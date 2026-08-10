@@ -10,11 +10,11 @@
   :root{
     --bg: #0b0d12;
     --bg-2: #14171f;
-    --gold: #edad18;
-    --gold-dim: #7e5903;
+    --gold: #e8b84b;
+    --gold-dim: #7a6430;
     --red: #b83b3b;
     --text: #f1ece1;
-    --text-dim: #666666;
+    --text-dim: #8a8f9c;
   }
 
   *{ box-sizing: border-box; }
@@ -88,8 +88,8 @@
 
   .clock{
     display:grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 10px;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
     margin-bottom: 8px;
   }
 
@@ -195,6 +195,7 @@
     <h1 id="eventTitle">—</h1>
 
     <div class="clock" id="clock">
+      <div class="unit"><div class="num" id="months">--</div><div class="label">Mo</div></div>
       <div class="unit"><div class="num" id="days">--</div><div class="label">Days</div></div>
       <div class="unit"><div class="num" id="hours">--</div><div class="label">Hours</div></div>
       <div class="unit"><div class="num" id="mins">--</div><div class="label">Mins</div></div>
@@ -227,8 +228,7 @@
        sorted automatically by date, soonest first.
      ============================================================ */
   const EVENTS = [
-    { title: "Marvel Doomsday", date: "2026-12-18T20:00:00" },
-    {title: "Natal", date: "2026-12-25T00:00:00"},
+    { title: "Movie Night", date: "2026-12-01T19:00:00" },
     // { title: "Another event", date: "2026-08-15T20:30:00" },
   ];
   /* ============================================================
@@ -259,6 +259,7 @@
 
   // ---- elements ----
   const titleEl = document.getElementById('eventTitle');
+  const monthsEl = document.getElementById('months');
   const daysEl = document.getElementById('days');
   const hoursEl = document.getElementById('hours');
   const minsEl = document.getElementById('mins');
