@@ -228,7 +228,7 @@
        sorted automatically by date, soonest first.
      ============================================================ */
   const EVENTS = [
-    {title: "Doomsday", date: "2026-12-18T20:00:00"},
+    { title: "Doomsday", date: "2026-12-18T20:00:00" },
     // { title: "Another event", date: "2026-08-15T20:30:00" },
   ];
   /* ============================================================
@@ -276,6 +276,30 @@
     return d.toLocaleString(undefined, { month:'short', day:'numeric', year:'numeric', hour:'numeric', minute:'2-digit' });
   }
 
+  // Calendar-accurate breakdown: counts whole months first (respecting
+  // different month lengths), then whatever's left over as days/h/m/s.
+  function breakdown(fromDate, toDate){
+    let months = (toDate.getFullYear() - fromDate.getFullYear()) * 12
+               + (toDate.getMonth() - fromDate.getMonth());
+
+    // if the day-of-month/time hasn't been reached yet in the target month, back off one month
+    let cursor = new Date(fromDate);
+    cursor.setMonth(cursor.getMonth() + months);
+    if(cursor.getTime() > toDate.getTime()){
+      months -= 1;
+      cursor = new Date(fromDate);
+      cursor.setMonth(cursor.getMonth() + months);
+    }
+
+    const remainderMs = toDate.getTime() - cursor.getTime();
+    const days = Math.floor(remainderMs / (1000*60*60*24));
+    const hours = Math.floor((remainderMs / (1000*60*60)) % 24);
+    const mins = Math.floor((remainderMs / (1000*60)) % 60);
+    const secs = Math.floor((remainderMs / 1000) % 60);
+
+    return { months, days, hours, mins, secs };
+  }
+
   function renderClock(){
     if(sorted.length === 0){
       titleEl.textContent = 'No events yet';
@@ -285,10 +309,10 @@
     }
     const active = sorted[activeIndex];
     titleEl.textContent = active.title;
-    const target = new Date(active.date).getTime();
-    const diff = target - Date.now();
+    const now = new Date();
+    const target = new Date(active.date);
 
-    if(diff <= 0){
+    if(target.getTime() <= now.getTime()){
       clockEl.style.display = 'none';
       arrivedEl.style.display = 'block';
       return;
@@ -296,15 +320,13 @@
     clockEl.style.display = 'grid';
     arrivedEl.style.display = 'none';
 
-    const d = Math.floor(diff / (1000*60*60*24));
-    const h = Math.floor((diff / (1000*60*60)) % 24);
-    const m = Math.floor((diff / (1000*60)) % 60);
-    const s = Math.floor((diff / 1000) % 60);
+    const b = breakdown(now, target);
 
-    daysEl.textContent = d;
-    hoursEl.textContent = pad(h);
-    minsEl.textContent = pad(m);
-    secsEl.textContent = pad(s);
+    monthsEl.textContent = b.months;
+    daysEl.textContent = b.days;
+    hoursEl.textContent = pad(b.hours);
+    minsEl.textContent = pad(b.mins);
+    secsEl.textContent = pad(b.secs);
   }
 
   function renderList(){
