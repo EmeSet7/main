@@ -1,0 +1,3077 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stock.io</title>
+<script src="https://unpkg.com/@zxing/library@0.18.6/umd/index.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500&display=swap');
+
+
+
+  /* ═══════════════════════════════════════════════
+     COLOR PALETTE — change values here to retheme
+     All colors are used via var(--name) everywhere
+     ═══════════════════════════════════════════════ */
+  :root {
+    /* Page backgrounds — darkest to lightest */
+    --bg: #020202;        /* Main page background (darkest) */
+    --surface: #222222;   /* Header, sidebar, cards */
+    --surface2: #555555;  /* Hover states, secondary cards, input backgrounds in detail panel */
+    --border: #aaaaaa;    /* All borders and dividers */
+
+    /* Accent — the main blue, used for highlights, active states, buttons */
+    --accent: #999999;      /* Bright blue — buttons, active part code, focused borders */
+    --accent-dim: #333333;  /* Dark blue — active item background in sidebar list */
+
+    /* Green — in stock / positive / save button */
+    --green: #109010;     /* Bright green — quantity number when stock > 0, Save button text */
+    --green-dim: #055005; /* Dark green — quantity badge background, Save button background */
+
+    /* Red — out of stock / delete / warning */
+    --red: #a01010;       /* Bright red — quantity number when stock = 0, Delete button text */
+    --red-dim: #500505;   /* Dark red — quantity badge background, Delete button background */
+
+    /* Yellow — sale price display */
+    --yellow: #f4d630;    /* Used only for the price value in the detail panel */
+
+    /* Text */
+    --text: #aaaaaa;      /* Main text color — labels, values, part codes */
+    --text-dim: #888888;  /* Secondary text — descriptions, placeholders, small labels */
+
+    /* Fonts */
+    --mono: 'IBM Plex Mono', monospace; /* Used for codes, numbers, labels, buttons */
+    --sans: 'IBM Plex Sans', sans-serif; /* Used for body text and input fields */
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 14px;
+    min-height: 100vh;
+  }
+
+  /* ── LAYOUT ─────────────────────────────────────
+     The app is split into:
+     - header (top bar with logo, save/load, stats)
+     - main (sidebar on left + detail panel on right)
+     ─────────────────────────────────────────────── */
+  .app { display: flex; flex-direction: column; height: 100vh; }
+
+  /* Top bar — logo, save/load buttons, part count stats */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 24px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    flex-shrink: 0;
+  }
+
+  /* Brand block — logo image + wordmark, sit side by side */
+  .brand { display: flex; align-items: center; gap: 10px; }
+
+  /* Placeholder logo image — swap the <img src="..."> in HTML for the real
+     logo file/URL later. Sized to sit comfortably next to the wordmark. */
+  .brand-logo {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    flex-shrink: 0;
+  }
+
+  /* "STOCK" in blue, ".io" in grey */
+  .logo {
+    font-family: var(--mono);
+    font-size: 24px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    color: var(--accent); /* logo main color */
+  }
+  .logo span { color: var(--text-dim); font-weight: 400; } /* the ".io" part */
+
+  /* Header tab switcher — Stock vs Work Orders */
+  .nav-tabs { display: flex; gap: 4px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 3px; }
+  .nav-tab {
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 600;
+    background: transparent;
+    border: none;
+    color: var(--text-dim);
+    padding: 7px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+  }
+  .nav-tab:hover { color: var(--text); }
+  .nav-tab.active { background: var(--accent-dim); color: var(--accent); }
+
+  /* Save status indicator (dot + text) next to the Save/Load buttons */
+  .save-status {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-dim);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .save-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--text-dim);
+    display: inline-block;
+    transition: background 0.3s;
+  }
+  .save-dot.saved { background: var(--green); }   /* green dot = file saved */
+  .save-dot.unsaved { background: var(--yellow); } /* yellow dot = unsaved changes */
+
+  .header-stats {
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    row-gap: 6px;
+  }
+  .stat { text-align: right; }
+  .stat-value { font-family: var(--mono); font-size: 18px; font-weight: 600; color: var(--text); }
+  .stat-label { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.06em; }
+
+  .main {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  /* ── SIDEBAR (left panel) ───────────────────────
+     Contains: scan input, search box,
+     location filter chips, and the parts list
+     ─────────────────────────────────────────────── */
+  .sidebar {
+    width: 500px;
+    flex-shrink: 0;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .scan-zone {
+    padding: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .scan-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
+    margin-bottom: 8px;
+    font-family: var(--mono);
+  }
+
+  .scan-input-wrap {
+    display: flex;
+    gap: 8px;
+  }
+
+  .scan-input {
+    flex: 1;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 15px;
+    padding: 10px 12px;
+    border-radius: 6px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .scan-input:focus { border-color: var(--accent); }
+  .scan-input::placeholder { color: var(--text-dim); font-size: 13px; }
+
+  .btn {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 10px 14px;
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.15s;
+    white-space: nowrap;
+  }
+  .btn:hover { opacity: 0.50; }
+  .btn.secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); } /* grey — Cancel, Load, camera */
+  .btn.danger    { background: var(--red-dim);   color: var(--red);  border: 1px solid var(--red); }   /* red  — Delete part */
+  .btn.success   { background: var(--green-dim); color: var(--green);border: 1px solid var(--green); } /* green — Save to file */
+
+  .search-wrap {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .search-input {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 13px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    outline: none;
+  }
+  .search-input:focus { border-color: var(--accent); }
+  .search-input::placeholder { color: var(--text-dim); }
+
+  .location-filter {
+    padding: 8px 16px 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  .loc-filter-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-dim);
+    font-family: var(--mono);
+    margin-bottom: 6px;
+  }
+  /* Location filter chips — one pill per unique location in your stock.
+     Click to filter list. "All" chip resets the filter. */
+  .loc-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+  .loc-chip {
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 3px 9px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text-dim);
+    cursor: pointer;
+    transition: background 0.1s, color 0.1s, border-color 0.1s;
+    white-space: nowrap;
+  }
+  .loc-chip:hover  { border-color: var(--accent); color: var(--text); }                                    /* hover: blue border */
+  .loc-chip.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); } /* selected: blue filled */
+
+  .parts-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+    align-content: start;
+    gap: 6px;
+  }
+  .parts-list::-webkit-scrollbar { width: 4px; }
+  .parts-list::-webkit-scrollbar-track { background: transparent; }
+  .parts-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  .parts-list.list-view {
+    grid-template-columns: 1fr; /* fallback single-column mode, toggled via view switch */
+  }
+
+  .part-item {
+    padding: 8px 9px;
+    border-radius: 6px;
+    cursor: pointer;
+    border: 1px solid transparent;
+    margin-bottom: 0px;
+    min-width: 0; /* allow ellipsis truncation to work inside grid cells */
+    overflow: hidden; /* contain badges/text so they never visually bleed into the next grid card */
+    transition: background 0.2s, border-color 0.2s;
+  }
+  .part-item:hover  { background: var(--surface2); }                                   /* hover: slightly lighter background */
+  .part-item.active { background: var(--accent-dim); border-color: var(--accent); }  /* selected part: blue tint + border */
+
+  .part-item-code {
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--accent);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .part-item-name {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .part-item-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 4px;
+    gap: 4px;
+  }
+  .qty-badge {
+    font-family: var(--mono);
+    font-size: 9px;
+    padding: 1px 3px;
+    border-radius: 4px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .qty-badge.ok   { background: var(--green-dim); color: var(--green); } /* green badge — has stock */
+  .qty-badge.zero { background: var(--red-dim);   color: var(--red); }  /* red badge  — out of stock */
+  .loc-badge {
+    font-size: 9px;
+    color: var(--text-dim);
+    font-family: var(--mono);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+  }
+
+  .empty-state {
+    padding: 32px 16px;
+    text-align: center;
+    color: var(--text-dim);
+    font-size: 13px;
+  }
+
+  /* DETAIL PANEL */
+  .detail {
+    flex: 1;
+    overflow-y: auto;
+    padding: 28px 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  .no-selection {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 12px;
+    color: var(--text-dim);
+  }
+  .no-selection-icon { font-size: 48px; opacity: 0.3; }
+  .no-selection p { font-size: 13px; }
+
+  .detail-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+
+  .detail-code {
+    font-family: var(--mono);
+    font-size: 28px;
+    font-weight: 600;
+    color: var(--accent);
+    letter-spacing: 0.04em;
+  }
+  .detail-manufacturer {
+    font-size: 13px;
+    color: var(--text-dim);
+    margin-top: 4px;
+  }
+
+  .detail-actions { display: flex; gap: 8px; }
+
+  .qty-control {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px 24px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .qty-display {
+    font-family: var(--mono);
+    font-size: 52px;
+    font-weight: 600;
+    min-width: 80px;
+    text-align: center;
+    line-height: 1;
+  }
+  .qty-display.zero { color: var(--red); }   /* big number goes red when stock hits 0 */
+  .qty-display.ok   { color: var(--green); } /* big number is green when stock > 0 */
+
+  .qty-buttons { display: flex; flex-direction: column; gap: 8px; }
+  .qty-btn {
+    width: 44px;
+    height: 44px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text);
+    font-size: 22px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--mono);
+    transition: background 0.2s, color 0.2s;
+  }
+  .qty-btn.plus:hover  { background: var(--green-dim); color: var(--green); border-color: var(--green); } /* + button hover: goes green */
+  .qty-btn.minus:hover { background: var(--red-dim);   color: var(--red);   border-color: var(--red); }   /* − button hover: goes red */
+
+  .qty-meta { flex: 1; }
+  .qty-price {
+    font-family: var(--mono);
+    font-size: 20px;
+    color: var(--yellow); /* sale price shown in yellow */
+  }
+  .qty-price-label { font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; }
+
+  .qty-location {
+    margin-top: 16px;
+    font-family: var(--mono);
+    font-size: 14px;
+    color: var(--text);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 12px;
+    display: inline-block;
+  }
+  .qty-location-label { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
+
+  /* FIELDS */
+  .fields-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-dim);
+    font-family: var(--mono);
+  }
+  .field input {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 14px;
+    padding: 10px 12px;
+    border-radius: 6px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .field input:focus { border-color: var(--accent); }
+  .field input::placeholder { color: var(--text-dim); }
+  .field.full { grid-column: 1 / -1; }
+
+  .save-bar {
+    display: flex;
+    gap: 10px;
+    padding-top: 4px;
+  }
+
+  /* MODAL */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    backdrop-filter: blur(5px);
+  }
+  .modal {
+    background: var(--surface);
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    width: 500px;
+    max-width: 95vw;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+  .modal h2 {
+    font-family: var(--mono);
+    font-size: 15px;
+    margin-bottom: 4px;
+    color: var(--accent);
+  }
+  .modal p { font-size: 12px; color: var(--text-dim); margin-bottom: 14px; }
+  .modal .fields-grid { gap: 8px; margin-bottom: 14px; }
+  .modal .field input { padding: 7px 10px; font-size: 13px; }
+  .modal .field label { font-size: 10px; }
+  .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+
+  .hist-item {
+    padding: 8px 10px;
+    border-radius: 6px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    font-size: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+  }
+  .hist-item-main { min-width: 0; }
+  .hist-item-code {
+    font-family: var(--mono);
+    font-weight: 600;
+    color: var(--accent);
+    margin-right: 6px;
+  }
+  .hist-item-desc { color: var(--text); }
+  .hist-item-time {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-dim);
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .hist-tag {
+    font-family: var(--mono);
+    font-size: 9px;
+    padding: 1px 5px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    margin-right: 6px;
+  }
+  .hist-tag.create { background: var(--green-dim); color: var(--green); }
+  .hist-tag.delete { background: var(--red-dim); color: var(--red); }
+  .hist-tag.edit   { background: var(--accent-dim); color: var(--accent); }
+  .hist-tag.qty    { background: var(--surface); color: var(--text-dim); border: 1px solid var(--border); }
+  .hist-tag.wo     { background: var(--yellow, var(--surface2)); color: var(--text); border: 1px solid var(--border); }
+  .hist-empty { padding: 24px 12px; text-align: center; color: var(--text-dim); font-size: 12px; }
+
+  /* ── WORK ORDERS ────────────────────────────────── */
+  .wo-status-badge {
+    font-family: var(--mono);
+    font-size: 9px;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .wo-status-badge.open        { background: var(--accent-dim); color: var(--accent); border: 1px solid var(--border); }
+  .wo-status-badge.in_progress { background: var(--yellow);    color: var(--accent-dim); border: 1px solid var(--border); }
+  .wo-status-badge.ready       { background: var(--green-dim);  color: var(--green); border: 1px solid var(--border); }
+  .wo-status-badge.delivered   { background: var(--green-dim);   color: var(--green); border: 1px solid var(--border); }
+  .wo-status-badge.waiting_parts { background: var(--yellow); color: var(--accent-dim); border: 1px solid var(--border); }
+  .wo-status-badge.cancelled   { background: var(--red-dim);   color: var(--red); border: 1px solid var(--border); text-decoration: line-through; }
+
+  .wo-item-top { display: flex; justify-content: space-between; align-items: center; gap: 6px; flex-wrap: wrap; row-gap: 4px; }
+  .wo-item-num { font-family: var(--mono); font-size: 12px; font-weight: 600; color: var(--accent); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .wo-item-badges { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; min-width: 0; }
+  .wo-item-customer { font-size: 13px; color: var(--text); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .wo-item-unit { font-size: 11px; color: var(--text-dim); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .wo-item-bottom { display: flex; justify-content: space-between; align-items: center; margin-top: 6px; }
+  .wo-item-balance { font-family: var(--mono); font-size: 11px; color: var(--text-dim); }
+  .wo-item-balance.due { color: var(--yellow); }
+  .wo-item-balance.settled { color: var(--green); }
+  .wo-item-balance.pending { color: var(--text-dim); font-style: italic; }
+
+  /* Aging badge — flags a WO stuck in the same status for a while.
+     Escalates yellow (1wk+) -> yellow/bold (1mo+) -> red (3mo+). */
+  .aging-badge {
+    font-family: var(--mono);
+    font-size: 9px;
+    font-weight: 600;
+    padding: 1px 5px;
+    border-radius: 4px;
+    white-space: nowrap;
+  }
+  .aging-badge.week    { background: var(--surface2); color: var(--yellow); border: 1px solid var(--yellow); }
+  .aging-badge.month   { background: var(--surface2); color: var(--yellow); border: 1px solid var(--yellow); font-weight: 700; }
+  .aging-badge.quarter { background: var(--red-dim); color: var(--red); border: 1px solid var(--red); font-weight: 700; }
+
+  .field textarea {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 14px;
+    padding: 10px 12px;
+    border-radius: 6px;
+    outline: none;
+    resize: vertical;
+    min-height: 60px;
+    transition: border-color 0.15s;
+  }
+  .field textarea:focus { border-color: var(--accent); }
+
+  .status-select {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 600;
+    padding: 8px 10px;
+    border-radius: 6px;
+    outline: none;
+    cursor: pointer;
+    text-transform: uppercase;
+  }
+
+  .cost-summary {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px 22px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 16px;
+  }
+  .cost-summary .stat { text-align: left; }
+  .cost-summary .stat-value { font-size: 22px; }
+  .cost-summary .stat-value.due { color: var(--accent); }
+  .cost-summary .stat-value.settled { color: var(--green); }
+
+  .line-item, .payment-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 8px 10px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 12px;
+    margin-bottom: 6px;
+  }
+  .line-item-main, .payment-item-main { min-width: 0; }
+  .line-item-code { font-family: var(--mono); color: var(--accent); font-weight: 600; margin-right: 6px; }
+  .line-item-amt, .payment-item-amt { font-family: var(--mono); font-weight: 600; color: var(--text); white-space: nowrap; }
+  .payment-method-tag {
+    font-family: var(--mono);
+    font-size: 9px;
+    padding: 1px 5px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    margin-right: 8px;
+  }
+  .payment-method-tag.cash     { background: var(--green-dim); color: var(--green); }
+  .payment-method-tag.transfer { background: var(--accent-dim); color: var(--accent); }
+  .line-remove-btn {
+    background: none;
+    border: none;
+    color: var(--red);
+    cursor: pointer;
+    font-family: var(--mono);
+    font-size: 14px;
+    line-height: 1;
+    padding: 2px 4px;
+    flex-shrink: 0;
+  }
+  .line-remove-btn:hover { opacity: 0.6; }
+
+  .add-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .add-row input, .add-row select {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13px;
+    padding: 8px 10px;
+    border-radius: 6px;
+    outline: none;
+  }
+
+  /* ── PRINTABLE WORK ORDER ───────────────────────
+     #print-area is empty/hidden during normal use.
+     printWo() fills it with an invoice layout, then
+     window.print() is called. The @media print block
+     hides everything else on the page so only the
+     invoice content ends up on paper.
+     ─────────────────────────────────────────────── */
+  #print-area { display: none; }
+  .inv-header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #000; padding-bottom: 14px; margin-bottom: 18px; }
+  .inv-title { font-family: var(--mono); font-size: 22px; font-weight: 600; letter-spacing: 0.04em; }
+  .inv-meta { text-align: right; font-size: 12px; }
+  .inv-meta .inv-number { font-family: var(--mono); font-size: 16px; font-weight: 600; }
+  .inv-section { margin-bottom: 16px; }
+  .inv-section-title { font-family: var(--mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: #555; margin-bottom: 6px; border-bottom: 1px solid #ccc; padding-bottom: 3px; }
+  .inv-row { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; padding: 3px 0; }
+  .inv-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .inv-table th { text-align: left; font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: #555; border-bottom: 1px solid #000; padding: 4px 6px; }
+  .inv-table td { padding: 5px 6px; border-bottom: 1px solid #ddd; }
+  .inv-table td.num, .inv-table th.num { text-align: right; }
+  .inv-totals { margin-top: 10px; margin-left: auto; width: 260px; }
+  .inv-totals .inv-row { font-size: 13px; }
+  .inv-totals .inv-row.grand { font-weight: 700; font-size: 15px; border-top: 1px solid #000; margin-top: 4px; padding-top: 6px; }
+  .inv-totals .inv-row.due { color: #a01010; font-weight: 700; }
+  .inv-footer { margin-top: 30px; font-size: 11px; color: #555; text-align: center; }
+
+  @media print {
+    body * { visibility: hidden; }
+    #print-area, #print-area * { visibility: visible; }
+    #print-area {
+      display: block;
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%;
+      color: #000;
+      background: #fff;
+      padding: 20px;
+    }
+  }
+
+  .hidden { display: none !important; }
+  .section-title {
+    font-family: var(--mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
+    margin-bottom: 12px;
+  }
+
+  /* ── FINANCE TAB ─────────────────────────────────── */
+  .finance-filters {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 18px;
+  }
+  .finance-filters select {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 600;
+    padding: 8px 10px;
+    border-radius: 6px;
+    outline: none;
+    cursor: pointer;
+  }
+  .finance-filters label {
+    font-family: var(--mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-dim);
+    margin-right: -4px;
+  }
+  .finance-rate-setting {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .finance-rate-setting input {
+    width: 80px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13px;
+    padding: 7px 5px;
+    border-radius: 6px;
+    outline: none;
+    text-align: center;
+  }
+
+  .finance-chart-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px 22px;
+  }
+  .finance-chart {
+    display: flex;
+    align-items: flex-end;
+    gap: 6px;
+    height: 160px;
+    margin-top: 14px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 2px;
+  }
+  .finance-bar-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    height: 100%;
+    min-width: 0;
+  }
+  .finance-bar-stack {
+    width: 100%;
+    max-width: 28px;
+    display: flex;
+    flex-direction: column-reverse;
+    border-radius: 3px 3px 0 0;
+    overflow: hidden;
+  }
+  .finance-bar-seg.cash { background: var(--green); }
+  .finance-bar-seg.transfer { background: var(--accent); }
+  .finance-bar-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-dim);
+    margin-top: 6px;
+    white-space: nowrap;
+  }
+  .finance-legend {
+    display: flex;
+    gap: 16px;
+    margin-top: 10px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+  .finance-legend span { display: flex; align-items: center; gap: 5px; }
+  .finance-legend-dot { width: 9px; height: 9px; border-radius: 2px; display: inline-block; }
+  .finance-legend-dot.cash { background: var(--green); }
+  .finance-legend-dot.transfer { background: var(--accent); }
+
+  .finance-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .finance-table th {
+    text-align: left;
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-dim);
+    border-bottom: 1px solid var(--border);
+    padding: 6px 8px;
+  }
+  .finance-table td { padding: 8px; border-bottom: 1px solid var(--border); }
+  .finance-table td.num, .finance-table th.num { text-align: right; font-family: var(--mono); }
+  .finance-declared-badge {
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-weight: 600;
+    text-transform: uppercase;
+    cursor: pointer;
+    border: 1px solid var(--border);
+  }
+  .finance-declared-badge.pending { background: var(--red-dim); color: var(--red); }
+  .finance-declared-badge.done { background: var(--green-dim); color: var(--green); }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- HEADER -->
+  <header>
+    <div class="brand">
+      <!-- Placeholder logo — replace this src with your real logo file/URL when ready.
+           Delete this <img> line entirely if you'd rather show just the symbol with no image slot. -->
+      <img class="brand-logo" id="brand-logo" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSIzMiIgdmlld0JveD0iMCAwIDMyIDMyIj48cmVjdCB4PSIxIiB5PSIxIiB3aWR0aD0iMzAiIGhlaWdodD0iMzAiIHJ4PSI2IiBmaWxsPSIjMWEyMjMzIiBzdHJva2U9IiMzYjgyZjYiIHN0cm9rZS13aWR0aD0iMS41IiBzdHJva2UtZGFzaGFycmF5PSIzIDIiLz48dGV4dCB4PSIxNiIgeT0iMTkiIGZvbnQtc2l6ZT0iOCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzNiODJmNiIgZm9udC1mYW1pbHk9Im1vbm9zcGFjZSIgZm9udC13ZWlnaHQ9IjYwMCI+TE9HTzwvdGV4dD48L3N2Zz4=" alt="logo">
+      <!-- Wordmark — delete this whole div (or add class="hidden") if you switch to a symbol-only logo -->
+      <div class="logo">STOCK<span>.io</span></div>
+    </div>
+    <div class="nav-tabs">
+      <button class="nav-tab active" id="tab-stock" onclick="switchTab('stock')">Stock</button>
+      <button class="nav-tab" id="tab-wo" onclick="switchTab('wo')">Work Orders</button>
+      <button class="nav-tab" id="tab-finance" onclick="switchTab('finance')">Finance</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div class="save-status"><span class="save-dot" id="save-dot"></span><span id="save-label">No file loaded</span></div>
+      <button class="btn secondary" onclick="openHistory()" >History</button>
+      <button class="btn secondary" onclick="loadFile()" >Load</button>
+      <button class="btn success" onclick="saveFile()" >Save</button>
+      <button class="btn secondary" id="auto-save-btn" onclick="toggleAutoSave()" >Auto-Save: Off</button>
+    </div>
+    <div class="header-stats" id="stock-stats">
+      <div class="stat">
+        <div class="stat-value" id="stat-parts">0</div>
+        <div class="stat-label">Parts</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value" id="stat-units">0</div>
+        <div class="stat-label">Total Units</div>
+      </div>
+    </div>
+    <div class="header-stats hidden" id="wo-stats">
+      <div class="stat">
+        <div class="stat-value" id="stat-wo-open">0</div>
+        <div class="stat-label">Open Orders</div>
+      </div>
+    </div>
+    <div class="header-stats hidden" id="finance-stats">
+      <div class="stat">
+        <div class="stat-value" id="stat-finance-balance">€0</div>
+        <div class="stat-label">Balance Due</div>
+      </div>
+    </div>
+  </header>
+
+  <div class="main" id="stock-main">
+
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+      <!-- SCAN -->
+      <div class="scan-zone">
+        <div class="scan-label">Scan / Enter Code</div>
+        <div class="scan-input-wrap">
+          <input class="scan-input" id="scan-input" placeholder="Scan or type code…" autocomplete="off" autofocus>
+          <button class="btn secondary" onclick="toggleCamera()" id="cam-btn" >WebC</button>
+          <button class="btn" onclick="handleScan()">GO</button>
+        </div>
+        <div id="cam-wrap" style="display:none;margin-top:10px;position:relative;">
+          <video id="cam-video" style="width:100%;border-radius:6px;border:1px solid var(--border);" autoplay muted playsinline></video>
+          <div style="position:absolute;inset:0;border:2px solid var(--accent);border-radius:6px;pointer-events:none;opacity:0.5;"></div>
+          <div style="font-size:11px;color:var(--text-dim);margin-top:4px;text-align:center;font-family:var(--mono)">Point at barcode — detects automatically</div>
+        </div>
+      </div>
+      <!-- SEARCH -->
+      <div class="search-wrap" style="display:flex; gap:8px;">
+        <input class="search-input" id="search-input" placeholder="Search parts…" oninput="renderList()">
+        <button class="btn secondary" id="view-toggle-btn" onclick="toggleListView()" style="padding:8px 10px;">▦</button>
+      </div>
+      <!-- LOCATION FILTER -->
+      <div class="location-filter" id="location-filter-wrap">
+        <div class="loc-filter-label">Location</div>
+        <div class="loc-chips" id="loc-chips"></div>
+      </div>
+      <!-- LIST -->
+      <div class="parts-list" id="parts-list"></div>
+    </div>
+
+    <!-- DETAIL -->
+    <div class="detail" id="detail">
+      <div class="no-selection">
+        <div class="no-selection-icon">◫</div>
+        <p>Scan a code or select a part</p>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- WORK ORDERS MAIN VIEW -->
+  <div class="main hidden" id="wo-main">
+
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+      <div class="scan-zone">
+        <div class="scan-label">Work Orders</div>
+        <div style="display:flex; gap:8px;">
+          <button class="btn" style="flex:1;" onclick="openWoModal()">New Work Order</button>
+          <button class="btn secondary" id="wo-mode-toggle-btn" onclick="toggleWoMode()">Customers</button>
+        </div>
+      </div>
+      <div class="search-wrap" style="display:flex; gap:8px;">
+        <input class="search-input" id="wo-search-input" placeholder="Search customer, phone, serial, code, WO#…" oninput="renderWoList()" style="flex:1;">
+        <button class="btn secondary" id="wo-view-toggle-btn" onclick="toggleWoListView()" style="padding:8px 10px;">▦</button>
+      </div>
+      <div class="location-filter" id="wo-status-filter-wrap">
+        <div class="loc-filter-label">Status</div>
+        <div class="loc-chips" id="wo-status-chips"></div>
+      </div>
+      <div class="parts-list" id="wo-list"></div>
+    </div>
+
+    <!-- DETAIL -->
+    <div class="detail" id="wo-detail">
+      <div class="no-selection">
+        <div class="no-selection-icon">◫</div>
+        <p>Create or select a work order</p>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- FINANCE MAIN VIEW -->
+  <div class="main hidden" id="finance-main">
+    <div class="detail" id="finance-detail" style="max-width:1100px; margin:0 auto; width:100%;"></div>
+  </div>
+</div>
+
+<!-- PRINT AREA — filled by printWo(), only visible via @media print -->
+<div id="print-area"></div>
+
+<!-- SHARED LOCATION DATALIST — populated by JS from existing part locations -->
+<datalist id="location-suggestions"></datalist>
+<datalist id="manufacturer-suggestions"></datalist>
+<datalist id="wo-model-suggestions"></datalist>
+
+<!-- NEW PART MODAL -->
+<div class="modal-overlay hidden" id="modal">
+  <div class="modal">
+    <h2>New Part</h2>
+    <p id="modal-code-label">Code not found — add it to stock.</p>
+    <div class="fields-grid">
+      <div class="field full">
+        <label>Code</label>
+        <input id="m-code" placeholder="Part code / barcode">
+      </div>
+      <div class="field full">
+        <label>Manufacturer</label>
+        <input id="m-manufacturer" placeholder="Yamaha, generic…" list="manufacturer-suggestions" autocomplete="off">
+      </div>
+      <div class="field full">
+        <label>Description</label>
+        <input id="m-description" placeholder="What is this part?">
+      </div>
+      <div class="field">
+        <label>Sale Price</label>
+        <input id="m-price" type="number" min="0" step="0.5" placeholder="0.00">
+      </div>
+      <div class="field">
+        <label>Initial Qty</label>
+        <input id="m-qty" type="number" min="0" step="1" placeholder="0">
+      </div>
+      <div class="field full">
+        <label>Location</label>
+        <!-- datalist gives a dropdown of existing locations but still allows typing new ones -->
+        <input id="m-location" placeholder="Pick existing or type new…" list="location-suggestions" autocomplete="off">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn" onclick="saveNewPart()">Add Part</button>
+    </div>
+  </div>
+</div>
+
+<!-- HISTORY MODAL -->
+<div class="modal-overlay hidden" id="history-modal">
+  <div class="modal" style="width:620px;">
+    <h2>History</h2>
+    <p>Every stock change, newest first. Stored alongside your parts and included in Save/Load.</p>
+    <div style="display:flex; gap:8px; margin-bottom:12px;">
+      <input class="search-input" id="history-search" placeholder="Filter by code, part, or action…" oninput="renderHistory()" style="flex:1;">
+      <button class="btn danger" onclick="clearHistory()" title="Erase all history entries">Clear</button>
+    </div>
+    <div id="history-list" style="max-height:50vh; overflow-y:auto; display:flex; flex-direction:column; gap:6px;"></div>
+    <div class="modal-actions" style="margin-top:14px;">
+      <button class="btn secondary" onclick="closeHistory()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- NEW WORK ORDER MODAL -->
+<div class="modal-overlay hidden" id="wo-modal">
+  <div class="modal">
+    <h2>New Work Order</h2>
+    <p>Register the customer, unit, and what they brought in.</p>
+    <div class="fields-grid">
+      <div class="field full">
+        <label>Customer Name</label>
+        <input id="wo-m-name" placeholder="Name">
+      </div>
+      <div class="field full">
+        <label>Phone Number</label>
+        <input id="wo-m-phone" placeholder="9...">
+      </div>
+      <div class="field">
+        <label>Make</label>
+        <input id="wo-m-make" placeholder="e.g. Yamaha" list="manufacturer-suggestions" autocomplete="off">
+      </div>
+      <div class="field">
+        <label>Model</label>
+        <input id="wo-m-model" placeholder="e.g. PSR-E373" list="wo-model-suggestions" autocomplete="off">
+      </div>
+      <div class="field full">
+        <label>Serial Number</label>
+        <input id="wo-m-serial" placeholder="SN:">
+      </div>
+      <div class="field full">
+        <label>Problem / Notes</label>
+        <textarea id="wo-m-problem" placeholder="Issue"></textarea>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeWoModal()">Cancel</button>
+      <button class="btn" onclick="saveNewWo()">Create Work Order</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── STORAGE ───────────────────────────────────────────────────────────────
+// Two-layer system:
+//   1. localStorage — automatic backup in browser, survives page refresh/crash
+//   2. stock.json   — the real file you Save/Load manually, lives on your disk
+//
+// On startup: loads from localStorage (crash recovery)
+// On Save button: downloads stock.json to your PC
+// On Load button: reads a stock.json file you pick
+// Every change: marks the dot yellow (unsaved) and backs up to localStorage
+
+const STORAGE_KEY = 'stockio_parts'; // key used inside the browser's localStorage
+const HISTORY_STORAGE_KEY = 'stockio_history'; // key used for the change-log backup
+const HISTORY_LIMIT = 1000; // keep the log from growing forever
+let unsaved = false;
+
+function markUnsaved() {
+  unsaved = true;
+  document.getElementById('save-dot').className = 'save-dot unsaved';
+  document.getElementById('save-label').textContent = 'Unsaved changes';
+  scheduleAutoSave();
+}
+function markSaved(label) {
+  unsaved = false;
+  document.getElementById('save-dot').className = 'save-dot saved';
+  document.getElementById('save-label').textContent = label || 'Saved';
+}
+
+// localStorage as crash backup only
+function backupToLocal() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(parts)); } catch {}
+}
+
+function currentSnapshotJson() {
+  return JSON.stringify({ version: 2, parts, history, workOrders, woCounter, ivaDeclared, estIrsRate, customerNotes }, null, 2);
+}
+
+function saveFile() {
+  const json = currentSnapshotJson();
+  const blob = new Blob([json], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'stock.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+  markSaved('Saved to stock.json');
+  backupToLocal();
+}
+
+function loadFile() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json,application/json';
+  input.onchange = e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      let data;
+      try {
+        data = JSON.parse(ev.target.result);
+      } catch {
+        alert('Could not read file — make sure it\'s a valid stock.json');
+        return;
+      }
+      try {
+        parts = data.parts || data; // support both versioned and raw array
+        history = Array.isArray(data.history) ? data.history : history; // keep current log if file predates history
+        workOrders = Array.isArray(data.workOrders) ? data.workOrders : workOrders; // keep current WOs if file predates them
+        // Defensive back-compat: fill in any work order missing whole sub-objects
+        // (very old/hand-edited files) so a stray gap here never throws mid-render
+        // and gets mistaken for the file itself being invalid.
+        workOrders.forEach(wo => {
+          if (!wo.customer || typeof wo.customer !== 'object') wo.customer = { name: '', phone: '' };
+          if (!wo.unit || typeof wo.unit !== 'object') wo.unit = { make: '', model: '', serial: '' };
+          if (typeof wo.problem !== 'string') wo.problem = '';
+          if (!Array.isArray(wo.partsUsed)) wo.partsUsed = [];
+          if (typeof wo.laborCost !== 'number') wo.laborCost = 0;
+        });
+        workOrders.forEach(wo => { if (!Array.isArray(wo.miscItems)) wo.miscItems = []; }); // back-compat for files saved before misc items existed
+        workOrders.forEach(wo => { if (typeof wo.invoiced !== 'boolean') wo.invoiced = false; }); // back-compat for files saved before invoice/tax toggle existed
+        workOrders.forEach(wo => { if (typeof wo.partsTaxRate !== 'number') wo.partsTaxRate = 23; if (typeof wo.laborTaxRate !== 'number') wo.laborTaxRate = 23; }); // back-compat for files saved before split tax rates existed
+        workOrders.forEach(wo => { if (!wo.clientType) wo.clientType = 'individual'; if (typeof wo.retentionRate !== 'number') wo.retentionRate = 11.5; }); // back-compat for files saved before client type / retention existed
+        workOrders.forEach(wo => { if (typeof wo.warranty !== 'boolean') wo.warranty = false; }); // back-compat for files saved before warranty (no-VAT) flag existed
+        woCounter = typeof data.woCounter === 'number' ? data.woCounter : woCounter;
+        ivaDeclared = data.ivaDeclared && typeof data.ivaDeclared === 'object' ? data.ivaDeclared : ivaDeclared;
+        estIrsRate = typeof data.estIrsRate === 'number' ? data.estIrsRate : estIrsRate;
+        customerNotes = data.customerNotes && typeof data.customerNotes === 'object' ? data.customerNotes : customerNotes; // back-compat for files saved before customer notes existed
+        save_local();
+        try { localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(history)); } catch {}
+        woBackup();
+        ivaDeclBackup();
+        customerNotesBackup();
+        try { localStorage.setItem(IRS_RATE_KEY, String(estIrsRate)); } catch {}
+        markSaved('Loaded: ' + file.name);
+        selectedId = null;
+        selectedWoId = null;
+        selectedCustomerKey = null;
+        woViewMode = 'orders';
+        syncWoModeUI();
+        renderList();
+        renderWoList();
+        if (activeTab === 'finance') renderFinance();
+        document.getElementById('detail').innerHTML = `
+          <div class="no-selection">
+            <div class="no-selection-icon">◫</div>
+            <p>Scan a code or select a part</p>
+          </div>`;
+        document.getElementById('wo-detail').innerHTML = `
+          <div class="no-selection">
+            <div class="no-selection-icon">◫</div>
+            <p>Create or select a work order</p>
+          </div>`;
+      } catch (err) {
+        // The JSON itself parsed fine — something in applying/rendering it broke.
+        // Say so plainly instead of blaming the file, and log details for debugging.
+        console.error('Error applying loaded file:', err);
+        alert('File loaded, but something went wrong displaying it. Check the browser console for details — your data was not corrupted.');
+      }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+
+function save_local() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(parts)); } catch {}
+}
+
+// ─── AUTO-SAVE ──────────────────────────────────────────────────────────────
+// Best case (Chrome/Edge, page served over http(s)): the File System Access
+// API lets us silently overwrite the same file on disk every time something
+// changes — no download prompts, nothing to remember.
+// Fallback (Safari/Firefox, or the file opened directly from disk): silent
+// overwrite isn't possible, so instead we auto-download a fresh stock.json
+// every few minutes whenever there are unsaved changes, so you can't forget
+// for long even if you never touch Save yourself.
+let autoSaveHandle = null;
+let autoSaveEnabled = false;
+let autoSaveDebounceTimer = null;
+let autoSaveFallbackTimer = null;
+const AUTO_SAVE_DEBOUNCE_MS = 2000;
+const AUTO_SAVE_FALLBACK_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
+
+async function toggleAutoSave() {
+  const btn = document.getElementById('auto-save-btn');
+
+  if (autoSaveEnabled) {
+    autoSaveEnabled = false;
+    autoSaveHandle = null;
+    clearTimeout(autoSaveDebounceTimer);
+    if (autoSaveFallbackTimer) clearInterval(autoSaveFallbackTimer);
+    autoSaveFallbackTimer = null;
+    btn.textContent = 'Auto-Save: Off';
+    btn.className = 'btn secondary';
+    return;
+  }
+
+  if ('showSaveFilePicker' in window) {
+    try {
+      autoSaveHandle = await window.showSaveFilePicker({
+        suggestedName: 'stock.json',
+        types: [{ description: 'Stock.io backup', accept: { 'application/json': ['.json'] } }]
+      });
+      autoSaveEnabled = true;
+      btn.textContent = 'Auto-Save: On';
+      btn.className = 'btn success';
+      await writeAutoSave(); // write immediately so the file isn't empty
+      return;
+    } catch (err) {
+      if (err && err.name === 'AbortError') return; // user closed the file picker, do nothing
+      // any other error — fall through to the fallback below
+    }
+  }
+
+  // Fallback path: no silent overwrite available here
+  autoSaveEnabled = true;
+  btn.textContent = 'Auto-Save: On (auto-download)';
+  btn.className = 'btn success';
+  alert('This browser/setup can\'t silently overwrite a file on disk, so Auto-Save will instead automatically download a fresh stock.json every 5 minutes whenever there are unsaved changes.');
+  autoSaveFallbackTimer = setInterval(() => {
+    if (unsaved) saveFile();
+  }, AUTO_SAVE_FALLBACK_INTERVAL_MS);
+}
+
+async function writeAutoSave() {
+  if (!autoSaveHandle) return;
+  try {
+    const writable = await autoSaveHandle.createWritable();
+    await writable.write(currentSnapshotJson());
+    await writable.close();
+    markSaved('Auto-saved');
+  } catch (err) {
+    // permission likely lost/revoked (e.g. user moved/deleted the file) — turn
+    // it off cleanly instead of erroring silently on every future change
+    autoSaveEnabled = false;
+    autoSaveHandle = null;
+    clearTimeout(autoSaveDebounceTimer);
+    const btn = document.getElementById('auto-save-btn');
+    if (btn) { btn.textContent = 'Auto-Save: Off'; btn.className = 'btn secondary'; }
+  }
+}
+
+function scheduleAutoSave() {
+  if (!autoSaveEnabled || !autoSaveHandle) return;
+  clearTimeout(autoSaveDebounceTimer);
+  autoSaveDebounceTimer = setTimeout(writeAutoSave, AUTO_SAVE_DEBOUNCE_MS);
+}
+
+// ─── HISTORY LOG ────────────────────────────────────────────────────────────
+// Records every meaningful stock change: create, delete, edit, +/- qty, bulk adjust.
+// Newest entries first. Persisted to localStorage immediately and saved/loaded
+// together with parts.json (see saveFile/loadFile below).
+function logEvent(type, code, desc) {
+  history.unshift({
+    id: crypto.randomUUID(),
+    ts: new Date().toISOString(),
+    type,        // 'create' | 'delete' | 'edit' | 'qty'
+    code,
+    desc
+  });
+  if (history.length > HISTORY_LIMIT) history.length = HISTORY_LIMIT;
+  try { localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(history)); } catch {}
+}
+
+function clearHistory() {
+  if (!confirm('Erase the entire history log? This cannot be undone.')) return;
+  history = [];
+  try { localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(history)); } catch {}
+  renderHistory();
+}
+
+function openHistory() {
+  document.getElementById('history-search').value = '';
+  renderHistory();
+  document.getElementById('history-modal').classList.remove('hidden');
+}
+
+function closeHistory() {
+  document.getElementById('history-modal').classList.add('hidden');
+  if (activeTab === 'stock') scanInput.focus();
+}
+
+function formatHistoryTime(iso) {
+  const d = new Date(iso);
+  const now = new Date();
+  const sameDay = d.toDateString() === now.toDateString();
+  const time = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  return sameDay ? time : d.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ' + time;
+}
+
+function renderHistory() {
+  const q = (document.getElementById('history-search')?.value || '').toLowerCase();
+  const filtered = !q ? history : history.filter(h =>
+    (h.code||'').toLowerCase().includes(q) ||
+    (h.desc||'').toLowerCase().includes(q) ||
+    (h.type||'').toLowerCase().includes(q)
+  );
+  const list = document.getElementById('history-list');
+  if (!filtered.length) {
+    list.innerHTML = `<div class="hist-empty">No history yet — changes you make will show up here.</div>`;
+    return;
+  }
+  list.innerHTML = filtered.map(h => `
+    <div class="hist-item">
+      <div class="hist-item-main">
+        <span class="hist-tag ${h.type}">${h.type}</span><span class="hist-item-code">${h.code||''}</span><span class="hist-item-desc">${h.desc||''}</span>
+      </div>
+      <div class="hist-item-time">${formatHistoryTime(h.ts)}</div>
+    </div>
+  `).join('');
+}
+
+// ─── GRID / LIST VIEW TOGGLE ────────────────────────────────────────────────
+function toggleListView() {
+  listViewMode = !listViewMode;
+  const list = document.getElementById('parts-list');
+  const btn = document.getElementById('view-toggle-btn');
+  list.classList.toggle('list-view', listViewMode);
+  btn.textContent = listViewMode ? '☰' : '▦';
+  
+}
+
+function toggleWoListView() {
+  woListViewMode = !woListViewMode;
+  const list = document.getElementById('wo-list');
+  const btn = document.getElementById('wo-view-toggle-btn');
+  list.classList.toggle('list-view', woListViewMode);
+  btn.textContent = woListViewMode ? '☰' : '▦';
+}
+
+// override save() calls to also mark unsaved
+function save(p) {
+  parts = p !== undefined ? p : parts;
+  save_local();
+  markUnsaved();
+}
+
+// load from localStorage on start (crash recovery)
+let parts = (() => {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
+  catch { return []; }
+})();
+
+// history log — every stock change gets appended here (crash-recovered from localStorage too)
+let history = (() => {
+  try { return JSON.parse(localStorage.getItem(HISTORY_STORAGE_KEY)) || []; }
+  catch { return []; }
+})();
+
+let selectedId = null;
+let listViewMode = false; // false = grid (default), true = single-column list
+let woListViewMode = false; // WO list defaults to grid view
+
+// work orders — repair tickets, share parts/history but stored separately
+const WO_STORAGE_KEY = 'stockio_workorders';
+const WO_COUNTER_KEY = 'stockio_wo_counter';
+let workOrders = (() => {
+  try { return JSON.parse(localStorage.getItem(WO_STORAGE_KEY)) || []; }
+  catch { return []; }
+})();
+workOrders.forEach(wo => { if (!Array.isArray(wo.miscItems)) wo.miscItems = []; }); // back-compat for work orders saved before misc items existed
+workOrders.forEach(wo => { if (typeof wo.invoiced !== 'boolean') wo.invoiced = false; }); // back-compat for work orders saved before invoice/tax toggle existed
+workOrders.forEach(wo => { if (typeof wo.partsTaxRate !== 'number') wo.partsTaxRate = 23; if (typeof wo.laborTaxRate !== 'number') wo.laborTaxRate = 23; }); // back-compat for work orders saved before split tax rates existed
+workOrders.forEach(wo => { if (!wo.clientType) wo.clientType = 'individual'; if (typeof wo.retentionRate !== 'number') wo.retentionRate = 11.5; }); // back-compat for work orders saved before client type / retention existed
+workOrders.forEach(wo => { if (typeof wo.warranty !== 'boolean') wo.warranty = false; }); // back-compat for work orders saved before warranty (no-VAT) flag existed
+let woCounter = (() => {
+  try { return parseInt(localStorage.getItem(WO_COUNTER_KEY)) || 0; }
+  catch { return 0; }
+})();
+let selectedWoId = null;
+let woStatusFilter = null;
+let activeTab = 'stock';
+
+// Customers view — a lookup/reference layer over the same workOrders array,
+// grouped by customer (phone first, name fallback — same matching rule as
+// getCustomerHistory), plus small persisted notes per customer (e.g. "always
+// pays cash"). No new WO data structure; only the notes need their own storage.
+let woViewMode = 'orders'; // 'orders' | 'customers' — which list/detail the WO tab currently shows
+let selectedCustomerKey = null;
+const CUSTOMER_NOTES_KEY = 'stockio_customer_notes';
+let customerNotes = (() => {
+  try { return JSON.parse(localStorage.getItem(CUSTOMER_NOTES_KEY)) || {}; }
+  catch { return {}; }
+})();
+function customerNotesBackup() {
+  try { localStorage.setItem(CUSTOMER_NOTES_KEY, JSON.stringify(customerNotes)); } catch {}
+}
+
+// Estimated average IRS rate applied to presumed profit (regime simplificado).
+// This is a single personal setting (your overall tax situation), not
+// per-work-order — editable directly in the Work Orders header stats.
+const IRS_RATE_KEY = 'stockio_irs_rate';
+let estIrsRate = (() => {
+  try { const v = parseFloat(localStorage.getItem(IRS_RATE_KEY)); return isNaN(v) ? 26.8 : v; }
+  catch { return 26.8; }
+})();
+function setEstIrsRate(value) {
+  const v = parseFloat(value);
+  estIrsRate = isNaN(v) ? estIrsRate : Math.max(0, v);
+  try { localStorage.setItem(IRS_RATE_KEY, String(estIrsRate)); } catch {}
+  updateWoStats();
+  if (selectedWoId) selectWo(selectedWoId);
+  if (activeTab === 'finance') renderFinance();
+}
+
+// warn before closing with unsaved changes
+window.addEventListener('beforeunload', e => {
+  if (unsaved) {
+    e.preventDefault();
+    e.returnValue = '';
+  }
+});
+
+function newPart_shortcut() { openModal(''); }
+
+// ─── TAB SWITCHING ──────────────────────────────────────────────────────────
+function switchTab(tab) {
+  activeTab = tab;
+  document.getElementById('tab-stock').classList.toggle('active', tab === 'stock');
+  document.getElementById('tab-wo').classList.toggle('active', tab === 'wo');
+  document.getElementById('tab-finance').classList.toggle('active', tab === 'finance');
+  document.getElementById('stock-main').classList.toggle('hidden', tab !== 'stock');
+  document.getElementById('wo-main').classList.toggle('hidden', tab !== 'wo');
+  document.getElementById('finance-main').classList.toggle('hidden', tab !== 'finance');
+  document.getElementById('stock-stats').classList.toggle('hidden', tab !== 'stock');
+  document.getElementById('wo-stats').classList.toggle('hidden', tab !== 'wo');
+  document.getElementById('finance-stats').classList.toggle('hidden', tab !== 'finance');
+  if (tab === 'stock') {
+    scanInput.focus();
+  } else if (tab === 'wo') {
+    renderWoList();
+  } else if (tab === 'finance') {
+    renderFinance();
+  }
+}
+
+// ─── FINANCE TAB ────────────────────────────────────────────────────────────
+// A dedicated period-filtered view over all work orders: revenue, VAT owed,
+// retention withheld, and estimated IRS on profit, broken down by year and
+// quarter, plus a month-by-month cash/transfer chart and a quarterly IVA
+// declaration checklist (Portugal's quarterly IVA regime).
+let financeYear = new Date().getFullYear();
+let financeQuarter = 'all'; // 'all' | '1' | '2' | '3' | '4'
+
+const IVA_DECL_KEY = 'stockio_iva_declared';
+let ivaDeclared = (() => {
+  try { return JSON.parse(localStorage.getItem(IVA_DECL_KEY)) || {}; }
+  catch { return {}; }
+})();
+function ivaDeclBackup() {
+  try { localStorage.setItem(IVA_DECL_KEY, JSON.stringify(ivaDeclared)); } catch {}
+}
+function toggleIvaDeclared(key) {
+  ivaDeclared[key] = !ivaDeclared[key];
+  ivaDeclBackup();
+  renderFinance();
+}
+
+function quarterOf(date) { return Math.floor(date.getMonth() / 3) + 1; }
+
+// Quarterly IVA is due around the 15th–20th of the 2nd month after the
+// quarter ends (regime trimestral, turnover under €650k). Q4 rolls into
+// February of the following year.
+function ivaDueDateLabel(year, q) {
+  const dueMonths = { 1: [4, 20], 2: [7, 20], 3: [10, 20], 4: [1, 20] }; // [month(0-idx), day]
+  const [m, d] = dueMonths[q];
+  const dueYear = q === 4 ? year + 1 : year;
+  return new Date(dueYear, m, d).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function setFinanceYear(y) { financeYear = parseInt(y) || new Date().getFullYear(); renderFinance(); }
+function setFinanceQuarter(q) { financeQuarter = q; renderFinance(); }
+
+function renderFinance() {
+  const el = document.getElementById('finance-detail');
+
+  // Running balance due across all open work orders, regardless of period filter.
+  const totalBalanceDue = workOrders
+    .filter(wo => wo.status !== 'delivered' && wo.status !== 'cancelled')
+    .reduce((s, wo) => s + Math.max(0, computeWoTotals(wo).balance), 0);
+  document.getElementById('stat-finance-balance').textContent = '€' + totalBalanceDue.toFixed(2);
+
+  // Years with any work order activity, plus the current year so the
+  // picker never comes up empty on a fresh install.
+  const years = [...new Set(workOrders.map(wo => new Date(wo.createdAt).getFullYear()))];
+  years.push(new Date().getFullYear());
+  const yearOptions = [...new Set(years)].sort((a,b) => b - a);
+  if (!yearOptions.includes(financeYear)) financeYear = yearOptions[0];
+
+  // Work orders created within the selected year/quarter — drives the
+  // revenue/tax summary cards (tied to invoice date, matching how you'd
+  // declare it).
+  const inPeriod = workOrders.filter(wo => {
+    const d = new Date(wo.createdAt);
+    return d.getFullYear() === financeYear && (financeQuarter === 'all' || quarterOf(d) === parseInt(financeQuarter));
+  });
+
+  let totalInvoiced = 0, totalTax = 0, totalRetention = 0, totalEstIrs = 0, totalGoods = 0, totalLabor = 0, totalProfit = 0, totalLaborProfit = 0;
+  let invoicedCount = 0;
+  inPeriod.forEach(wo => {
+    const t = computeWoTotals(wo);
+    if (wo.invoiced) {
+      totalInvoiced += t.total;
+      invoicedCount++;
+    }
+    totalTax += t.tax;
+    totalRetention += t.retention;
+    totalEstIrs += t.estIrsDue;
+  });
+  const avgWoValue = invoicedCount ? totalInvoiced / invoicedCount : 0;
+
+  // Profit and parts/labor revenue only count work orders that are actually
+  // finished (ready or delivered) — an open/in-progress job's parts and labor
+  // can still change, so it shouldn't inflate profit before the work is done.
+  const completedInPeriod = inPeriod.filter(wo => wo.status === 'ready' || wo.status === 'delivered');
+  completedInPeriod.forEach(wo => {
+    const t = computeWoTotals(wo);
+    totalGoods += t.goodsTotal;
+    totalLabor += t.laborTotal;
+    totalProfit += t.profit;
+    totalLaborProfit += t.laborProfit;
+  });
+
+  // Cash/transfer split by when payments were actually received (payment's
+  // own date), not the work order's creation date — this is what actually
+  // moved through your hands in the period, i.e. real cash flow.
+  let periodCash = 0, periodTransfer = 0;
+  workOrders.forEach(wo => {
+    wo.payments.forEach(p => {
+      const d = new Date(p.date);
+      if (d.getFullYear() !== financeYear) return;
+      if (financeQuarter !== 'all' && quarterOf(d) !== parseInt(financeQuarter)) return;
+      if (p.method === 'cash') periodCash += p.amount;
+      else if (p.method === 'transfer') periodTransfer += p.amount;
+    });
+  });
+  const periodCollected = periodCash + periodTransfer;
+
+  // Monthly cash/transfer breakdown for the selected year — always all 12
+  // months so the chart has a consistent shape regardless of the quarter filter.
+  const monthly = Array.from({ length: 12 }, () => ({ cash: 0, transfer: 0 }));
+  workOrders.forEach(wo => {
+    wo.payments.forEach(p => {
+      const d = new Date(p.date);
+      if (d.getFullYear() !== financeYear) return;
+      if (p.method === 'cash') monthly[d.getMonth()].cash += p.amount;
+      else if (p.method === 'transfer') monthly[d.getMonth()].transfer += p.amount;
+    });
+  });
+  const maxMonthTotal = Math.max(1, ...monthly.map(m => m.cash + m.transfer));
+  const monthLabels = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+  // Quarterly IVA declaration checklist for the selected year.
+  const quarters = [1,2,3,4].map(q => {
+    const qWos = workOrders.filter(wo => {
+      const d = new Date(wo.createdAt);
+      return d.getFullYear() === financeYear && quarterOf(d) === q;
+    });
+    const qTax = qWos.reduce((s, wo) => s + computeWoTotals(wo).tax, 0);
+    const key = `${financeYear}-Q${q}`;
+    return { q, qTax, key, due: ivaDueDateLabel(financeYear, q), declared: !!ivaDeclared[key] };
+  });
+
+  el.innerHTML = `
+    <div class="finance-filters">
+      <label>Year</label>
+      <select onchange="setFinanceYear(this.value)">
+        ${yearOptions.map(y => `<option value="${y}" ${y === financeYear ? 'selected' : ''}>${y}</option>`).join('')}
+      </select>
+      <label>Quarter</label>
+      <select onchange="setFinanceQuarter(this.value)">
+        <option value="all" ${financeQuarter === 'all' ? 'selected' : ''}>Full Year</option>
+        <option value="1" ${financeQuarter === '1' ? 'selected' : ''}>Q1 (Jan–Mar)</option>
+        <option value="2" ${financeQuarter === '2' ? 'selected' : ''}>Q2 (Apr–Jun)</option>
+        <option value="3" ${financeQuarter === '3' ? 'selected' : ''}>Q3 (Jul–Sep)</option>
+        <option value="4" ${financeQuarter === '4' ? 'selected' : ''}>Q4 (Oct–Dec)</option>
+      </select>
+      <div class="finance-rate-setting">
+        <label>Est. IRS Rate</label>
+        <input id="finance-irs-rate-input" type="number" min="0" step="0.1" value="${estIrsRate}" onchange="setEstIrsRate(this.value)">
+        <span style="font-family:var(--mono); font-size:13px; color:var(--text-dim);">%</span>
+      </div>
+    </div>
+
+    <div class="cost-summary">
+      <div class="stat"><div class="stat-value">${invoicedCount} / ${inPeriod.length}</div><div class="stat-label">Invoiced / Total Orders</div></div>
+      <div class="stat"><div class="stat-value">€${totalInvoiced.toFixed(2)}</div><div class="stat-label">Total Invoiced</div></div>
+      <div class="stat"><div class="stat-value">€${periodCollected.toFixed(2)}</div><div class="stat-label">Total Collected</div></div>
+      <div class="stat"><div class="stat-value" style="font-size:14px;">€${periodCash.toFixed(2)} cash / €${periodTransfer.toFixed(2)} transfer</div><div class="stat-label">Payment Split</div></div>
+      <div class="stat"><div class="stat-value">€${totalTax.toFixed(2)}</div><div class="stat-label">IVA to Pay</div></div>
+      <div class="stat"><div class="stat-value">€${totalRetention.toFixed(2)}</div><div class="stat-label">Retention Held</div></div>
+      <div class="stat"><div class="stat-value">€${totalEstIrs.toFixed(2)}</div><div class="stat-label">Est. IRS Due</div></div>
+      <div class="stat"><div class="stat-value">€${avgWoValue.toFixed(2)}</div><div class="stat-label">Avg. Invoiced Value</div></div>
+      <div class="stat"><div class="stat-value">€${totalProfit.toFixed(2)}</div><div class="stat-label">Est. Profit (Ready/Delivered)</div></div>
+      <div class="stat"><div class="stat-value">€${totalLaborProfit.toFixed(2)}</div><div class="stat-label">Total Labor Profit (Ready/Delivered)</div></div>
+      <div class="stat"><div class="stat-value">€${totalGoods.toFixed(2)}</div><div class="stat-label">Total Parts Revenue (Ready/Delivered)</div></div>
+    </div>
+    <div style="font-size:11px; color:var(--text-dim); margin-top:-14px;">Total Invoiced, IVA, Retention, and Est. IRS — Est. Profit = cash jobs in full, invoiced jobs after VAT and Est. IRS. Profit and Parts Revenue only count work orders marked Ready or Delivered.</div>
+
+    <div class="finance-chart-card">
+      <div class="section-title" style="margin-bottom:0;">Monthly Collections — ${financeYear}</div>
+      <div class="finance-chart">
+        ${monthly.map((m, i) => {
+          const total = m.cash + m.transfer;
+          const totalPct = Math.max(total > 0 ? 4 : 0, (total / maxMonthTotal) * 100);
+          const cashPct = total > 0 ? (m.cash / total) * 100 : 0;
+          const transferPct = total > 0 ? (m.transfer / total) * 100 : 0;
+          return `
+          <div class="finance-bar-col" title="${monthLabels[i]}: €${m.cash.toFixed(2)} cash, €${m.transfer.toFixed(2)} transfer">
+            <div class="finance-bar-stack" style="height:${totalPct}%;">
+              ${m.transfer > 0 ? `<div class="finance-bar-seg transfer" style="height:${transferPct}%;"></div>` : ''}
+              ${m.cash > 0 ? `<div class="finance-bar-seg cash" style="height:${cashPct}%;"></div>` : ''}
+            </div>
+            <div class="finance-bar-label">${monthLabels[i]}</div>
+          </div>`;
+        }).join('')}
+      </div>
+      <div class="finance-legend">
+        <span><span class="finance-legend-dot cash"></span>Cash</span>
+        <span><span class="finance-legend-dot transfer"></span>Transfer</span>
+      </div>
+    </div>
+
+    <div>
+      <div class="section-title">Quarterly IVA Declarations — ${financeYear}</div>
+      <table class="finance-table">
+        <thead><tr><th>Quarter</th><th class="num">IVA Collected</th><th>Declaration Due</th><th>Status</th></tr></thead>
+        <tbody>
+          ${quarters.map(qr => `
+            <tr>
+              <td>Q${qr.q} ${financeYear}</td>
+              <td class="num">€${qr.qTax.toFixed(2)}</td>
+              <td>${qr.due}</td>
+              <td><span class="finance-declared-badge ${qr.declared ? 'done' : 'pending'}" onclick="toggleIvaDeclared('${qr.key}')">${qr.declared ? '✓ Declared' : 'Pending'}</span></td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+// ─── WORK ORDERS ────────────────────────────────────────────────────────────
+// A work order is a repair ticket: who dropped off what, what's wrong with it,
+// which parts from stock were used (auto-deducted), and how much was paid and
+// by which method. Everything persists to localStorage and to stock.json
+// alongside parts/history so it all travels together in one file.
+function woBackup() {
+  try { localStorage.setItem(WO_STORAGE_KEY, JSON.stringify(workOrders)); } catch {}
+  try { localStorage.setItem(WO_COUNTER_KEY, String(woCounter)); } catch {}
+  markUnsaved();
+}
+
+function woNumberLabel(n) { return 'WO-' + String(n).padStart(4, '0'); }
+
+// Default VAT rate — 23% for both parts and labor (repairs here are all
+// invoiced at the standard rate; partsTaxRate/laborTaxRate stay separate
+// fields per work order in case a specific job ever needs a different split).
+const DEFAULT_PARTS_TAX_RATE = 23;
+const DEFAULT_LABOR_TAX_RATE = 23;
+
+// Default retenção na fonte rate — only applies when the client is a
+// business with organized accounting (contabilidade organizada). Private
+// individual customers are never subject to retention.
+const DEFAULT_RETENTION_RATE = 11.5;
+
+function computeWoTotals(wo) {
+  const partsTotal = wo.partsUsed.reduce((s, l) => s + l.lineTotal, 0);
+  const miscTotal = (wo.miscItems || []).reduce((s, l) => s + l.lineTotal, 0);
+  const goodsTotal = partsTotal + miscTotal; // parts + other non-stock materials
+  const laborTotal = wo.laborCost || 0;
+  const subtotal = goodsTotal + laborTotal;
+  const partsTaxRate = typeof wo.partsTaxRate === 'number' ? wo.partsTaxRate : DEFAULT_PARTS_TAX_RATE;
+  const laborTaxRate = typeof wo.laborTaxRate === 'number' ? wo.laborTaxRate : DEFAULT_LABOR_TAX_RATE;
+  const goodsTax = (wo.invoiced && !wo.warranty) ? Math.round(goodsTotal * (partsTaxRate / 100) * 100) / 100 : 0;
+  const laborTax = (wo.invoiced && !wo.warranty) ? Math.round(laborTotal * (laborTaxRate / 100) * 100) / 100 : 0;
+  const tax = Math.round((goodsTax + laborTax) * 100) / 100;
+  const total = subtotal + tax;
+
+  // Retenção na fonte — an advance payment of your own IRS, only withheld
+  // when the client is a business with organized accounting, and only on a
+  // formal invoice. A work order marked "No Invoice" never touches Finanças,
+  // so it never generates retention either.
+  const isBusiness = wo.clientType === 'business';
+  const retentionRate = typeof wo.retentionRate === 'number' ? wo.retentionRate : DEFAULT_RETENTION_RATE;
+  const retention = (wo.invoiced && isBusiness) ? Math.round(laborTotal * (retentionRate / 100) * 100) / 100 : 0;
+  const amountDue = Math.round((total - retention) * 100) / 100; // what the client actually needs to pay you
+
+  const paid = wo.payments.reduce((s, p) => s + p.amount, 0);
+  const cashPaid = wo.payments.filter(p => p.method === 'cash').reduce((s, p) => s + p.amount, 0);
+  const transferPaid = wo.payments.filter(p => p.method === 'transfer').reduce((s, p) => s + p.amount, 0);
+  const balance = Math.round((amountDue - paid) * 100) / 100;
+
+  // Estimated IRS on profit (regime simplificado) — taxable profit is a
+  // presumed percentage of revenue, not revenue minus actual costs: 15% for
+  // goods/parts sold, 75% for labor/services (services are presumed to carry
+  // far less cost). estIrsRate is your own average IRS rate (set once in the
+  // header, since it depends on your total yearly income, not this one job).
+  // Only counted when the work order is invoiced — a non-invoiced job isn't
+  // declared income, so it doesn't create an IRS estimate either. This is a
+  // rough planning estimate only — not a substitute for your actual annual
+  // IRS filing.
+  const GOODS_PROFIT_COEFFICIENT = 0.15;
+  const LABOR_PROFIT_COEFFICIENT = 0.75;
+  const presumedProfit = wo.invoiced ? Math.round((goodsTotal * GOODS_PROFIT_COEFFICIENT + laborTotal * LABOR_PROFIT_COEFFICIENT) * 100) / 100 : 0;
+  const estIrsDue = Math.round(presumedProfit * (estIrsRate / 100) * 100) / 100;
+  // Split of the Est. IRS estimate by goods vs. labor, so profit can be
+  // broken out the same way — same coefficients as above, just kept separate
+  // instead of combined into one presumed-profit figure.
+  const goodsEstIrsDue = wo.invoiced ? Math.round(goodsTotal * GOODS_PROFIT_COEFFICIENT * (estIrsRate / 100) * 100) / 100 : 0;
+  const laborEstIrsDue = wo.invoiced ? Math.round(laborTotal * LABOR_PROFIT_COEFFICIENT * (estIrsRate / 100) * 100) / 100 : 0;
+
+  // Est. profit — what you actually keep. VAT charged to the client is never
+  // yours (it's excluded from subtotal already, then remitted to the state),
+  // so subtracting Est. IRS from subtotal is all that's needed. A non-invoiced
+  // ("no invoice") job has estIrsDue = 0, so its full cash amount counts as
+  // profit, matching how it's actually handled.
+  const goodsProfit = Math.round((goodsTotal - goodsEstIrsDue) * 100) / 100;
+  const laborProfit = Math.round((laborTotal - laborEstIrsDue) * 100) / 100;
+  const profit = Math.round((subtotal - estIrsDue) * 100) / 100;
+
+  return { partsTotal, miscTotal, goodsTotal, laborTotal, subtotal, partsTaxRate, laborTaxRate, goodsTax, laborTax, tax, total, retentionRate, retention, amountDue, paid, cashPaid, transferPaid, balance, presumedProfit, estIrsDue, goodsEstIrsDue, laborEstIrsDue, goodsProfit, laborProfit, profit };
+}
+
+function openWoModal() {
+  ['wo-m-name','wo-m-phone','wo-m-make','wo-m-model','wo-m-serial','wo-m-problem'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('wo-modal').classList.remove('hidden');
+  document.getElementById('wo-m-name').focus();
+}
+function closeWoModal() { document.getElementById('wo-modal').classList.add('hidden'); }
+
+function saveNewWo() {
+  const name = document.getElementById('wo-m-name').value.trim();
+  if (!name) { alert('Customer name is required'); return; }
+  woCounter += 1;
+  const wo = {
+    id: crypto.randomUUID(),
+    number: woCounter,
+    createdAt: new Date().toISOString(),
+    status: 'open',
+    statusChangedAt: new Date().toISOString(),
+    customer: {
+      name,
+      phone: document.getElementById('wo-m-phone').value.trim()
+    },
+    unit: {
+      make: document.getElementById('wo-m-make').value.trim(),
+      model: document.getElementById('wo-m-model').value.trim(),
+      serial: document.getElementById('wo-m-serial').value.trim()
+    },
+    problem: document.getElementById('wo-m-problem').value.trim(),
+    partsUsed: [],
+    miscItems: [],
+    laborCost: 0,
+    invoiced: false,
+    warranty: false,
+    partsTaxRate: DEFAULT_PARTS_TAX_RATE,
+    laborTaxRate: DEFAULT_LABOR_TAX_RATE,
+    clientType: 'individual',
+    retentionRate: DEFAULT_RETENTION_RATE,
+    payments: []
+  };
+  workOrders.push(wo);
+  woBackup();
+  logEvent('wo', woNumberLabel(wo.number), `created for ${wo.customer.name}${wo.unit.make || wo.unit.model ? ' — ' + [wo.unit.make, wo.unit.model].filter(Boolean).join(' ') : ''}`);
+  closeWoModal();
+  renderWoList();
+  selectWo(wo.id);
+}
+
+function renderWoStatusChips() {
+  const statuses = [
+    { key: 'open', label: 'Open' },
+    { key: 'waiting_parts', label: 'Waiting Parts' },
+    { key: 'in_progress', label: 'In Progress' },
+    { key: 'ready', label: 'Ready' },
+    { key: 'delivered', label: 'Delivered' },
+    { key: 'cancelled', label: 'Cancelled' }
+  ];
+  const wrap = document.getElementById('wo-status-chips');
+  wrap.innerHTML = [
+    `<span class="loc-chip ${!woStatusFilter ? 'active' : ''}" onclick="setWoStatusFilter(null)">All</span>`,
+    `<span class="loc-chip ${woStatusFilter === '__not_delivered__' ? 'active' : ''}" onclick="setWoStatusFilter('__not_delivered__')">All but Delivered</span>`,
+    ...statuses.map(s => `<span class="loc-chip ${woStatusFilter === s.key ? 'active' : ''}" onclick="setWoStatusFilter('${s.key}')">${s.label}</span>`)
+  ].join('');
+}
+function setWoStatusFilter(key) { woStatusFilter = key; renderWoStatusChips(); renderWoList(); }
+
+function statusLabel(key) {
+  return { open: 'Open', waiting_parts: 'Waiting Parts', in_progress: 'In Progress', ready: 'Ready', delivered: 'Delivered', cancelled: 'Cancelled' }[key] || key;
+}
+
+// ─── STATUS AGING BADGE ──────────────────────────────────────────────────────
+// Flags work orders that have been sitting in the same non-final status for a
+// while — most often "Waiting Parts" or "In Progress" — so a stalled job
+// stands out in the list instead of blending in. Uses statusChangedAt (set
+// whenever the status dropdown changes); falls back to createdAt for older
+// work orders saved before that field existed.
+function getAgingBadge(wo) {
+  if (wo.status === 'ready' || wo.status === 'delivered' || wo.status === 'cancelled') return '';
+  const since = new Date(wo.statusChangedAt || wo.createdAt);
+  const days = Math.floor((Date.now() - since.getTime()) / 86400000);
+  if (days >= 90) return `<span class="aging-badge quarter" title="${days} days in ${statusLabel(wo.status)}">⚠ 3mo+</span>`;
+  if (days >= 30) return `<span class="aging-badge month" title="${days} days in ${statusLabel(wo.status)}">▲ 1mo+</span>`;
+  if (days >= 7) return `<span class="aging-badge week" title="${days} days in ${statusLabel(wo.status)}">● 1wk+</span>`;
+  return '';
+}
+
+// ─── CUSTOMERS VIEW ──────────────────────────────────────────────────────────
+// Groups existing work orders by customer (same phone-first/name-fallback
+// matching rule as getCustomerHistory) so there's no separate customer
+// database to keep in sync — it's always derived live from workOrders.
+function getCustomerKey(customer) {
+  const phone = (customer.phone || '').trim().toLowerCase();
+  if (phone) return 'p:' + phone;
+  const name = (customer.name || '').trim().toLowerCase();
+  return 'n:' + name;
+}
+
+function getCustomersList() {
+  const map = new Map();
+  workOrders.forEach(wo => {
+    const key = getCustomerKey(wo.customer);
+    if (!map.has(key)) map.set(key, { key, name: wo.customer.name, phone: wo.customer.phone, latestNumber: wo.number, wos: [] });
+    const c = map.get(key);
+    c.wos.push(wo);
+    if (wo.number > c.latestNumber) { c.latestNumber = wo.number; c.name = wo.customer.name; c.phone = wo.customer.phone; } // keep most recently-entered name/phone in case it was corrected later
+  });
+  return Array.from(map.values()).map(c => {
+    const sorted = c.wos.slice().sort((a, b) => b.number - a.number);
+    const totalPaid = c.wos.reduce((s, wo) => s + wo.payments.reduce((ps, p) => ps + p.amount, 0), 0);
+    // Outstanding balance only counts finalized (ready/delivered) jobs — same
+    // rule used everywhere else in the app for when a balance is "real".
+    const balanceDue = c.wos.reduce((s, wo) => {
+      if (wo.status !== 'ready' && wo.status !== 'delivered') return s;
+      return s + Math.max(0, computeWoTotals(wo).balance);
+    }, 0);
+    return { key: c.key, name: c.name, phone: c.phone, woCount: c.wos.length, totalPaid, balanceDue, lastVisit: sorted[0].createdAt, wos: sorted };
+  });
+}
+
+function toggleWoMode() {
+  woViewMode = woViewMode === 'orders' ? 'customers' : 'orders';
+  selectedCustomerKey = null;
+  selectedWoId = null;
+  syncWoModeUI();
+  renderWoList();
+  document.getElementById('wo-detail').innerHTML = woViewMode === 'customers'
+    ? `<div class="no-selection"><div class="no-selection-icon">◫</div><p>Select a customer</p></div>`
+    : `<div class="no-selection"><div class="no-selection-icon">◫</div><p>Create or select a work order</p></div>`;
+}
+
+function syncWoModeUI() {
+  const btn = document.getElementById('wo-mode-toggle-btn');
+  const statusWrap = document.getElementById('wo-status-filter-wrap');
+  const search = document.getElementById('wo-search-input');
+  if (!btn || !statusWrap || !search) return;
+  if (woViewMode === 'customers') {
+    btn.textContent = 'Work Orders';
+    statusWrap.classList.add('hidden');
+    search.placeholder = 'Search customers by name or phone…';
+  } else {
+    btn.textContent = 'Customers';
+    statusWrap.classList.remove('hidden');
+    search.placeholder = 'Search customer, phone, serial, code, WO#…';
+  }
+}
+
+function renderCustomersList() {
+  const q = (document.getElementById('wo-search-input').value || '').toLowerCase();
+  const customers = getCustomersList()
+    .filter(c => !q || (c.name || '').toLowerCase().includes(q) || (c.phone || '').toLowerCase().includes(q))
+    .sort((a, b) => new Date(b.lastVisit) - new Date(a.lastVisit));
+
+  const list = document.getElementById('wo-list');
+  if (!customers.length) {
+    list.innerHTML = `<div class="empty-state">No customers found</div>`;
+    return;
+  }
+  list.innerHTML = customers.map(c => `
+    <div class="part-item ${c.key === selectedCustomerKey ? 'active' : ''}" onclick="selectCustomer('${c.key.replace(/'/g, "\\'")}')">
+      <div class="wo-item-top">
+        <span class="wo-item-num">${c.name || 'Unknown'}</span>
+        ${c.balanceDue > 0 ? `<span class="wo-status-badge open">€${c.balanceDue.toFixed(2)} due</span>` : ''}
+      </div>
+      <div class="wo-item-customer">${c.phone || 'No phone on file'}</div>
+      <div class="wo-item-unit">${c.woCount} job${c.woCount > 1 ? 's' : ''} · last visit ${new Date(c.lastVisit).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}</div>
+      <div class="wo-item-bottom"><span class="wo-item-balance settled">€${c.totalPaid.toFixed(2)} paid</span></div>
+    </div>
+  `).join('');
+}
+
+function selectCustomer(key) {
+  selectedCustomerKey = key;
+  renderCustomersList();
+  const c = getCustomersList().find(x => x.key === key);
+  if (!c) return;
+  const note = customerNotes[key] || '';
+
+  document.getElementById('wo-detail').innerHTML = `
+    <div class="detail-header">
+      <div>
+        <div class="detail-code">${c.name || 'Unknown Customer'}</div>
+        <div class="detail-manufacturer">${c.phone || 'No phone on file'}</div>
+      </div>
+    </div>
+
+    <div class="cost-summary">
+      <div class="stat"><div class="stat-value">${c.woCount}</div><div class="stat-label">Work Orders</div></div>
+      <div class="stat"><div class="stat-value">€${c.totalPaid.toFixed(2)}</div><div class="stat-label">Total Paid</div></div>
+      <div class="stat"><div class="stat-value ${c.balanceDue > 0 ? 'due' : 'settled'}">€${c.balanceDue.toFixed(2)}</div><div class="stat-label">Balance Due</div></div>
+      <div class="stat"><div class="stat-value" style="font-size:16px;">${new Date(c.lastVisit).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}</div><div class="stat-label">Last Visit</div></div>
+    </div>
+
+    <div>
+      <div class="section-title">Notes</div>
+      <div class="field full">
+        <textarea id="customer-note-input" placeholder="e.g. always pays cash, prefers pickup after 6pm…">${note}</textarea>
+      </div>
+      <div class="save-bar" style="margin-top:8px;">
+        <button class="btn" onclick="saveCustomerNotes('${key.replace(/'/g, "\\'")}')">Save Notes</button>
+      </div>
+    </div>
+
+    <div>
+      <div class="section-title">Work Order History — ${c.woCount} job${c.woCount > 1 ? 's' : ''}</div>
+      <div>
+        ${c.wos.map(w => {
+          const { balance: wBalance } = computeWoTotals(w);
+          const wIsFinal = w.status === 'ready' || w.status === 'delivered';
+          let wBalanceLine = '';
+          if (w.status === 'cancelled') {
+            if (wBalance > 0) wBalanceLine = `<span class="wo-item-balance due">€${wBalance.toFixed(2)} due</span>`;
+          } else if (wIsFinal) {
+            wBalanceLine = wBalance > 0
+              ? `<span class="wo-item-balance due">€${wBalance.toFixed(2)} due</span>`
+              : `<span class="wo-item-balance settled">Paid in full</span>`;
+          } else {
+            wBalanceLine = `<span class="wo-item-balance pending">Not finalized yet</span>`;
+          }
+          return `
+          <div class="line-item" style="cursor:pointer;" onclick="selectWo('${w.id}')" title="Open ${woNumberLabel(w.number)}">
+            <div class="line-item-main">
+              <span class="line-item-code">${woNumberLabel(w.number)}</span>
+              <span class="wo-status-badge ${w.status}" style="margin-left:8px;">${statusLabel(w.status)}</span>
+              &nbsp;${new Date(w.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}
+              ${[w.unit.make, w.unit.model].filter(Boolean).join(' ') ? ' — ' + [w.unit.make, w.unit.model].filter(Boolean).join(' ') : ''}${w.unit.serial ? ' · SN ' + w.unit.serial : ''}
+              ${w.problem ? '<br><span style="color:var(--text-dim);font-size:12px;">' + w.problem + '</span>' : ''}
+            </div>
+            <div>${wBalanceLine}</div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function saveCustomerNotes(key) {
+  const input = document.getElementById('customer-note-input');
+  if (!input) return;
+  customerNotes[key] = input.value;
+  customerNotesBackup();
+  markUnsaved();
+}
+
+// ─── WORK ORDERS LIST (dispatcher) ──────────────────────────────────────────
+function renderWoList() {
+  updateManufacturerDatalist();
+  updateWoModelDatalist();
+  syncWoModeUI();
+  if (woViewMode === 'customers') {
+    renderCustomersList();
+    updateWoStats();
+    return;
+  }
+  renderWorkOrdersList();
+}
+
+function renderWorkOrdersList() {
+  renderWoStatusChips();
+  const q = document.getElementById('wo-search-input').value.toLowerCase();
+  const filtered = workOrders.filter(wo => {
+    const matchesSearch = !q ||
+      woNumberLabel(wo.number).toLowerCase().includes(q) ||
+      wo.customer.name.toLowerCase().includes(q) ||
+      (wo.customer.phone||'').toLowerCase().includes(q) ||
+      (wo.unit.serial||'').toLowerCase().includes(q) ||
+      (wo.unit.make||'').toLowerCase().includes(q) ||
+      (wo.unit.model||'').toLowerCase().includes(q) ||
+      wo.partsUsed.some(l => l.code.toLowerCase().includes(q));
+    const matchesStatus = !woStatusFilter ||
+      (woStatusFilter === '__not_delivered__' ? wo.status !== 'delivered' : wo.status === woStatusFilter);
+    // A search query is treated as a customer/unit lookup and takes priority over
+    // the status chip — e.g. searching a returning customer's phone number should
+    // surface their old delivered/cancelled orders too, not just the active filter.
+    return matchesSearch && (q ? true : matchesStatus);
+  }).sort((a,b) => b.number - a.number);
+
+  const list = document.getElementById('wo-list');
+  if (!filtered.length) {
+    list.innerHTML = `<div class="empty-state">No work orders found</div>`;
+  } else {
+    list.innerHTML = filtered.map(wo => {
+      const { balance } = computeWoTotals(wo);
+      const isFinalStage = wo.status === 'ready' || wo.status === 'delivered';
+      let balanceLine = '';
+      if (wo.status === 'cancelled') {
+        // Cancelled jobs usually never accrued a cost — only show anything
+        // if there's an actual amount still owed (rare, but possible).
+        if (balance > 0) balanceLine = `<span class="wo-item-balance due">€${balance.toFixed(2)} due</span>`;
+      } else if (isFinalStage) {
+        balanceLine = balance > 0
+          ? `<span class="wo-item-balance due">€${balance.toFixed(2)} due</span>`
+          : `<span class="wo-item-balance settled">Paid in full</span>`;
+      } else {
+        balanceLine = `<span class="wo-item-balance pending">Not finalized yet</span>`;
+      }
+      return `
+      <div class="part-item ${wo.id === selectedWoId ? 'active' : ''}" onclick="selectWo('${wo.id}')">
+        <div class="wo-item-top">
+          <span class="wo-item-num">${woNumberLabel(wo.number)}</span>
+          <span class="wo-item-badges">${getAgingBadge(wo)}<span class="wo-status-badge ${wo.status}">${statusLabel(wo.status)}</span></span>
+        </div>
+        <div class="wo-item-customer">${wo.customer.name}</div>
+        <div class="wo-item-unit">${[wo.unit.make, wo.unit.model].filter(Boolean).join(' ') || '—'}${wo.unit.serial ? ' · SN ' + wo.unit.serial : ''}</div>
+        ${balanceLine ? `<div class="wo-item-bottom">${balanceLine}</div>` : ''}
+      </div>`;
+    }).join('');
+  }
+  updateWoStats();
+}
+
+function updateWoStats() {
+  const open = workOrders.filter(wo => wo.status !== 'delivered' && wo.status !== 'cancelled');
+  document.getElementById('stat-wo-open').textContent = open.length;
+}
+
+// ─── CUSTOMER HISTORY ────────────────────────────────────────────────────────
+// Finds this customer's other work orders so a returning customer's past
+// repairs are visible immediately, regardless of the current status filter.
+// Matches by phone number first (most reliable id), falling back to name
+// when no phone is on file. Excludes the work order being viewed itself.
+function getCustomerHistory(wo) {
+  const phone = (wo.customer.phone || '').trim().toLowerCase();
+  const name = (wo.customer.name || '').trim().toLowerCase();
+  if (!phone && !name) return [];
+  return workOrders
+    .filter(w => w.id !== wo.id)
+    .filter(w => {
+      const wPhone = (w.customer.phone || '').trim().toLowerCase();
+      const wName = (w.customer.name || '').trim().toLowerCase();
+      if (phone && wPhone) return wPhone === phone;
+      return !!wName && wName === name;
+    })
+    .sort((a, b) => b.number - a.number);
+}
+
+function selectWo(id) {
+  selectedWoId = id;
+  const wo = workOrders.find(w => w.id === id);
+  if (!wo) return;
+  renderWoList();
+
+  const { partsTotal, miscTotal, subtotal, tax, total, retentionRate, retention, amountDue, paid, cashPaid, transferPaid, balance, presumedProfit, estIrsDue } = computeWoTotals(wo);
+  const isBusiness = wo.clientType === 'business';
+  const custHistory = getCustomerHistory(wo);
+
+  document.getElementById('wo-detail').innerHTML = `
+    <div class="detail-header">
+      <div>
+        <div class="detail-code">${woNumberLabel(wo.number)}</div>
+        <div class="detail-manufacturer">Created ${new Date(wo.createdAt).toLocaleDateString([], { month:'short', day:'numeric', year:'numeric' })}</div>
+      </div>
+      <div class="detail-actions" style="align-items:center; gap:10px; flex-wrap:wrap;">
+        <select class="status-select" id="wo-status-select" onchange="updateWoStatus('${wo.id}', this.value)">
+          ${['open','waiting_parts','in_progress','ready','delivered','cancelled'].map(s => `<option value="${s}" ${wo.status===s?'selected':''}>${statusLabel(s)}</option>`).join('')}
+        </select>
+        <button class="btn ${wo.invoiced ? 'success' : 'secondary'}" onclick="toggleWoInvoice('${wo.id}')" >${wo.invoiced ? 'Invoice' : 'No Invoice'}</button>
+        <button class="btn ${wo.warranty ? 'success' : 'secondary'}" onclick="toggleWoWarranty('${wo.id}')" >${wo.warranty ? 'Warranty (No VAT)' : 'Not Warranty'}</button>
+        <button class="btn ${isBusiness ? 'success' : 'secondary'}" onclick="toggleWoClientType('${wo.id}')" >${isBusiness ? 'Withholding Tax' : 'No 11,5% Withhold'}</button>
+        <button class="btn secondary" onclick="printWo('${wo.id}')" >Print</button>
+        <button class="btn danger" onclick="deleteWo('${wo.id}')">Delete</button>
+      </div>
+    </div>
+
+    ${custHistory.length ? `
+    <div>
+      <div class="section-title">Customer History — ${custHistory.length} previous work order${custHistory.length > 1 ? 's' : ''}</div>
+      <div>
+        ${custHistory.map(w => {
+          const { balance: wBalance } = computeWoTotals(w);
+          const wIsFinal = w.status === 'ready' || w.status === 'delivered';
+          let wBalanceLine = '';
+          if (w.status === 'cancelled') {
+            if (wBalance > 0) wBalanceLine = `<span class="wo-item-balance due">€${wBalance.toFixed(2)} due</span>`;
+          } else if (wIsFinal) {
+            wBalanceLine = wBalance > 0
+              ? `<span class="wo-item-balance due">€${wBalance.toFixed(2)} due</span>`
+              : `<span class="wo-item-balance settled">Paid in full</span>`;
+          } else {
+            wBalanceLine = `<span class="wo-item-balance pending">Not finalized yet</span>`;
+          }
+          return `
+          <div class="line-item" style="cursor:pointer;" onclick="selectWo('${w.id}')" title="Open ${woNumberLabel(w.number)}">
+            <div class="line-item-main">
+              <span class="line-item-code">${woNumberLabel(w.number)}</span>
+              <span class="wo-status-badge ${w.status}" style="margin-left:8px;">${statusLabel(w.status)}</span>
+              &nbsp;${new Date(w.createdAt).toLocaleDateString([], { month:'short', day:'numeric', year:'numeric' })}
+              ${[w.unit.make, w.unit.model].filter(Boolean).join(' ') ? ' — ' + [w.unit.make, w.unit.model].filter(Boolean).join(' ') : ''}${w.unit.serial ? ' · SN ' + w.unit.serial : ''}
+              ${w.problem ? '<br><span style="color:var(--text-dim);font-size:12px;">' + w.problem + '</span>' : ''}
+            </div>
+            <div>${wBalanceLine}</div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+    ` : ''}
+
+    <div class="cost-summary">
+      <div class="stat"><div class="stat-value">€${subtotal.toFixed(2)}</div><div class="stat-label">Subtotal</div></div>
+      ${wo.invoiced && !wo.warranty ? `<div class="stat"><div class="stat-value">€${tax.toFixed(2)}</div><div class="stat-label">VAT Due (23%)</div></div>` : ''}
+      <div class="stat"><div class="stat-value">€${total.toFixed(2)}</div><div class="stat-label">Total Cost</div></div>
+      ${isBusiness ? `<div class="stat"><div class="stat-value">€${retention.toFixed(2)}</div><div class="stat-label">Retention (${retentionRate}%)</div></div>
+      <div class="stat"><div class="stat-value">€${amountDue.toFixed(2)}</div><div class="stat-label">Due From Client</div></div>` : ''}
+      ${wo.invoiced ? `<div class="stat"><div class="stat-value">€${estIrsDue.toFixed(2)}</div><div class="stat-label">Est. IRS on Profit (${estIrsRate}%)</div></div>` : ''}
+      <div class="stat"><div class="stat-value">€${paid.toFixed(2)}</div><div class="stat-label">Paid</div></div>
+      <div class="stat"><div class="stat-value ${balance > 0 ? 'due' : 'settled'}">€${Math.max(0,balance).toFixed(2)}</div><div class="stat-label">Balance Due</div></div>
+      <div class="stat"><div class="stat-value" style="font-size:14px;">€${cashPaid.toFixed(2)} cash / €${transferPaid.toFixed(2)} transfer</div><div class="stat-label">Payment Split</div></div>
+    </div>
+
+    <div>
+      <div class="section-title">Customer & Unit</div>
+      <div class="fields-grid">
+        <div class="field">
+          <label>Customer Name</label>
+          <input id="wo-e-name" value="${wo.customer.name}">
+        </div>
+        <div class="field">
+          <label>Phone</label>
+          <input id="wo-e-phone" value="${wo.customer.phone||''}">
+        </div>
+        <div class="field">
+          <label>Make</label>
+          <input id="wo-e-make" value="${wo.unit.make||''}" list="manufacturer-suggestions" autocomplete="off">
+        </div>
+        <div class="field">
+          <label>Model</label>
+          <input id="wo-e-model" value="${wo.unit.model||''}" list="wo-model-suggestions" autocomplete="off">
+        </div>
+        <div class="field full">
+          <label>Serial Number</label>
+          <input id="wo-e-serial" value="${wo.unit.serial||''}">
+        </div>
+        <div class="field full">
+          <label>Problem / Notes</label>
+          <textarea id="wo-e-problem">${wo.problem||''}</textarea>
+        </div>
+      </div>
+      <div class="save-bar" style="margin-top:10px;">
+        <button class="btn" onclick="saveWoFields('${wo.id}')">Save Details</button>
+      </div>
+    </div>
+
+    <div>
+      <div class="section-title">Parts Used</div>
+      <div class="add-row">
+        <input id="wo-part-code" placeholder="Type part code" style="flex:1;" onkeydown="if(event.key==='Enter') addWoPart('${wo.id}')">
+        <input id="wo-part-qty" type="number" min="1" step="1" value="1" style="width:70px;">
+        <button class="btn" onclick="addWoPart('${wo.id}')">Add</button>
+      </div>
+      <div style="margin-top:10px;">
+        ${wo.partsUsed.length ? wo.partsUsed.map(l => `
+          <div class="line-item">
+            <div class="line-item-main"><span class="line-item-code">${l.code}</span>${l.qty} × €${l.unitPrice.toFixed(2)}${l.description ? ' — ' + l.description : ''}</div>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span class="line-item-amt">€${l.lineTotal.toFixed(2)}</span>
+              <button class="line-remove-btn" onclick="removeWoPart('${wo.id}','${l.id}')" title="Remove and restock">✕</button>
+            </div>
+          </div>
+        `).join('') : '<div class="hist-empty">No parts used yet</div>'}
+      </div>
+
+      <div>
+      <div class="section-title">Other Items</div>
+      <div class="add-row">
+        <input id="wo-misc-desc" placeholder="Description" style="flex:1;" onkeydown="if(event.key==='Enter') addWoMisc('${wo.id}')">
+        <input id="wo-misc-qty" type="number" min="1" step="1" value="1" style="width:70px;" title="Quantity">
+        <input id="wo-misc-price" type="number" min="0" step="0.5" placeholder="Unit price" style="width:100px;">
+        <button class="btn" onclick="addWoMisc('${wo.id}')">Add</button>
+      </div>
+      <div style="margin-top:10px;">
+        ${(wo.miscItems||[]).length ? wo.miscItems.map(l => `
+          <div class="line-item">
+            <div class="line-item-main">${l.description} — ${l.qty} × €${l.unitPrice.toFixed(2)}</div>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span class="line-item-amt">€${l.lineTotal.toFixed(2)}</span>
+              <button class="line-remove-btn" onclick="removeWoMisc('${wo.id}','${l.id}')" title="Remove">✕</button>
+            </div>
+          </div>
+        `).join('') : '<div class="hist-empty">No other items added yet</div>'}
+      </div>
+      <div class="field">
+          <label>Labor Cost</label>
+          <input id="wo-e-labor" type="number" min="0" step="17.5" value="${wo.laborCost||0}" onchange="saveWoLabor('${wo.id}', this.value)">
+      </div>
+    </div>
+
+      <div class="fields-grid" style="margin-top:12px;">
+        <div class="field">
+          <label>Other Items Subtotal</label>
+          <input value="€${miscTotal.toFixed(2)}" disabled>
+        </div>
+        <div class="field">
+          <label>Parts Subtotal</label>
+          <input value="€${partsTotal.toFixed(2)}" disabled>
+        </div>
+      </div>
+    </div>
+
+    
+
+    <div>
+      <div class="section-title">Payments</div>
+      <div class="add-row">
+        <input id="wo-payment-amount" type="number" min="0.01" step="0.01" placeholder="Amount" style="width:120px;">
+        <select id="wo-payment-method">
+          <option value="cash">Cash</option>
+          <option value="transfer">Transfer</option>
+        </select>
+        <button class="btn secondary" onclick="addWoPayment('${wo.id}')">Record Payment</button>
+        <button class="btn success" onclick="payWoInFull('${wo.id}')">Pay in full</button>
+      </div>
+      <div style="margin-top:10px;">
+        ${wo.payments.length ? wo.payments.map(p => `
+          <div class="payment-item">
+            <div class="payment-item-main">
+              <span class="payment-method-tag ${p.method}">${p.method}</span>${new Date(p.date).toLocaleDateString([], { month:'short', day:'numeric' })}
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span class="payment-item-amt">€${p.amount.toFixed(2)}</span>
+              <button class="line-remove-btn" onclick="removeWoPayment('${wo.id}','${p.id}')" title="Remove payment">✕</button>
+            </div>
+          </div>
+        `).join('') : '<div class="hist-empty">No payments recorded yet</div>'}
+      </div>
+    </div>
+  `;
+}
+
+// Builds a clean invoice layout for a work order into the hidden #print-area,
+// then triggers the browser's print dialog. @media print rules (see <style>)
+// hide the rest of the app so only the invoice ends up on paper / as PDF.
+function printWo(id) {
+  const wo = workOrders.find(w => w.id === id);
+  if (!wo) return;
+  const { partsTotal, miscTotal, subtotal, tax, total, retentionRate, retention, amountDue, paid, cashPaid, transferPaid, balance } = computeWoTotals(wo);
+  const isBusiness = wo.clientType === 'business';
+
+  const rows = [
+    ...wo.partsUsed.map(l => `
+      <tr>
+        <td>${l.code}${l.description ? ' — ' + l.description : ''}</td>
+        <td class="num">${l.qty}</td>
+        <td class="num">€${l.unitPrice.toFixed(2)}</td>
+        <td class="num">€${l.lineTotal.toFixed(2)}</td>
+      </tr>`),
+    ...(wo.miscItems||[]).map(l => `
+      <tr>
+        <td>${l.description}</td>
+        <td class="num">${l.qty}</td>
+        <td class="num">€${l.unitPrice.toFixed(2)}</td>
+        <td class="num">€${l.lineTotal.toFixed(2)}</td>
+      </tr>`),
+    wo.laborCost ? `
+      <tr>
+        <td>Labor</td>
+        <td class="num">—</td>
+        <td class="num">—</td>
+        <td class="num">€${wo.laborCost.toFixed(2)}</td>
+      </tr>` : ''
+  ].join('');
+
+  const paymentRows = wo.payments.length ? wo.payments.map(p => `
+      <div class="inv-row"><span>${p.method === 'cash' ? 'Cash' : 'Transfer'} — ${new Date(p.date).toLocaleDateString([], { month:'short', day:'numeric', year:'numeric' })}</span><span>€${p.amount.toFixed(2)}</span></div>
+    `).join('') : '<div class="inv-row"><span>No payments recorded</span><span></span></div>';
+
+  document.getElementById('print-area').innerHTML = `
+    <div class="inv-header">
+      <div class="inv-title">STOCK.io — Work Order</div>
+      <div class="inv-meta">
+        <div class="inv-number">${woNumberLabel(wo.number)}</div>
+        <div>${new Date(wo.createdAt).toLocaleDateString([], { month:'long', day:'numeric', year:'numeric' })}</div>
+        <div>Status: ${statusLabel(wo.status)}</div>
+      </div>
+    </div>
+
+    <div class="inv-section">
+      <div class="inv-section-title">Customer</div>
+      <div class="inv-row"><span>${wo.customer.name}</span><span>${wo.customer.phone||''}</span></div>
+    </div>
+
+    <div class="inv-section">
+      <div class="inv-section-title">Unit</div>
+      <div class="inv-row"><span>${[wo.unit.make, wo.unit.model].filter(Boolean).join(' ') || '—'}</span><span>${wo.unit.serial ? 'SN ' + wo.unit.serial : ''}</span></div>
+      ${wo.problem ? `<div class="inv-row"><span>${wo.problem}</span><span></span></div>` : ''}
+    </div>
+
+    <div class="inv-section">
+      <div class="inv-section-title">Items & Labor</div>
+      <table class="inv-table">
+        <thead><tr><th>Description</th><th class="num">Qty</th><th class="num">Unit</th><th class="num">Total</th></tr></thead>
+        <tbody>${rows || '<tr><td colspan="4">No items</td></tr>'}</tbody>
+      </table>
+    </div>
+
+    <div class="inv-section">
+      <div class="inv-section-title">Payments</div>
+      ${paymentRows}
+    </div>
+
+    <div class="inv-totals">
+      <div class="inv-row"><span>Parts</span><span>€${partsTotal.toFixed(2)}</span></div>
+      <div class="inv-row"><span>Other Items</span><span>€${miscTotal.toFixed(2)}</span></div>
+      <div class="inv-row"><span>Labor</span><span>€${(wo.laborCost||0).toFixed(2)}</span></div>
+      <div class="inv-row"><span>Subtotal</span><span>€${subtotal.toFixed(2)}</span></div>
+      ${wo.invoiced && !wo.warranty ? `<div class="inv-row"><span>Tax (23%)</span><span>€${tax.toFixed(2)}</span></div>` : ''}
+      <div class="inv-row grand"><span>Total</span><span>€${total.toFixed(2)}</span></div>
+      ${isBusiness ? `<div class="inv-row"><span>Retenção na Fonte (${retentionRate}%)</span><span>−€${retention.toFixed(2)}</span></div>
+      <div class="inv-row"><span>Net Due</span><span>€${amountDue.toFixed(2)}</span></div>` : ''}
+      <div class="inv-row"><span>Paid (cash)</span><span>€${cashPaid.toFixed(2)}</span></div>
+      <div class="inv-row"><span>Paid (transfer)</span><span>€${transferPaid.toFixed(2)}</span></div>
+      <div class="inv-row ${balance > 0 ? 'due' : ''}"><span>${balance > 0 ? 'Balance Due' : 'Paid in Full'}</span><span>€${Math.max(0,balance).toFixed(2)}</span></div>
+    </div>
+
+    <div class="inv-footer">Not valid invoice.</div>
+  `;
+
+  window.print();
+}
+
+function updateWoStatus(id, status) {
+  const wo = workOrders.find(w => w.id === id);
+  if (!wo) return;
+  const before = wo.status;
+  wo.status = status;
+  if (status !== before) wo.statusChangedAt = new Date().toISOString();
+  woBackup();
+  logEvent('wo', woNumberLabel(wo.number), `status ${statusLabel(before)} → ${statusLabel(status)}`);
+  renderWoList();
+}
+
+// Flips the invoice/tax flag for a work order. When on, computeWoTotals adds
+// 23% tax on top of the subtotal (parts + other items + labor); when off,
+// the total is just the subtotal with no tax.
+function toggleWoInvoice(id) {
+  const wo = workOrders.find(w => w.id === id);
+  if (!wo) return;
+  wo.invoiced = !wo.invoiced;
+  woBackup();
+  logEvent('wo', woNumberLabel(wo.number), wo.invoiced ? 'marked as invoiced (+23% tax)' : 'marked as no invoice (no tax)');
+  renderWoList();
+  selectWo(id);
+}
+
+// Flips whether the client is a private individual or a business with
+// organized accounting. Only business clients withhold retenção na fonte —
+// computeWoTotals applies the retention rate to the labor value only, and
+// reduces the amount actually collected from that client accordingly.
+function toggleWoClientType(id) {
+  const wo = workOrders.find(w => w.id === id);
+  if (!wo) return;
+  wo.clientType = wo.clientType === 'business' ? 'individual' : 'business';
+  woBackup();
+  logEvent('wo', woNumberLabel(wo.number), wo.clientType === 'business' ? 'marked as business client (retenção applies)' : 'marked as private individual (no retenção)');
+  renderWoList();
+  selectWo(id);
+}
+
+// Warranty jobs (manufacturer pays, out-of-country) — invoiced for your own
+// control and still counted toward the IRS profit estimate, but VAT never
+// applies since the manufacturer is outside the country.
+function toggleWoWarranty(id) {
+  const wo = workOrders.find(w => w.id === id);
+  if (!wo) return;
+  wo.warranty = !wo.warranty;
+  woBackup();
+  logEvent('wo', woNumberLabel(wo.number), wo.warranty ? 'marked as warranty (no VAT)' : 'unmarked warranty');
+  renderWoList();
+  selectWo(id);
+}
+
+function saveWoFields(id) {
+  const wo = workOrders.find(w => w.id === id);
+  if (!wo) return;
+  wo.customer.name = document.getElementById('wo-e-name').value.trim() || wo.customer.name;
+  wo.customer.phone = document.getElementById('wo-e-phone').value.trim();
+  wo.unit.make = document.getElementById('wo-e-make').value.trim();
+  wo.unit.model = document.getElementById('wo-e-model').value.trim();
+  wo.unit.serial = document.getElementById('wo-e-serial').value.trim();
+  wo.problem = document.getElementById('wo-e-problem').value.trim();
+  woBackup();
+  logEvent('wo', woNumberLabel(wo.number), 'details updated');
+  renderWoList();
+  selectWo(id);
+}
+
+function saveWoLabor(id, value) {
+  const wo = workOrders.find(w => w.id === id);
+  if (!wo) return;
+  wo.laborCost = Math.max(0, parseFloat(value) || 0);
+  woBackup();
+  renderWoList();
+  selectWo(id);
+}
+
+// Adding a part looks it up in the shared `parts` stock array, deducts the
+// quantity from stock immediately, records the cost line on the work order,
+// and logs it once in the shared history log so it's traceable from both sides.
+function addWoPart(woId) {
+  const wo = workOrders.find(w => w.id === woId);
+  if (!wo) return;
+  const codeInput = document.getElementById('wo-part-code');
+  const code = codeInput.value.trim();
+  if (!code) return;
+  const qty = Math.max(1, parseInt(document.getElementById('wo-part-qty').value) || 1);
+  const part = parts.find(p => p.code.toLowerCase() === code.toLowerCase());
+  if (!part) { alert(`No part in stock with code "${code}"`); return; }
+  if (part.qty < qty) {
+    if (!confirm(`Only ${part.qty} in stock for ${part.code}. Use anyway? (stock will go to 0)`)) return;
+  }
+  const before = part.qty;
+  part.qty = Math.max(0, part.qty - qty);
+  save();
+  const line = {
+    id: crypto.randomUUID(),
+    partId: part.id,
+    code: part.code,
+    description: part.description || '',
+    qty,
+    unitPrice: part.price || 0,
+    lineTotal: Math.round((part.price || 0) * qty * 100) / 100
+  };
+  wo.partsUsed.push(line);
+  woBackup();
+  logEvent('qty', part.code, `used ${qty} on ${woNumberLabel(wo.number)} (${before} → ${part.qty})`);
+  codeInput.value = '';
+  document.getElementById('wo-part-qty').value = '1';
+  renderList();
+  selectWo(woId);
+  codeInput.focus();
+}
+
+// Removing a used part puts the quantity back into stock — keeps stock accurate
+// if you pull the wrong part or a repair gets reassigned.
+function removeWoPart(woId, lineId) {
+  const wo = workOrders.find(w => w.id === woId);
+  if (!wo) return;
+  const line = wo.partsUsed.find(l => l.id === lineId);
+  if (!line) return;
+  if (!confirm(`Remove ${line.qty}× ${line.code} from this work order and restock it?`)) return;
+  const part = parts.find(p => p.id === line.partId);
+  if (part) {
+    part.qty += line.qty;
+    save();
+    logEvent('qty', part.code, `restocked ${line.qty} removed from ${woNumberLabel(wo.number)}`);
+  }
+  wo.partsUsed = wo.partsUsed.filter(l => l.id !== lineId);
+  woBackup();
+  renderList();
+  selectWo(woId);
+}
+
+// "Other Items" — free-text, non-stock cost lines (resistors, fuses, cable,
+// anything you don't bother keeping in inventory but still want to bill for).
+// No lookup against `parts`, no stock deduction — just description/qty/price.
+function addWoMisc(woId) {
+  const wo = workOrders.find(w => w.id === woId);
+  if (!wo) return;
+  const descInput = document.getElementById('wo-misc-desc');
+  const description = descInput.value.trim();
+  if (!description) { alert('Enter a description for this item'); return; }
+  const qty = Math.max(1, parseInt(document.getElementById('wo-misc-qty').value) || 1);
+  const unitPrice = Math.max(0, parseFloat(document.getElementById('wo-misc-price').value) || 0);
+  const item = {
+    id: crypto.randomUUID(),
+    description,
+    qty,
+    unitPrice,
+    lineTotal: Math.round(unitPrice * qty * 100) / 100
+  };
+  if (!Array.isArray(wo.miscItems)) wo.miscItems = [];
+  wo.miscItems.push(item);
+  woBackup();
+  logEvent('wo', woNumberLabel(wo.number), `added other item: ${qty} × ${description} (€${item.lineTotal.toFixed(2)})`);
+  descInput.value = '';
+  document.getElementById('wo-misc-qty').value = '1';
+  document.getElementById('wo-misc-price').value = '';
+  selectWo(woId);
+  descInput.focus();
+}
+
+function removeWoMisc(woId, itemId) {
+  const wo = workOrders.find(w => w.id === woId);
+  if (!wo) return;
+  const item = (wo.miscItems || []).find(l => l.id === itemId);
+  if (!item) return;
+  if (!confirm(`Remove "${item.description}" from this work order?`)) return;
+  wo.miscItems = wo.miscItems.filter(l => l.id !== itemId);
+  woBackup();
+  logEvent('wo', woNumberLabel(wo.number), `removed other item: ${item.description}`);
+  selectWo(woId);
+}
+
+function addWoPayment(woId) {
+  const wo = workOrders.find(w => w.id === woId);
+  if (!wo) return;
+  const amount = parseFloat(document.getElementById('wo-payment-amount').value);
+  if (!amount || amount <= 0) { alert('Enter a valid payment amount'); return; }
+  const method = document.getElementById('wo-payment-method').value;
+  wo.payments.push({ id: crypto.randomUUID(), amount: Math.round(amount * 100) / 100, method, date: new Date().toISOString() });
+  woBackup();
+  logEvent('wo', woNumberLabel(wo.number), `payment recorded: €${amount.toFixed(2)} (${method})`);
+  document.getElementById('wo-payment-amount').value = '';
+  selectWo(woId);
+}
+
+function payWoInFull(woId) {
+  const wo = workOrders.find(w => w.id === woId);
+  if (!wo) return;
+  const { balance } = computeWoTotals(wo);
+  if (balance <= 0) { alert('This work order is already paid.'); return; }
+  const method = document.getElementById('wo-payment-method').value;
+  wo.payments.push({ id: crypto.randomUUID(), amount: Math.round(balance * 100) / 100, method, date: new Date().toISOString() });
+  woBackup();
+  logEvent('wo', woNumberLabel(wo.number), `payment recorded: €${balance.toFixed(2)} (${method}) - paid in full`);
+  selectWo(woId);
+}
+
+function removeWoPayment(woId, paymentId) {
+  const wo = workOrders.find(w => w.id === woId);
+  if (!wo) return;
+  const p = wo.payments.find(x => x.id === paymentId);
+  if (!p) return;
+  if (!confirm(`Remove this €${p.amount.toFixed(2)} ${p.method} payment?`)) return;
+  wo.payments = wo.payments.filter(x => x.id !== paymentId);
+  woBackup();
+  logEvent('wo', woNumberLabel(wo.number), `payment removed: €${p.amount.toFixed(2)} (${p.method})`);
+  selectWo(woId);
+}
+
+function deleteWo(id) {
+  const wo = workOrders.find(w => w.id === id);
+  if (!wo) return;
+  if (!confirm(`Delete ${woNumberLabel(wo.number)}? Any parts used on it will be restocked.`)) return;
+  wo.partsUsed.forEach(line => {
+    const part = parts.find(p => p.id === line.partId);
+    if (part) part.qty += line.qty;
+  });
+  if (wo.partsUsed.length) save();
+  workOrders = workOrders.filter(w => w.id !== id);
+  selectedWoId = null;
+  woBackup();
+  logEvent('wo', woNumberLabel(wo.number), 'work order deleted');
+  renderList();
+  renderWoList();
+  document.getElementById('wo-detail').innerHTML = `
+    <div class="no-selection">
+      <div class="no-selection-icon">◫</div>
+      <p>Create or select a work order</p>
+    </div>`;
+}
+
+// ─── SCAN ──────────────────────────────────────────────────────────────────
+// Handles both USB scanner (types code + Enter) and manual typing + GO button.
+// If code exists → opens that part in the detail panel
+// If code is new → opens the "New Part" modal with the code pre-filled
+const scanInput = document.getElementById('scan-input');
+
+scanInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter') handleScan();
+});
+
+function handleScan() {
+  const code = scanInput.value.trim().toUpperCase();
+  if (!code) return;
+  scanInput.value = '';
+  scanInput.focus();
+
+  const part = parts.find(p => p.code.toLowerCase() === code.toLowerCase());
+  if (part) {
+    selectPart(part.id);
+    renderList();
+  } else {
+    openModal(code);
+  }
+}
+
+// ─── LOCATION FILTER ───────────────────────────────────────────────────────
+// Reads all unique location values from parts and renders them as clickable chips.
+// Clicking a chip sets selectedLocation, which filters the parts list.
+// Clicking "All" resets it (selectedLocation = null = no filter).
+let selectedLocation = null;
+
+function renderLocationChips() {
+  const locations = [...new Set(parts.map(p => p.location).filter(Boolean))].sort();
+  const wrap = document.getElementById('loc-chips');
+  if (!locations.length) { wrap.innerHTML = '<span style="font-size:11px;color:var(--text-dim)">No locations yet</span>'; return; }
+  wrap.innerHTML = [
+    `<span class="loc-chip ${!selectedLocation ? 'active' : ''}" onclick="setLocationFilter(null)">All</span>`,
+    ...locations.map(loc =>
+      `<span class="loc-chip ${selectedLocation === loc ? 'active' : ''}" onclick="setLocationFilter('${loc.replace(/'/g, "\\'")}')">${loc}</span>`
+    )
+  ].join('');
+}
+
+function setLocationFilter(loc) {
+  selectedLocation = loc;
+  renderLocationChips();
+  renderList();
+}
+
+// ─── LIST ──────────────────────────────────────────────────────────────────
+// Renders the parts list in the sidebar.
+// Applies both the text search filter AND the location chip filter simultaneously.
+// Also refreshes the location chips and header stats on every call.
+function renderList() {
+  renderLocationChips();
+  updateLocationDatalist();
+  updateManufacturerDatalist();
+  const q = document.getElementById('search-input').value.toLowerCase();
+  const filtered = parts.filter(p => {
+    const matchesSearch = !q ||
+      p.code.toLowerCase().includes(q) ||
+      (p.manufacturer||'').toLowerCase().includes(q) ||
+      (p.description||'').toLowerCase().includes(q) ||
+      (p.location||'').toLowerCase().includes(q);
+    const matchesLocation = !selectedLocation || p.location === selectedLocation;
+    return matchesSearch && matchesLocation;
+  });
+
+  const list = document.getElementById('parts-list');
+  if (!filtered.length) {
+    list.innerHTML = `<div class="empty-state">No parts found</div>`;
+    return;
+  }
+
+  list.innerHTML = filtered.map(p => `
+    <div class="part-item ${p.id === selectedId ? 'active' : ''}" onclick="selectPart('${p.id}')">
+      <div class="part-item-code">${p.code}</div>
+      <div class="part-item-name">${p.manufacturer ? p.manufacturer + ' — ' : ''}${p.description || '—'}</div>
+      <div class="part-item-row">
+        <span class="qty-badge ${p.qty > 0 ? 'ok' : 'zero'}">${p.qty} units</span>
+        <span class="loc-badge">${p.location || ''}</span>
+      </div>
+    </div>
+  `).join('');
+
+  updateStats();
+}
+
+function updateStats() {
+  document.getElementById('stat-parts').textContent = parts.length;
+  document.getElementById('stat-units').textContent = parts.reduce((s,p) => s + p.qty, 0);
+}
+
+// ─── DETAIL ────────────────────────────────────────────────────────────────
+// Renders the right-side detail panel for the selected part.
+// Shows: part code, manufacturer, quantity control (+/−), price, location, and edit fields.
+// adjustQty() — adds or removes 1 unit, never goes below 0
+// savePart()  — saves edits from the detail form fields back to the part
+// deletePart() — removes the part entirely after confirmation
+function selectPart(id) {
+  selectedId = id;
+  const p = parts.find(x => x.id === id);
+  if (!p) return;
+  renderList();
+
+  document.getElementById('detail').innerHTML = `
+    <div class="detail-header">
+      <div>
+        <div class="detail-code">${p.code}</div>
+        <div class="detail-manufacturer">${p.manufacturer || 'No manufacturer'}</div>
+      </div>
+      <div class="detail-actions">
+        <button class="btn danger" onclick="deletePart('${p.id}')">Delete</button>
+      </div>
+    </div>
+
+    <div class="qty-control">
+      <div class="qty-buttons">
+        <button class="qty-btn plus" onclick="adjustQty('${p.id}', 1)">+</button>
+        <button class="qty-btn minus" onclick="adjustQty('${p.id}', -1)">−</button>
+      </div>
+      <div class="qty-display ${p.qty > 0 ? 'ok' : 'zero'}" id="qty-display">${p.qty}</div>
+      <div class="qty-meta">
+        <div class="qty-price-label">Sale Price</div>
+        <div class="qty-price">${p.price ? '€' + parseFloat(p.price).toFixed(2) : '—'}</div>
+        <div class="qty-location-label" style="margin-top:14px">Location</div>
+        <div class="qty-location">${p.location || '—'}</div>
+      </div>
+    </div>
+
+    <div>
+      <div class="section-title">Edit Part</div>
+      <div class="fields-grid">
+        <div class="field full">
+          <label>Code</label>
+          <input id="e-code" value="${p.code}" placeholder="Part code">
+        </div>
+        <div class="field full">
+          <label>Manufacturer</label>
+          <input id="e-manufacturer" value="${p.manufacturer||''}" placeholder="Manufacturer" list="manufacturer-suggestions" autocomplete="off">
+        </div>
+        <div class="field full">
+          <label>Description</label>
+          <input id="e-description" value="${p.description||''}" placeholder="Description">
+        </div>
+        <div class="field">
+          <label>Sale Price</label>
+          <input id="e-price" type="number" min="0" step="1" value="${p.price||''}">
+        </div>
+        <div class="field">
+          <label>Quantity</label>
+          <input id="e-qty" type="number" min="0" step="1" value="${p.qty}">
+        </div>
+        <div class="field full">
+          <label>Location</label>
+          <!-- datalist gives dropdown of existing locations, still accepts new text -->
+          <input id="e-location" value="${p.location||''}" placeholder="Pick existing or type new…" list="location-suggestions" autocomplete="off">
+        </div>
+      </div>
+
+      <!-- BULK QUANTITY ADJUST — add or remove multiple units at once -->
+      <div class="section-title" style="margin-top:16px">Bulk Adjust</div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <input id="bulk-qty" type="number" min="1" step="1" value="1"
+          style="width:80px;background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:14px;padding:8px 10px;border-radius:6px;outline:none;">
+        <button class="btn success" onclick="bulkAdjust('${p.id}', 1)">+ Add</button>
+        <button class="btn danger"  onclick="bulkAdjust('${p.id}', -1)">− Remove</button>
+      </div>
+
+      <div class="save-bar" style="margin-top:14px">
+        <button class="btn" onclick="savePart('${p.id}')">Save Changes</button>
+      </div>
+    </div>
+  `;
+}
+
+function adjustQty(id, delta) {
+  const p = parts.find(x => x.id === id);
+  if (!p) return;
+  const before = p.qty;
+  p.qty = Math.max(0, p.qty + delta);
+  save();
+  logEvent('qty', p.code, `${delta > 0 ? '+1' : '−1'} (${before} → ${p.qty})`);
+  // update just the number without full re-render
+  const d = document.getElementById('qty-display');
+  if (d) {
+    d.textContent = p.qty;
+    d.className = 'qty-display ' + (p.qty > 0 ? 'ok' : 'zero');
+  }
+  renderList();
+}
+
+function savePart(id) {
+  const p = parts.find(x => x.id === id);
+  if (!p) return;
+  const before = { code: p.code, manufacturer: p.manufacturer, description: p.description, price: p.price, qty: p.qty, location: p.location };
+  p.code = document.getElementById('e-code').value.trim() || p.code;
+  p.manufacturer = document.getElementById('e-manufacturer').value.trim();
+  p.description = document.getElementById('e-description').value.trim();
+  p.price = parseFloat(document.getElementById('e-price').value) || 0;
+  p.qty = Math.max(0, parseInt(document.getElementById('e-qty').value) || 0);
+  p.location = document.getElementById('e-location').value.trim();
+  save();
+
+  // build a human-readable summary of just the fields that actually changed
+  const changed = [];
+  if (before.code !== p.code) changed.push(`code ${before.code} → ${p.code}`);
+  if (before.manufacturer !== p.manufacturer) changed.push(`manufacturer → ${p.manufacturer || '—'}`);
+  if (before.description !== p.description) changed.push(`description updated`);
+  if (before.price !== p.price) changed.push(`price €${before.price} → €${p.price}`);
+  if (before.qty !== p.qty) changed.push(`qty ${before.qty} → ${p.qty}`);
+  if (before.location !== p.location) changed.push(`location → ${p.location || '—'}`);
+  if (changed.length) logEvent('edit', p.code, changed.join(', '));
+
+  selectPart(id);
+  renderList();
+}
+
+function deletePart(id) {
+  if (!confirm('Delete this part from stock?')) return;
+  const p = parts.find(x => x.id === id);
+  parts = parts.filter(x => x.id !== id);
+  selectedId = null;
+  save();
+  if (p) logEvent('delete', p.code, `removed (had ${p.qty} units)`);
+  renderList();
+  document.getElementById('detail').innerHTML = `
+    <div class="no-selection">
+      <div class="no-selection-icon">◫</div>
+      <p>Scan a code or select a part</p>
+    </div>`;
+}
+
+// ─── BULK ADJUST ───────────────────────────────────────────────────────────
+// Adds or removes multiple units at once using the number input in the detail panel.
+// direction: 1 = add, -1 = remove. Never goes below 0.
+function bulkAdjust(id, direction) {
+  const p = parts.find(x => x.id === id);
+  if (!p) return;
+  const amount = Math.max(1, parseInt(document.getElementById('bulk-qty').value) || 1);
+  const before = p.qty;
+  p.qty = Math.max(0, p.qty + (amount * direction));
+  save();
+  logEvent('qty', p.code, `bulk ${direction > 0 ? '+' : '−'}${amount} (${before} → ${p.qty})`);
+  const d = document.getElementById('qty-display');
+  if (d) {
+    d.textContent = p.qty;
+    d.className = 'qty-display ' + (p.qty > 0 ? 'ok' : 'zero');
+  }
+  renderList();
+}
+
+// ─── LOCATION DATALIST ─────────────────────────────────────────────────────
+// Keeps the shared <datalist> in sync with all unique locations in stock.
+// Used by both the modal and the detail panel edit field.
+function updateLocationDatalist() {
+  const locations = [...new Set(parts.map(p => p.location).filter(Boolean))].sort();
+  document.getElementById('location-suggestions').innerHTML =
+    locations.map(l => `<option value="${l}">`).join('');
+}
+
+// ─── MANUFACTURER DATALIST ──────────────────────────────────────────────────
+// Same idea as locations: no separate storage, just the unique manufacturer
+// values already present across your parts, PLUS any "make" already typed on
+// a work order (e.g. an instrument brand that never shows up in parts stock),
+// refreshed on every list render.
+function updateManufacturerDatalist() {
+  const fromParts = parts.map(p => p.manufacturer);
+  const fromWo = workOrders.map(wo => wo.unit.make);
+  const manufacturers = [...new Set([...fromParts, ...fromWo].filter(Boolean))].sort();
+  document.getElementById('manufacturer-suggestions').innerHTML =
+    manufacturers.map(m => `<option value="${m}">`).join('');
+}
+
+// ─── WO MODEL DATALIST ──────────────────────────────────────────────────────
+// Suggests models already typed on previous work orders, so repeat units
+// (or the same model brought in by a different customer) autocomplete too.
+function updateWoModelDatalist() {
+  const models = [...new Set(workOrders.map(wo => wo.unit.model).filter(Boolean))].sort();
+  document.getElementById('wo-model-suggestions').innerHTML =
+    models.map(m => `<option value="${m}">`).join('');
+}
+
+// ─── MODAL (New Part popup) ─────────────────────────────────────────────────
+// Opens when a scanned/typed code isn't found, or when "+ Part" button is clicked.
+// If a code was scanned, it pre-fills the Code field automatically.
+// saveNewPart() validates, creates the part object, adds it to the list, and closes.
+function openModal(code) {
+  document.getElementById('m-code').value = code || '';
+  document.getElementById('m-manufacturer').value = '';
+  document.getElementById('m-description').value = '';
+  document.getElementById('m-price').value = '';
+  document.getElementById('m-qty').value = '1';
+  document.getElementById('m-location').value = '';
+  document.getElementById('modal-code-label').textContent =
+    code ? `Code "${code}" not found — add it to stock.` : 'Add a new part manually.';
+  document.getElementById('modal').classList.remove('hidden');
+  document.getElementById('m-manufacturer').focus();
+}
+
+function closeModal() {
+  document.getElementById('modal').classList.add('hidden');
+  scanInput.focus();
+}
+
+function saveNewPart() {
+  const code = document.getElementById('m-code').value.trim();
+  if (!code) { alert('Code is required'); return; }
+  if (parts.find(p => p.code.toLowerCase() === code.toLowerCase())) {
+    alert('A part with this code already exists'); return;
+  }
+  const part = {
+    id: crypto.randomUUID(),
+    code,
+    manufacturer: document.getElementById('m-manufacturer').value.trim(),
+    description: document.getElementById('m-description').value.trim(),
+    price: parseFloat(document.getElementById('m-price').value) || 0,
+    qty: Math.max(0, parseInt(document.getElementById('m-qty').value) || 0),
+    location: document.getElementById('m-location').value.trim(),
+  };
+  parts.push(part);
+  save();
+  logEvent('create', part.code, `added new part${part.qty ? ` with ${part.qty} units` : ''}`);
+  closeModal();
+  renderList();
+  selectPart(part.id);
+}
+
+// close modal on overlay click
+document.getElementById('modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('modal')) closeModal();
+});
+document.getElementById('wo-modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('wo-modal')) closeWoModal();
+});
+
+// + button in header area — keyboard shortcut N (stock tab only, so it doesn't fire while typing a WO)
+document.addEventListener('keydown', e => {
+  if (activeTab === 'stock' && e.key === 'n' && document.activeElement !== scanInput && document.activeElement.tagName !== 'INPUT') openModal('');
+  if (e.key === 'Escape') { closeModal(); closeWoModal(); closeHistory(); }
+  if (e.key === 's' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); saveFile(); }
+});
+
+// ─── CAMERA SCAN ───────────────────────────────────────────────────────────
+// Uses the ZXing library to read barcodes from a webcam feed.
+// Click 📷 to start — shows a live video preview in the sidebar.
+// Scans a frame every 300ms; when a barcode is detected it auto-fills
+// the scan input and triggers handleScan(), then stops the camera.
+// Supports: Code128, Code39, EAN-13, EAN-8, UPC-A, QR Code, DataMatrix
+// Note: requires camera permission in the browser. Works best in Chrome/Edge.
+let cameraActive = false;
+let codeReader = null;
+
+async function toggleCamera() {
+  if (cameraActive) {
+    stopCamera();
+  } else {
+    startCamera();
+  }
+}
+
+async function startCamera() {
+  const wrap = document.getElementById('cam-wrap');
+  const video = document.getElementById('cam-video');
+  const btn = document.getElementById('cam-btn');
+  try {
+    wrap.style.display = 'block';
+    btn.textContent = '⏹';
+    btn.title = 'Stop camera';
+    cameraActive = true;
+
+    // ZXing 0.18.6 API — decodeFromConstraints starts the stream itself and
+    // continuously scans frames internally (no manual canvas grabbing needed).
+    // The callback fires repeatedly; err is a routine NotFoundException on
+    // frames with no barcode, so it's ignored — only act when result is set.
+    codeReader = new ZXing.BrowserMultiFormatReader();
+    await codeReader.decodeFromConstraints(
+      { video: { facingMode: 'environment' } },
+      video,
+      (result, err) => {
+        if (result) {
+          const code = result.getText();
+          stopCamera();
+          document.getElementById('scan-input').value = code;
+          handleScan();
+        }
+      }
+    );
+
+  } catch (err) {
+    alert('Could not access camera: ' + err.message);
+    stopCamera();
+  }
+}
+
+function stopCamera() {
+  if (codeReader) {
+    codeReader.reset(); // stops decoding loop and releases the camera stream
+    codeReader = null;
+  }
+  document.getElementById('cam-wrap').style.display = 'none';
+  document.getElementById('cam-btn').textContent = '📷';
+  document.getElementById('cam-btn').title = 'Scan with webcam';
+  cameraActive = false;
+  scanInput.focus();
+}
+
+// ─── SCAN FOCUS ────────────────────────────────────────────────────────────
+// Keeps the scan input always ready to receive barcode scanner input.
+// A USB scanner acts like a keyboard — it types the code and presses Enter.
+// So the scan box must stay focused, otherwise scanner output goes nowhere.
+// This re-focuses it any time the user clicks a non-interactive area.
+document.addEventListener('click', e => {
+  if (activeTab !== 'stock') return;
+  const modal = document.getElementById('modal');
+  const isModalOpen = !modal.classList.contains('hidden');
+  if (isModalOpen) return;
+  const tag = e.target.tagName;
+  if (tag === 'INPUT' || tag === 'BUTTON' || tag === 'TEXTAREA') return;
+  scanInput.focus();
+});
+
+// Also refocus after any button click that isn't inside the modal or detail fields
+document.addEventListener('keyup', e => {
+  if (activeTab !== 'stock') return;
+  const modal = document.getElementById('modal');
+  const isModalOpen = !modal.classList.contains('hidden');
+  if (isModalOpen) return;
+  if (document.activeElement === document.body) scanInput.focus();
+});
+
+// ─── INIT ──────────────────────────────────────────────────────────────────
+renderList();
+renderLocationChips();
+syncWoModeUI();
+renderWoList();
+scanInput.focus();
+</script>
+</body>
+</html>

@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Countdown</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Archivo:wght@400;500;600&display=swap');
+
+  :root{
+    --bg: #0b0d12;
+    --bg-2: #14171f;
+    --gold: #e8b84b;
+    --gold-dim: #7a6430;
+    --red: #b83b3b;
+    --text: #f1ece1;
+    --text-dim: #8a8f9c;
+  }
+
+  *{ box-sizing: border-box; }
+
+  body{
+    margin:0;
+    min-height:100vh;
+    background:
+      radial-gradient(ellipse 80% 60% at 50% -10%, rgba(232,184,75,0.09), transparent),
+      var(--bg);
+    color: var(--text);
+    font-family: 'Archivo', sans-serif;
+    display:flex;
+    align-items:flex-start;
+    justify-content:center;
+    padding: 40px 24px;
+  }
+
+  .page{
+    width:100%;
+    max-width: 560px;
+    display:flex;
+    flex-direction:column;
+    gap: 18px;
+  }
+
+  .marquee{
+    background: var(--bg-2);
+    border: 1px solid rgba(232,184,75,0.18);
+    border-radius: 4px;
+    padding: 40px 32px 32px;
+    position: relative;
+    box-shadow: 0 40px 80px -30px rgba(0,0,0,0.6);
+  }
+
+  .bulbs{
+    position:absolute;
+    top:14px; left:14px; right:14px;
+    display:flex;
+    justify-content:space-between;
+  }
+  .bulbs span{
+    width:6px; height:6px;
+    border-radius:50%;
+    background: var(--gold-dim);
+  }
+  .bulbs span.lit{
+    background: var(--gold);
+    box-shadow: 0 0 6px 1px rgba(232,184,75,0.7);
+  }
+
+  .eyebrow{
+    text-align:center;
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin: 20px 0 6px;
+  }
+
+  h1{
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(30px, 6vw, 46px);
+    letter-spacing: 1px;
+    text-align:center;
+    margin: 0 0 28px;
+    color: var(--gold);
+    line-height: 1.05;
+    word-wrap: break-word;
+  }
+
+  .clock{
+    display:grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+
+  .unit{
+    text-align:center;
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 3px;
+    padding: 14px 4px 10px;
+  }
+
+  .unit .num{
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(28px, 7vw, 44px);
+    color: var(--text);
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .unit .label{
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-top: 6px;
+  }
+
+  .arrived{
+    text-align:center;
+    font-family:'Bebas Neue', sans-serif;
+    font-size: clamp(32px, 8vw, 52px);
+    color: var(--red);
+    letter-spacing: 2px;
+    padding: 20px 0;
+  }
+
+  .list-panel{
+    background: var(--bg-2);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 4px;
+    padding: 18px;
+  }
+
+  .list-panel .eyebrow{
+    text-align:left;
+    margin: 0 0 12px;
+  }
+
+  .stub{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap: 10px;
+    padding: 12px 14px;
+    border-radius: 3px;
+    border: 1px dashed rgba(255,255,255,0.12);
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+  }
+  .stub:hover{ border-color: var(--gold); }
+  .stub.active{
+    border-style: solid;
+    border-color: var(--gold);
+    background: rgba(232,184,75,0.06);
+  }
+  .stub.past{ opacity: 0.45; }
+
+  .stub-title{
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .stub-date{
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: 2px;
+  }
+
+  .empty-note{
+    font-size: 13px;
+    color: var(--text-dim);
+    text-align:center;
+    padding: 10px 0 4px;
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    * { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <div class="marquee">
+    <div class="bulbs" id="bulbs"></div>
+
+    <div class="eyebrow">Counting down to</div>
+    <h1 id="eventTitle">—</h1>
+
+    <div class="clock" id="clock">
+      <div class="unit"><div class="num" id="days">--</div><div class="label">Days</div></div>
+      <div class="unit"><div class="num" id="hours">--</div><div class="label">Hours</div></div>
+      <div class="unit"><div class="num" id="mins">--</div><div class="label">Mins</div></div>
+      <div class="unit"><div class="num" id="secs">--</div><div class="label">Secs</div></div>
+    </div>
+
+    <div class="arrived" id="arrived" style="display:none;">IT'S TIME 🎬</div>
+  </div>
+
+  <div class="list-panel">
+    <div class="eyebrow">All events</div>
+    <div id="stubList"></div>
+    <div class="empty-note" id="emptyNote" style="display:none;">No events yet — add one in the EVENTS list in the code.</div>
+  </div>
+
+</div>
+
+<script>
+  /* ============================================================
+     EDIT YOUR EVENTS HERE — this is the only part you need to touch.
+     This list is baked into the file, so anyone you share it with
+     (e.g. via GitHub Pages) sees the exact same events, no login,
+     no database.
+
+     Format for each event:
+       { title: "Name shown on screen", date: "YYYY-MM-DDTHH:MM:SS" }
+
+     - date is in 24h local time, no timezone letter at the end.
+     - Add or remove lines freely. Order doesn't matter — they're
+       sorted automatically by date, soonest first.
+     ============================================================ */
+  const EVENTS = [
+    { title: "Movie Night", date: "2026-12-01T19:00:00" },
+    // { title: "Another event", date: "2026-08-15T20:30:00" },
+  ];
+  /* ============================================================
+     Nothing below this line needs editing.
+     ============================================================ */
+
+  const sorted = [...EVENTS].sort((a,b) => new Date(a.date) - new Date(b.date));
+  const now0 = Date.now();
+  // default to the soonest event that hasn't happened yet; if all are past, show the last one
+  let activeIndex = sorted.findIndex(e => new Date(e.date).getTime() > now0);
+  if(activeIndex === -1) activeIndex = sorted.length - 1;
+
+  // ---- bulbs ----
+  const bulbsEl = document.getElementById('bulbs');
+  const BULB_COUNT = 14;
+  for(let i=0;i<BULB_COUNT;i++){
+    const s = document.createElement('span');
+    bulbsEl.appendChild(s);
+  }
+  let bulbFrame = 0;
+  function animateBulbs(){
+    const spans = bulbsEl.querySelectorAll('span');
+    spans.forEach((s, i) => {
+      s.classList.toggle('lit', (i + bulbFrame) % 3 === 0);
+    });
+    bulbFrame++;
+  }
+
+  // ---- elements ----
+  const titleEl = document.getElementById('eventTitle');
+  const daysEl = document.getElementById('days');
+  const hoursEl = document.getElementById('hours');
+  const minsEl = document.getElementById('mins');
+  const secsEl = document.getElementById('secs');
+  const clockEl = document.getElementById('clock');
+  const arrivedEl = document.getElementById('arrived');
+  const stubListEl = document.getElementById('stubList');
+  const emptyNoteEl = document.getElementById('emptyNote');
+
+  function pad(n){ return String(n).padStart(2,'0'); }
+
+  function formatDateShort(dateStr){
+    const d = new Date(dateStr);
+    return d.toLocaleString(undefined, { month:'short', day:'numeric', year:'numeric', hour:'numeric', minute:'2-digit' });
+  }
+
+  function renderClock(){
+    if(sorted.length === 0){
+      titleEl.textContent = 'No events yet';
+      clockEl.style.display = 'none';
+      arrivedEl.style.display = 'none';
+      return;
+    }
+    const active = sorted[activeIndex];
+    titleEl.textContent = active.title;
+    const target = new Date(active.date).getTime();
+    const diff = target - Date.now();
+
+    if(diff <= 0){
+      clockEl.style.display = 'none';
+      arrivedEl.style.display = 'block';
+      return;
+    }
+    clockEl.style.display = 'grid';
+    arrivedEl.style.display = 'none';
+
+    const d = Math.floor(diff / (1000*60*60*24));
+    const h = Math.floor((diff / (1000*60*60)) % 24);
+    const m = Math.floor((diff / (1000*60)) % 60);
+    const s = Math.floor((diff / 1000) % 60);
+
+    daysEl.textContent = d;
+    hoursEl.textContent = pad(h);
+    minsEl.textContent = pad(m);
+    secsEl.textContent = pad(s);
+  }
+
+  function renderList(){
+    stubListEl.innerHTML = '';
+    if(sorted.length === 0){
+      emptyNoteEl.style.display = 'block';
+      return;
+    }
+    emptyNoteEl.style.display = 'none';
+
+    sorted.forEach((ev, i) => {
+      const isPast = new Date(ev.date).getTime() <= Date.now();
+
+      const stub = document.createElement('div');
+      stub.className = 'stub' + (i === activeIndex ? ' active' : '') + (isPast ? ' past' : '');
+
+      const info = document.createElement('div');
+      const t = document.createElement('div');
+      t.className = 'stub-title';
+      t.textContent = ev.title;
+      const d = document.createElement('div');
+      d.className = 'stub-date';
+      d.textContent = formatDateShort(ev.date) + (isPast ? ' · past' : '');
+      info.appendChild(t);
+      info.appendChild(d);
+
+      stub.appendChild(info);
+
+      stub.addEventListener('click', () => {
+        activeIndex = i;
+        renderAll();
+      });
+
+      stubListEl.appendChild(stub);
+    });
+  }
+
+  function renderAll(){
+    renderClock();
+    renderList();
+  }
+
+  setInterval(() => { renderClock(); animateBulbs(); }, 1000);
+  renderAll();
+  animateBulbs();
+</script>
+
+</body>
+</html>

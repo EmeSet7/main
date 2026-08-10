@@ -1,0 +1,1040 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Tiago Cardoso//F1 2026 Calendar//PT
+CALNAME:Formula 1 2026
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+X-WR-CALNAME:Formula 1 2026
+X-WR-TIMEZONE:Europe/Lisbon
+
+BEGIN:VTIMEZONE
+TZID:Europe/Lisbon
+BEGIN:STANDARD
+DTSTART:19701025T020000
+RRULE:FREQ=YEARLY;BYDAY=-1SU;BYMONTH=10
+TZNAME:WET
+TZOFFSETFROM:+0100
+TZOFFSETTO:+0000
+END:STANDARD
+BEGIN:DAYLIGHT
+DTSTART:19700329T010000
+RRULE:FREQ=YEARLY;BYDAY=-1SU;BYMONTH=3
+TZNAME:WEST
+TZOFFSETFROM:+0000
+TZOFFSETTO:+0100
+END:DAYLIGHT
+END:VTIMEZONE
+
+
+BEGIN:VEVENT
+UID:f1-2026-r01-fp1@tiago
+DTSTART;TZID=Europe/Lisbon:20260306T030000
+DTEND;TZID=Europe/Lisbon:20260306T040000
+SUMMARY:🔧 F1 R1 — Australian GP · FP1
+DESCRIPTION:Round 1 · Free Practice 1\nCircuit: Albert Park · Melbourne\nLocal time: 13:00 AEDT
+LOCATION:Albert Park Circuit, Melbourne, Australia
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r01-fp2@tiago
+DTSTART;TZID=Europe/Lisbon:20260306T070000
+DTEND;TZID=Europe/Lisbon:20260306T080000
+SUMMARY:🔧 F1 R1 — Australian GP · FP2
+DESCRIPTION:Round 1 · Free Practice 2\nCircuit: Albert Park · Melbourne\nLocal time: 17:00 AEDT
+LOCATION:Albert Park Circuit, Melbourne, Australia
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r01-fp3@tiago
+DTSTART;TZID=Europe/Lisbon:20260307T040000
+DTEND;TZID=Europe/Lisbon:20260307T050000
+SUMMARY:🔧 F1 R1 — Australian GP · FP3
+DESCRIPTION:Round 1 · Free Practice 3\nCircuit: Albert Park · Melbourne\nLocal time: 14:00 AEDT
+LOCATION:Albert Park Circuit, Melbourne, Australia
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r01-quali@tiago
+DTSTART;TZID=Europe/Lisbon:20260307T070000
+DTEND;TZID=Europe/Lisbon:20260307T080000
+SUMMARY:📍 F1 R1 — Australian GP · Qualifying
+DESCRIPTION:Round 1 · Qualifying\nCircuit: Albert Park · Melbourne\nLocal time: 17:00 AEDT
+LOCATION:Albert Park Circuit, Melbourne, Australia
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r01-race@tiago
+DTSTART;TZID=Europe/Lisbon:20260308T050000
+DTEND;TZID=Europe/Lisbon:20260308T070000
+SUMMARY:🏁 F1 R1 — Australian GP · Russell wins (Mercedes)
+DESCRIPTION:Round 1 · Race\nCircuit: Albert Park · Melbourne · 58 laps\n\n🥇 George Russell (Mercedes)\n🥈 Kimi Antonelli (Mercedes)\n🥉 Charles Leclerc (Ferrari)
+LOCATION:Albert Park Circuit, Melbourne, Australia
+END:VEVENT
+
+
+BEGIN:VEVENT
+UID:f1-2026-r02-fp1@tiago
+DTSTART;TZID=Europe/Lisbon:20260313T050000
+DTEND;TZID=Europe/Lisbon:20260313T060000
+SUMMARY:🔧 F1 R2 — Chinese GP · FP1
+DESCRIPTION:Round 2 · Free Practice 1\nCircuit: Shanghai International · Sprint Weekend\nLocal time: 13:00 CST
+LOCATION:Shanghai International Circuit, Shanghai, China
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r02-sq@tiago
+DTSTART;TZID=Europe/Lisbon:20260313T090000
+DTEND;TZID=Europe/Lisbon:20260313T100000
+SUMMARY:⚡ F1 R2 — Chinese GP · Sprint Qualifying
+DESCRIPTION:Round 2 · Sprint Qualifying\nCircuit: Shanghai International · Sprint Weekend\nLocal time: 17:00 CST
+LOCATION:Shanghai International Circuit, Shanghai, China
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r02-sprint@tiago
+DTSTART;TZID=Europe/Lisbon:20260314T040000
+DTEND;TZID=Europe/Lisbon:20260314T050000
+SUMMARY:⚡ F1 R2 — Chinese GP · Sprint Race
+DESCRIPTION:Round 2 · Sprint Race\nCircuit: Shanghai International · Sprint Weekend\nLocal time: 12:00 CST
+LOCATION:Shanghai International Circuit, Shanghai, China
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r02-quali@tiago
+DTSTART;TZID=Europe/Lisbon:20260314T080000
+DTEND;TZID=Europe/Lisbon:20260314T090000
+SUMMARY:📍 F1 R2 — Chinese GP · Qualifying
+DESCRIPTION:Round 2 · Qualifying\nCircuit: Shanghai International · Sprint Weekend\nLocal time: 16:00 CST
+LOCATION:Shanghai International Circuit, Shanghai, China
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r02-race@tiago
+DTSTART;TZID=Europe/Lisbon:20260315T080000
+DTEND;TZID=Europe/Lisbon:20260315T100000
+SUMMARY:🏁 F1 R2 — Chinese GP · Antonelli wins (Mercedes)
+DESCRIPTION:Round 2 · Race\nCircuit: Shanghai International · 56 laps · Sprint Weekend\n\n🥇 Kimi Antonelli (Mercedes)\n🥈 George Russell (Mercedes)\n🥉 Charles Leclerc (Ferrari)
+LOCATION:Shanghai International Circuit, Shanghai, China
+END:VEVENT
+
+
+BEGIN:VEVENT
+UID:f1-2026-r03-fp1@tiago
+DTSTART;TZID=Europe/Lisbon:20260327T040000
+DTEND;TZID=Europe/Lisbon:20260327T050000
+SUMMARY:🔧 F1 R3 — Japanese GP · FP1
+DESCRIPTION:Round 3 · Free Practice 1\nCircuit: Suzuka International · 53 laps\nLocal time: 13:00 JST
+LOCATION:Suzuka International Racing Course, Suzuka, Japan
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r03-fp2@tiago
+DTSTART;TZID=Europe/Lisbon:20260327T080000
+DTEND;TZID=Europe/Lisbon:20260327T090000
+SUMMARY:🔧 F1 R3 — Japanese GP · FP2
+DESCRIPTION:Round 3 · Free Practice 2\nCircuit: Suzuka International · 53 laps\nLocal time: 17:00 JST
+LOCATION:Suzuka International Racing Course, Suzuka, Japan
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r03-fp3@tiago
+DTSTART;TZID=Europe/Lisbon:20260328T040000
+DTEND;TZID=Europe/Lisbon:20260328T050000
+SUMMARY:🔧 F1 R3 — Japanese GP · FP3
+DESCRIPTION:Round 3 · Free Practice 3\nCircuit: Suzuka International · 53 laps\nLocal time: 13:00 JST
+LOCATION:Suzuka International Racing Course, Suzuka, Japan
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r03-quali@tiago
+DTSTART;TZID=Europe/Lisbon:20260328T080000
+DTEND;TZID=Europe/Lisbon:20260328T090000
+SUMMARY:📍 F1 R3 — Japanese GP · Qualifying
+DESCRIPTION:Round 3 · Qualifying\nCircuit: Suzuka International · 53 laps\nLocal time: 17:00 JST
+LOCATION:Suzuka International Racing Course, Suzuka, Japan
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r03-race@tiago
+DTSTART;TZID=Europe/Lisbon:20260329T060000
+DTEND;TZID=Europe/Lisbon:20260329T080000
+SUMMARY:🏁 F1 R3 — Japanese GP · Suzuka
+DESCRIPTION:Round 3 · Race\nCircuit: Suzuka International · 53 laps\nLocal time: 14:00 JST
+LOCATION:Suzuka International Racing Course, Suzuka, Japan
+END:VEVENT
+
+
+BEGIN:VEVENT
+UID:f1-2026-r04-fp1@tiago
+DTSTART;TZID=Europe/Lisbon:20260501T180000
+DTEND;TZID=Europe/Lisbon:20260501T190000
+SUMMARY:🔧 F1 R4 — Miami GP · FP1
+DESCRIPTION:Round 4 · Free Practice 1\nCircuit: Miami International Autodrome · Sprint Weekend\nLocal time: 13:00 EDT
+LOCATION:Miami International Autodrome, Miami Gardens, USA
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r04-sq@tiago
+DTSTART;TZID=Europe/Lisbon:20260501T220000
+DTEND;TZID=Europe/Lisbon:20260501T230000
+SUMMARY:⚡ F1 R4 — Miami GP · Sprint Qualifying
+DESCRIPTION:Round 4 · Sprint Qualifying\nCircuit: Miami International Autodrome · Sprint Weekend\nLocal time: 17:00 EDT
+LOCATION:Miami International Autodrome, Miami Gardens, USA
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r04-sprint@tiago
+DTSTART;TZID=Europe/Lisbon:20260502T170000
+DTEND;TZID=Europe/Lisbon:20260502T180000
+SUMMARY:⚡ F1 R4 — Miami GP · Sprint Race
+DESCRIPTION:Round 4 · Sprint Race\nCircuit: Miami International Autodrome · Sprint Weekend\nLocal time: 12:00 EDT
+LOCATION:Miami International Autodrome, Miami Gardens, USA
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r04-quali@tiago
+DTSTART;TZID=Europe/Lisbon:20260502T210000
+DTEND;TZID=Europe/Lisbon:20260502T220000
+SUMMARY:📍 F1 R4 — Miami GP · Qualifying
+DESCRIPTION:Round 4 · Qualifying\nCircuit: Miami International Autodrome · Sprint Weekend\nLocal time: 16:00 EDT
+LOCATION:Miami International Autodrome, Miami Gardens, USA
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r04-race@tiago
+DTSTART;TZID=Europe/Lisbon:20260503T210000
+DTEND;TZID=Europe/Lisbon:20260503T230000
+SUMMARY:🏁 F1 R4 — Miami GP · Miami Gardens
+DESCRIPTION:Round 4 · Race\nCircuit: Miami International Autodrome · 57 laps · Sprint Weekend\nLocal time: 16:00 EDT
+LOCATION:Miami International Autodrome, Miami Gardens, USA
+END:VEVENT
+
+
+BEGIN:VEVENT
+UID:f1-2026-r05-fp1@tiago
+DTSTART;TZID=Europe/Lisbon:20260522T180000
+DTEND;TZID=Europe/Lisbon:20260522T190000
+SUMMARY:🔧 F1 R5 — Canadian GP · FP1
+DESCRIPTION:Round 5 · Free Practice 1\nCircuit: Circuit Gilles Villeneuve · Sprint Weekend\nLocal time: 13:00 EDT
+LOCATION:Circuit Gilles Villeneuve, Montreal, Canada
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r05-sq@tiago
+DTSTART;TZID=Europe/Lisbon:20260522T220000
+DTEND;TZID=Europe/Lisbon:20260522T230000
+SUMMARY:⚡ F1 R5 — Canadian GP · Sprint Qualifying
+DESCRIPTION:Round 5 · Sprint Qualifying\nCircuit: Circuit Gilles Villeneuve · Sprint Weekend\nLocal time: 17:00 EDT
+LOCATION:Circuit Gilles Villeneuve, Montreal, Canada
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r05-sprint@tiago
+DTSTART;TZID=Europe/Lisbon:20260523T170000
+DTEND;TZID=Europe/Lisbon:20260523T180000
+SUMMARY:⚡ F1 R5 — Canadian GP · Sprint Race
+DESCRIPTION:Round 5 · Sprint Race\nCircuit: Circuit Gilles Villeneuve · Sprint Weekend\nLocal time: 12:00 EDT
+LOCATION:Circuit Gilles Villeneuve, Montreal, Canada
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r05-quali@tiago
+DTSTART;TZID=Europe/Lisbon:20260523T210000
+DTEND;TZID=Europe/Lisbon:20260523T220000
+SUMMARY:📍 F1 R5 — Canadian GP · Qualifying
+DESCRIPTION:Round 5 · Qualifying\nCircuit: Circuit Gilles Villeneuve · Sprint Weekend\nLocal time: 16:00 EDT
+LOCATION:Circuit Gilles Villeneuve, Montreal, Canada
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r05-race@tiago
+DTSTART;TZID=Europe/Lisbon:20260524T190000
+DTEND;TZID=Europe/Lisbon:20260524T210000
+SUMMARY:🏁 F1 R5 — Canadian GP · Antonelli wins (Mercedes)
+DESCRIPTION:Round 5 · Race\nCircuit: Circuit Gilles Villeneuve · 70 laps · Sprint Weekend\n\n🥇 Kimi Antonelli (Mercedes)\n🥈 Lewis Hamilton (Ferrari)\n🥉 Max Verstappen (Red Bull)
+LOCATION:Circuit Gilles Villeneuve, Montreal, Canada
+END:VEVENT
+
+
+BEGIN:VEVENT
+UID:f1-2026-r06-fp1@tiago
+DTSTART;TZID=Europe/Lisbon:20260605T120000
+DTEND;TZID=Europe/Lisbon:20260605T130000
+SUMMARY:🔧 F1 R6 — Monaco GP · FP1
+DESCRIPTION:Round 6 · Free Practice 1\nCircuit: Circuit de Monaco · 78 laps\nLocal time: 13:00 CEST
+LOCATION:Circuit de Monaco, Monte Carlo, Monaco
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r06-fp2@tiago
+DTSTART;TZID=Europe/Lisbon:20260605T160000
+DTEND;TZID=Europe/Lisbon:20260605T170000
+SUMMARY:🔧 F1 R6 — Monaco GP · FP2
+DESCRIPTION:Round 6 · Free Practice 2\nCircuit: Circuit de Monaco · 78 laps\nLocal time: 17:00 CEST
+LOCATION:Circuit de Monaco, Monte Carlo, Monaco
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r06-fp3@tiago
+DTSTART;TZID=Europe/Lisbon:20260606T110000
+DTEND;TZID=Europe/Lisbon:20260606T120000
+SUMMARY:🔧 F1 R6 — Monaco GP · FP3
+DESCRIPTION:Round 6 · Free Practice 3\nCircuit: Circuit de Monaco · 78 laps\nLocal time: 12:00 CEST
+LOCATION:Circuit de Monaco, Monte Carlo, Monaco
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r06-quali@tiago
+DTSTART;TZID=Europe/Lisbon:20260606T150000
+DTEND;TZID=Europe/Lisbon:20260606T160000
+SUMMARY:📍 F1 R6 — Monaco GP · Qualifying
+DESCRIPTION:Round 6 · Qualifying\nCircuit: Circuit de Monaco · 78 laps\nLocal time: 16:00 CEST
+LOCATION:Circuit de Monaco, Monte Carlo, Monaco
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r06-race@tiago
+DTSTART;TZID=Europe/Lisbon:20260607T140000
+DTEND;TZID=Europe/Lisbon:20260607T160000
+SUMMARY:🏁 F1 R6 — Monaco GP · Monte Carlo
+DESCRIPTION:Round 6 · Race\nCircuit: Circuit de Monaco · 78 laps\nLocal time: 15:00 CEST
+LOCATION:Circuit de Monaco, Monte Carlo, Monaco
+END:VEVENT
+
+
+BEGIN:VEVENT
+UID:f1-2026-r07-fp1@tiago
+DTSTART;TZID=Europe/Lisbon:20260612T123000
+DTEND;TZID=Europe/Lisbon:20260612T133000
+SUMMARY:🔧 F1 R7 — Barcelona GP · FP1
+DESCRIPTION:Round 7 · Free Practice 1\nCircuit: Circuit de Barcelona-Catalunya · 66 laps\nLocal time: 13:30 CEST
+LOCATION:Circuit de Barcelona-Catalunya, Montmeló, Spain
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r07-fp2@tiago
+DTSTART;TZID=Europe/Lisbon:20260612T160000
+DTEND;TZID=Europe/Lisbon:20260612T170000
+SUMMARY:🔧 F1 R7 — Barcelona GP · FP2
+DESCRIPTION:Round 7 · Free Practice 2\nCircuit: Circuit de Barcelona-Catalunya · 66 laps\nLocal time: 17:00 CEST
+LOCATION:Circuit de Barcelona-Catalunya, Montmeló, Spain
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r07-fp3@tiago
+DTSTART;TZID=Europe/Lisbon:20260613T113000
+DTEND;TZID=Europe/Lisbon:20260613T123000
+SUMMARY:🔧 F1 R7 — Barcelona GP · FP3
+DESCRIPTION:Round 7 · Free Practice 3\nCircuit: Circuit de Barcelona-Catalunya · 66 laps\nLocal time: 12:30 CEST
+LOCATION:Circuit de Barcelona-Catalunya, Montmeló, Spain
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r07-quali@tiago
+DTSTART;TZID=Europe/Lisbon:20260613T150000
+DTEND;TZID=Europe/Lisbon:20260613T160000
+SUMMARY:📍 F1 R7 — Barcelona GP · Qualifying
+DESCRIPTION:Round 7 · Qualifying\nCircuit: Circuit de Barcelona-Catalunya · 66 laps\nLocal time: 16:00 CEST
+LOCATION:Circuit de Barcelona-Catalunya, Montmeló, Spain
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r07-race@tiago
+DTSTART;TZID=Europe/Lisbon:20260614T130000
+DTEND;TZID=Europe/Lisbon:20260614T150000
+SUMMARY:🏁 F1 R7 — Barcelona GP · Hamilton wins (Ferrari)
+DESCRIPTION:Round 7 · Race\nCircuit: Circuit de Barcelona-Catalunya · 66 laps\n\n🥇 Lewis Hamilton (Ferrari)\n🥈 George Russell (Mercedes) +19.5s\n🥉 Lando Norris (McLaren) +23.7s
+LOCATION:Circuit de Barcelona-Catalunya, Montmeló, Spain
+END:VEVENT
+
+
+BEGIN:VEVENT
+UID:f1-2026-r08-fp1@tiago
+DTSTART;TZID=Europe/Lisbon:20260626T123000
+DTEND;TZID=Europe/Lisbon:20260626T133000
+SUMMARY:🔧 F1 R8 — Austrian GP · FP1
+DESCRIPTION:Round 8 · Free Practice 1\nCircuit: Red Bull Ring · 71 laps\nLocal time: 13:30 CEST
+LOCATION:Red Bull Ring, Spielberg, Austria
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r08-fp2@tiago
+DTSTART;TZID=Europe/Lisbon:20260626T160000
+DTEND;TZID=Europe/Lisbon:20260626T170000
+SUMMARY:🔧 F1 R8 — Austrian GP · FP2
+DESCRIPTION:Round 8 · Free Practice 2\nCircuit: Red Bull Ring · 71 laps\nLocal time: 17:00 CEST
+LOCATION:Red Bull Ring, Spielberg, Austria
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r08-fp3@tiago
+DTSTART;TZID=Europe/Lisbon:20260627T113000
+DTEND;TZID=Europe/Lisbon:20260627T123000
+SUMMARY:🔧 F1 R8 — Austrian GP · FP3
+DESCRIPTION:Round 8 · Free Practice 3\nCircuit: Red Bull Ring · 71 laps\nLocal time: 12:30 CEST
+LOCATION:Red Bull Ring, Spielberg, Austria
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r08-quali@tiago
+DTSTART;TZID=Europe/Lisbon:20260627T150000
+DTEND;TZID=Europe/Lisbon:20260627T160000
+SUMMARY:📍 F1 R8 — Austrian GP · Qualifying
+DESCRIPTION:Round 8 · Qualifying\nCircuit: Red Bull Ring · 71 laps\nLocal time: 16:00 CEST
+LOCATION:Red Bull Ring, Spielberg, Austria
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r08-race@tiago
+DTSTART;TZID=Europe/Lisbon:20260628T140000
+DTEND;TZID=Europe/Lisbon:20260628T160000
+SUMMARY:🏁 F1 R8 — Austrian GP · Red Bull Ring
+DESCRIPTION:Round 8 · Race\nCircuit: Red Bull Ring · 71 laps\nLocal time: 15:00 CEST
+LOCATION:Red Bull Ring, Spielberg, Austria
+END:VEVENT
+
+
+BEGIN:VEVENT
+UID:f1-2026-r09-fp1@tiago
+DTSTART;TZID=Europe/Lisbon:20260703T120000
+DTEND;TZID=Europe/Lisbon:20260703T130000
+SUMMARY:🔧 F1 R9 — British GP · FP1
+DESCRIPTION:Round 9 · Free Practice 1\nCircuit: Silverstone · Sprint Weekend\nLocal time: 13:00 BST
+LOCATION:Silverstone Circuit, Silverstone, United Kingdom
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r09-sq@tiago
+DTSTART;TZID=Europe/Lisbon:20260703T160000
+DTEND;TZID=Europe/Lisbon:20260703T170000
+SUMMARY:⚡ F1 R9 — British GP · Sprint Qualifying
+DESCRIPTION:Round 9 · Sprint Qualifying\nCircuit: Silverstone · Sprint Weekend\nLocal time: 17:00 BST
+LOCATION:Silverstone Circuit, Silverstone, United Kingdom
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r09-sprint@tiago
+DTSTART;TZID=Europe/Lisbon:20260704T110000
+DTEND;TZID=Europe/Lisbon:20260704T120000
+SUMMARY:⚡ F1 R9 — British GP · Sprint Race
+DESCRIPTION:Round 9 · Sprint Race\nCircuit: Silverstone · Sprint Weekend\nLocal time: 12:00 BST
+LOCATION:Silverstone Circuit, Silverstone, United Kingdom
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r09-quali@tiago
+DTSTART;TZID=Europe/Lisbon:20260704T150000
+DTEND;TZID=Europe/Lisbon:20260704T160000
+SUMMARY:📍 F1 R9 — British GP · Qualifying
+DESCRIPTION:Round 9 · Qualifying\nCircuit: Silverstone · Sprint Weekend\nLocal time: 16:00 BST
+LOCATION:Silverstone Circuit, Silverstone, United Kingdom
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r09-race@tiago
+DTSTART;TZID=Europe/Lisbon:20260705T140000
+DTEND;TZID=Europe/Lisbon:20260705T160000
+SUMMARY:🏁 F1 R9 — British GP · Silverstone
+DESCRIPTION:Round 9 · Race\nCircuit: Silverstone · 52 laps · Sprint Weekend\nLocal time: 15:00 BST
+LOCATION:Silverstone Circuit, Silverstone, United Kingdom
+END:VEVENT
+
+
+BEGIN:VEVENT
+UID:f1-2026-r10-fp1@tiago
+DTSTART;TZID=Europe/Lisbon:20260717T120000
+DTEND;TZID=Europe/Lisbon:20260717T130000
+SUMMARY:🔧 F1 R10 — Belgian GP · FP1
+DESCRIPTION:Round 10 · Free Practice 1\nCircuit: Circuit de Spa-Francorchamps · 44 laps\nLocal time: 13:00 CEST
+LOCATION:Circuit de Spa-Francorchamps, Stavelot, Belgium
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r10-fp2@tiago
+DTSTART;TZID=Europe/Lisbon:20260717T160000
+DTEND;TZID=Europe/Lisbon:20260717T170000
+SUMMARY:🔧 F1 R10 — Belgian GP · FP2
+DESCRIPTION:Round 10 · Free Practice 2\nCircuit: Circuit de Spa-Francorchamps · 44 laps\nLocal time: 17:00 CEST
+LOCATION:Circuit de Spa-Francorchamps, Stavelot, Belgium
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r10-fp3@tiago
+DTSTART;TZID=Europe/Lisbon:20260718T110000
+DTEND;TZID=Europe/Lisbon:20260718T120000
+SUMMARY:🔧 F1 R10 — Belgian GP · FP3
+DESCRIPTION:Round 10 · Free Practice 3\nCircuit: Circuit de Spa-Francorchamps · 44 laps\nLocal time: 12:00 CEST
+LOCATION:Circuit de Spa-Francorchamps, Stavelot, Belgium
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r10-quali@tiago
+DTSTART;TZID=Europe/Lisbon:20260718T150000
+DTEND;TZID=Europe/Lisbon:20260718T160000
+SUMMARY:📍 F1 R10 — Belgian GP · Qualifying
+DESCRIPTION:Round 10 · Qualifying\nCircuit: Circuit de Spa-Francorchamps · 44 laps\nLocal time: 16:00 CEST
+LOCATION:Circuit de Spa-Francorchamps, Stavelot, Belgium
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r10-race@tiago
+DTSTART;TZID=Europe/Lisbon:20260719T140000
+DTEND;TZID=Europe/Lisbon:20260719T160000
+SUMMARY:🏁 F1 R10 — Belgian GP · Spa-Francorchamps
+DESCRIPTION:Round 10 · Race\nCircuit: Circuit de Spa-Francorchamps · 44 laps\nLocal time: 15:00 CEST
+LOCATION:Circuit de Spa-Francorchamps, Stavelot, Belgium
+END:VEVENT
+
+
+BEGIN:VEVENT
+UID:f1-2026-r11-fp1@tiago
+DTSTART;TZID=Europe/Lisbon:20260724T120000
+DTEND;TZID=Europe/Lisbon:20260724T130000
+SUMMARY:🔧 F1 R11 — Hungarian GP · FP1
+DESCRIPTION:Round 11 · Free Practice 1\nCircuit: Hungaroring · Budapest · 70 laps\nLocal time: 13:00 CEST
+LOCATION:Hungaroring, Mogyoród, Hungary
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r11-fp2@tiago
+DTSTART;TZID=Europe/Lisbon:20260724T160000
+DTEND;TZID=Europe/Lisbon:20260724T170000
+SUMMARY:🔧 F1 R11 — Hungarian GP · FP2
+DESCRIPTION:Round 11 · Free Practice 2\nCircuit: Hungaroring · Budapest · 70 laps\nLocal time: 17:00 CEST
+LOCATION:Hungaroring, Mogyoród, Hungary
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r11-fp3@tiago
+DTSTART;TZID=Europe/Lisbon:20260725T110000
+DTEND;TZID=Europe/Lisbon:20260725T120000
+SUMMARY:🔧 F1 R11 — Hungarian GP · FP3
+DESCRIPTION:Round 11 · Free Practice 3\nCircuit: Hungaroring · Budapest · 70 laps\nLocal time: 12:00 CEST
+LOCATION:Hungaroring, Mogyoród, Hungary
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r11-quali@tiago
+DTSTART;TZID=Europe/Lisbon:20260725T150000
+DTEND;TZID=Europe/Lisbon:20260725T160000
+SUMMARY:📍 F1 R11 — Hungarian GP · Qualifying
+DESCRIPTION:Round 11 · Qualifying\nCircuit: Hungaroring · Budapest · 70 laps\nLocal time: 16:00 CEST
+LOCATION:Hungaroring, Mogyoród, Hungary
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r11-race@tiago
+DTSTART;TZID=Europe/Lisbon:20260726T140000
+DTEND;TZID=Europe/Lisbon:20260726T160000
+SUMMARY:🏁 F1 R11 — Hungarian GP · Hungaroring
+DESCRIPTION:Round 11 · Race\nCircuit: Hungaroring · Budapest · 70 laps\nLocal time: 15:00 CEST
+LOCATION:Hungaroring, Mogyoród, Hungary
+END:VEVENT
+
+
+BEGIN:VEVENT
+UID:f1-2026-r12-fp1@tiago
+DTSTART;TZID=Europe/Lisbon:20260821T120000
+DTEND;TZID=Europe/Lisbon:20260821T130000
+SUMMARY:🔧 F1 R12 — Dutch GP · FP1
+DESCRIPTION:Round 12 · Free Practice 1\nCircuit: Circuit Zandvoort · Sprint Weekend\nLocal time: 13:00 CEST
+LOCATION:Circuit Zandvoort, Zandvoort, Netherlands
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r12-sq@tiago
+DTSTART;TZID=Europe/Lisbon:20260821T160000
+DTEND;TZID=Europe/Lisbon:20260821T170000
+SUMMARY:⚡ F1 R12 — Dutch GP · Sprint Qualifying
+DESCRIPTION:Round 12 · Sprint Qualifying\nCircuit: Circuit Zandvoort · Sprint Weekend\nLocal time: 17:00 CEST
+LOCATION:Circuit Zandvoort, Zandvoort, Netherlands
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r12-sprint@tiago
+DTSTART;TZID=Europe/Lisbon:20260822T110000
+DTEND;TZID=Europe/Lisbon:20260822T120000
+SUMMARY:⚡ F1 R12 — Dutch GP · Sprint Race
+DESCRIPTION:Round 12 · Sprint Race\nCircuit: Circuit Zandvoort · Sprint Weekend\nLocal time: 12:00 CEST
+LOCATION:Circuit Zandvoort, Zandvoort, Netherlands
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r12-quali@tiago
+DTSTART;TZID=Europe/Lisbon:20260822T150000
+DTEND;TZID=Europe/Lisbon:20260822T160000
+SUMMARY:📍 F1 R12 — Dutch GP · Qualifying
+DESCRIPTION:Round 12 · Qualifying\nCircuit: Circuit Zandvoort · Sprint Weekend\nLocal time: 16:00 CEST
+LOCATION:Circuit Zandvoort, Zandvoort, Netherlands
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r12-race@tiago
+DTSTART;TZID=Europe/Lisbon:20260823T140000
+DTEND;TZID=Europe/Lisbon:20260823T160000
+SUMMARY:🏁 F1 R12 — Dutch GP · Zandvoort
+DESCRIPTION:Round 12 · Race\nCircuit: Circuit Zandvoort · 72 laps · Sprint Weekend\nLocal time: 15:00 CEST
+LOCATION:Circuit Zandvoort, Zandvoort, Netherlands
+END:VEVENT
+
+
+BEGIN:VEVENT
+UID:f1-2026-r13-fp1@tiago
+DTSTART;TZID=Europe/Lisbon:20260904T120000
+DTEND;TZID=Europe/Lisbon:20260904T130000
+SUMMARY:🔧 F1 R13 — Italian GP · FP1
+DESCRIPTION:Round 13 · Free Practice 1\nCircuit: Autodromo Nazionale Monza · 53 laps\nLocal time: 13:00 CEST
+LOCATION:Autodromo Nazionale Monza, Monza, Italy
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r13-fp2@tiago
+DTSTART;TZID=Europe/Lisbon:20260904T160000
+DTEND;TZID=Europe/Lisbon:20260904T170000
+SUMMARY:🔧 F1 R13 — Italian GP · FP2
+DESCRIPTION:Round 13 · Free Practice 2\nCircuit: Autodromo Nazionale Monza · 53 laps\nLocal time: 17:00 CEST
+LOCATION:Autodromo Nazionale Monza, Monza, Italy
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r13-fp3@tiago
+DTSTART;TZID=Europe/Lisbon:20260905T110000
+DTEND;TZID=Europe/Lisbon:20260905T120000
+SUMMARY:🔧 F1 R13 — Italian GP · FP3
+DESCRIPTION:Round 13 · Free Practice 3\nCircuit: Autodromo Nazionale Monza · 53 laps\nLocal time: 12:00 CEST
+LOCATION:Autodromo Nazionale Monza, Monza, Italy
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r13-quali@tiago
+DTSTART;TZID=Europe/Lisbon:20260905T150000
+DTEND;TZID=Europe/Lisbon:20260905T160000
+SUMMARY:📍 F1 R13 — Italian GP · Qualifying
+DESCRIPTION:Round 13 · Qualifying\nCircuit: Autodromo Nazionale Monza · 53 laps\nLocal time: 16:00 CEST
+LOCATION:Autodromo Nazionale Monza, Monza, Italy
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r13-race@tiago
+DTSTART;TZID=Europe/Lisbon:20260906T140000
+DTEND;TZID=Europe/Lisbon:20260906T160000
+SUMMARY:🏁 F1 R13 — Italian GP · Monza
+DESCRIPTION:Round 13 · Race\nCircuit: Autodromo Nazionale Monza · 53 laps\nLocal time: 15:00 CEST
+LOCATION:Autodromo Nazionale Monza, Monza, Italy
+END:VEVENT
+
+
+BEGIN:VEVENT
+UID:f1-2026-r14-fp1@tiago
+DTSTART;TZID=Europe/Lisbon:20260911T120000
+DTEND;TZID=Europe/Lisbon:20260911T130000
+SUMMARY:🔧 F1 R14 — Madrid GP · FP1
+DESCRIPTION:Round 14 · Free Practice 1\nCircuit: Circuito de Madrid · New venue debut\nLocal time: 13:00 CEST
+LOCATION:Circuito de Madrid, Madrid, Spain
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r14-fp2@tiago
+DTSTART;TZID=Europe/Lisbon:20260911T160000
+DTEND;TZID=Europe/Lisbon:20260911T170000
+SUMMARY:🔧 F1 R14 — Madrid GP · FP2
+DESCRIPTION:Round 14 · Free Practice 2\nCircuit: Circuito de Madrid · New venue debut\nLocal time: 17:00 CEST
+LOCATION:Circuito de Madrid, Madrid, Spain
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r14-fp3@tiago
+DTSTART;TZID=Europe/Lisbon:20260912T110000
+DTEND;TZID=Europe/Lisbon:20260912T120000
+SUMMARY:🔧 F1 R14 — Madrid GP · FP3
+DESCRIPTION:Round 14 · Free Practice 3\nCircuit: Circuito de Madrid · New venue debut\nLocal time: 12:00 CEST
+LOCATION:Circuito de Madrid, Madrid, Spain
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r14-quali@tiago
+DTSTART;TZID=Europe/Lisbon:20260912T150000
+DTEND;TZID=Europe/Lisbon:20260912T160000
+SUMMARY:📍 F1 R14 — Madrid GP · Qualifying
+DESCRIPTION:Round 14 · Qualifying\nCircuit: Circuito de Madrid · New venue debut\nLocal time: 16:00 CEST
+LOCATION:Circuito de Madrid, Madrid, Spain
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r14-race@tiago
+DTSTART;TZID=Europe/Lisbon:20260913T140000
+DTEND;TZID=Europe/Lisbon:20260913T160000
+SUMMARY:🏁 F1 R14 — Madrid GP · Circuito de Madrid ⭐ Debut
+DESCRIPTION:Round 14 · Race\nCircuit: Circuito de Madrid · New venue F1 debut\nLocal time: 15:00 CEST
+LOCATION:Circuito de Madrid, Madrid, Spain
+END:VEVENT
+
+
+BEGIN:VEVENT
+UID:f1-2026-r15-fp1@tiago
+DTSTART;TZID=Europe/Lisbon:20260925T100000
+DTEND;TZID=Europe/Lisbon:20260925T110000
+SUMMARY:🔧 F1 R15 — Azerbaijan GP · FP1
+DESCRIPTION:Round 15 · Free Practice 1\nCircuit: Baku City Circuit · 51 laps\nLocal time: 13:00 AZT
+LOCATION:Baku City Circuit, Baku, Azerbaijan
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r15-fp2@tiago
+DTSTART;TZID=Europe/Lisbon:20260925T140000
+DTEND;TZID=Europe/Lisbon:20260925T150000
+SUMMARY:🔧 F1 R15 — Azerbaijan GP · FP2
+DESCRIPTION:Round 15 · Free Practice 2\nCircuit: Baku City Circuit · 51 laps\nLocal time: 17:00 AZT
+LOCATION:Baku City Circuit, Baku, Azerbaijan
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r15-fp3@tiago
+DTSTART;TZID=Europe/Lisbon:20260926T090000
+DTEND;TZID=Europe/Lisbon:20260926T100000
+SUMMARY:🔧 F1 R15 — Azerbaijan GP · FP3
+DESCRIPTION:Round 15 · Free Practice 3\nCircuit: Baku City Circuit · 51 laps\nLocal time: 12:00 AZT
+LOCATION:Baku City Circuit, Baku, Azerbaijan
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r15-quali@tiago
+DTSTART;TZID=Europe/Lisbon:20260926T130000
+DTEND;TZID=Europe/Lisbon:20260926T140000
+SUMMARY:📍 F1 R15 — Azerbaijan GP · Qualifying
+DESCRIPTION:Round 15 · Qualifying\nCircuit: Baku City Circuit · 51 laps\nLocal time: 16:00 AZT
+LOCATION:Baku City Circuit, Baku, Azerbaijan
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r15-race@tiago
+DTSTART;TZID=Europe/Lisbon:20260927T120000
+DTEND;TZID=Europe/Lisbon:20260927T140000
+SUMMARY:🏁 F1 R15 — Azerbaijan GP · Baku City Circuit
+DESCRIPTION:Round 15 · Race\nCircuit: Baku City Circuit · 51 laps\nLocal time: 15:00 AZT
+LOCATION:Baku City Circuit, Baku, Azerbaijan
+END:VEVENT
+
+
+BEGIN:VEVENT
+UID:f1-2026-r16-fp1@tiago
+DTSTART;TZID=Europe/Lisbon:20261009T100000
+DTEND;TZID=Europe/Lisbon:20261009T110000
+SUMMARY:🔧 F1 R16 — Singapore GP · FP1
+DESCRIPTION:Round 16 · Free Practice 1\nCircuit: Marina Bay Street Circuit · Sprint Weekend · Night Race\nLocal time: 18:00 SGT
+LOCATION:Marina Bay Street Circuit, Singapore
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r16-sq@tiago
+DTSTART;TZID=Europe/Lisbon:20261009T140000
+DTEND;TZID=Europe/Lisbon:20261009T150000
+SUMMARY:⚡ F1 R16 — Singapore GP · Sprint Qualifying
+DESCRIPTION:Round 16 · Sprint Qualifying\nCircuit: Marina Bay Street Circuit · Sprint Weekend · Night Race\nLocal time: 22:00 SGT
+LOCATION:Marina Bay Street Circuit, Singapore
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r16-sprint@tiago
+DTSTART;TZID=Europe/Lisbon:20261010T110000
+DTEND;TZID=Europe/Lisbon:20261010T120000
+SUMMARY:⚡ F1 R16 — Singapore GP · Sprint Race
+DESCRIPTION:Round 16 · Sprint Race\nCircuit: Marina Bay Street Circuit · Sprint Weekend · Night Race\nLocal time: 19:00 SGT
+LOCATION:Marina Bay Street Circuit, Singapore
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r16-quali@tiago
+DTSTART;TZID=Europe/Lisbon:20261010T140000
+DTEND;TZID=Europe/Lisbon:20261010T150000
+SUMMARY:📍 F1 R16 — Singapore GP · Qualifying
+DESCRIPTION:Round 16 · Qualifying\nCircuit: Marina Bay Street Circuit · Sprint Weekend · Night Race\nLocal time: 22:00 SGT
+LOCATION:Marina Bay Street Circuit, Singapore
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r16-race@tiago
+DTSTART;TZID=Europe/Lisbon:20261011T130000
+DTEND;TZID=Europe/Lisbon:20261011T150000
+SUMMARY:🏁🌙 F1 R16 — Singapore GP · Marina Bay Night Race
+DESCRIPTION:Round 16 · Race\nCircuit: Marina Bay Street Circuit · 62 laps · Sprint Weekend · Night Race\nLocal time: 20:00 SGT
+LOCATION:Marina Bay Street Circuit, Singapore
+END:VEVENT
+
+
+BEGIN:VEVENT
+UID:f1-2026-r17-fp1@tiago
+DTSTART;TZID=Europe/Lisbon:20261023T180000
+DTEND;TZID=Europe/Lisbon:20261023T190000
+SUMMARY:🔧 F1 R17 — US GP · FP1
+DESCRIPTION:Round 17 · Free Practice 1\nCircuit: Circuit of the Americas · 56 laps\nLocal time: 13:00 CDT
+LOCATION:Circuit of the Americas, Austin, Texas, USA
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r17-fp2@tiago
+DTSTART;TZID=Europe/Lisbon:20261023T220000
+DTEND;TZID=Europe/Lisbon:20261023T230000
+SUMMARY:🔧 F1 R17 — US GP · FP2
+DESCRIPTION:Round 17 · Free Practice 2\nCircuit: Circuit of the Americas · 56 laps\nLocal time: 17:00 CDT
+LOCATION:Circuit of the Americas, Austin, Texas, USA
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r17-fp3@tiago
+DTSTART;TZID=Europe/Lisbon:20261024T170000
+DTEND;TZID=Europe/Lisbon:20261024T180000
+SUMMARY:🔧 F1 R17 — US GP · FP3
+DESCRIPTION:Round 17 · Free Practice 3\nCircuit: Circuit of the Americas · 56 laps\nLocal time: 12:00 CDT
+LOCATION:Circuit of the Americas, Austin, Texas, USA
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r17-quali@tiago
+DTSTART;TZID=Europe/Lisbon:20261024T210000
+DTEND;TZID=Europe/Lisbon:20261024T220000
+SUMMARY:📍 F1 R17 — US GP · Qualifying
+DESCRIPTION:Round 17 · Qualifying\nCircuit: Circuit of the Americas · 56 laps\nLocal time: 16:00 CDT
+LOCATION:Circuit of the Americas, Austin, Texas, USA
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r17-race@tiago
+DTSTART;TZID=Europe/Lisbon:20261025T200000
+DTEND;TZID=Europe/Lisbon:20261025T220000
+SUMMARY:🏁 F1 R17 — US GP · Circuit of the Americas
+DESCRIPTION:Round 17 · Race\nCircuit: Circuit of the Americas · 56 laps\nLocal time: 14:00 CDT
+LOCATION:Circuit of the Americas, Austin, Texas, USA
+END:VEVENT
+
+
+BEGIN:VEVENT
+UID:f1-2026-r18-fp1@tiago
+DTSTART;TZID=Europe/Lisbon:20261030T190000
+DTEND;TZID=Europe/Lisbon:20261030T200000
+SUMMARY:🔧 F1 R18 — Mexico City GP · FP1
+DESCRIPTION:Round 18 · Free Practice 1\nCircuit: Autodromo Hermanos Rodriguez · 71 laps\nLocal time: 13:00 CST
+LOCATION:Autodromo Hermanos Rodriguez, Mexico City, Mexico
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r18-fp2@tiago
+DTSTART;TZID=Europe/Lisbon:20261030T230000
+DTEND;TZID=Europe/Lisbon:20261031T000000
+SUMMARY:🔧 F1 R18 — Mexico City GP · FP2
+DESCRIPTION:Round 18 · Free Practice 2\nCircuit: Autodromo Hermanos Rodriguez · 71 laps\nLocal time: 17:00 CST
+LOCATION:Autodromo Hermanos Rodriguez, Mexico City, Mexico
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r18-fp3@tiago
+DTSTART;TZID=Europe/Lisbon:20261031T180000
+DTEND;TZID=Europe/Lisbon:20261031T190000
+SUMMARY:🔧 F1 R18 — Mexico City GP · FP3
+DESCRIPTION:Round 18 · Free Practice 3\nCircuit: Autodromo Hermanos Rodriguez · 71 laps\nLocal time: 12:00 CST
+LOCATION:Autodromo Hermanos Rodriguez, Mexico City, Mexico
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r18-quali@tiago
+DTSTART;TZID=Europe/Lisbon:20261031T220000
+DTEND;TZID=Europe/Lisbon:20261031T230000
+SUMMARY:📍 F1 R18 — Mexico City GP · Qualifying
+DESCRIPTION:Round 18 · Qualifying\nCircuit: Autodromo Hermanos Rodriguez · 71 laps\nLocal time: 16:00 CST
+LOCATION:Autodromo Hermanos Rodriguez, Mexico City, Mexico
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r18-race@tiago
+DTSTART;TZID=Europe/Lisbon:20261101T210000
+DTEND;TZID=Europe/Lisbon:20261101T230000
+SUMMARY:🏁 F1 R18 — Mexico City GP · Hermanos Rodriguez
+DESCRIPTION:Round 18 · Race\nCircuit: Autodromo Hermanos Rodriguez · 71 laps\nLocal time: 14:00 CST
+LOCATION:Autodromo Hermanos Rodriguez, Mexico City, Mexico
+END:VEVENT
+
+
+BEGIN:VEVENT
+UID:f1-2026-r19-fp1@tiago
+DTSTART;TZID=Europe/Lisbon:20261106T160000
+DTEND;TZID=Europe/Lisbon:20261106T170000
+SUMMARY:🔧 F1 R19 — Brazilian GP · FP1
+DESCRIPTION:Round 19 · Free Practice 1\nCircuit: Autodromo Jose Carlos Pace · 71 laps\nLocal time: 13:00 BRT
+LOCATION:Autodromo Jose Carlos Pace, São Paulo, Brazil
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r19-fp2@tiago
+DTSTART;TZID=Europe/Lisbon:20261106T200000
+DTEND;TZID=Europe/Lisbon:20261106T210000
+SUMMARY:🔧 F1 R19 — Brazilian GP · FP2
+DESCRIPTION:Round 19 · Free Practice 2\nCircuit: Autodromo Jose Carlos Pace · 71 laps\nLocal time: 17:00 BRT
+LOCATION:Autodromo Jose Carlos Pace, São Paulo, Brazil
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r19-fp3@tiago
+DTSTART;TZID=Europe/Lisbon:20261107T150000
+DTEND;TZID=Europe/Lisbon:20261107T160000
+SUMMARY:🔧 F1 R19 — Brazilian GP · FP3
+DESCRIPTION:Round 19 · Free Practice 3\nCircuit: Autodromo Jose Carlos Pace · 71 laps\nLocal time: 12:00 BRT
+LOCATION:Autodromo Jose Carlos Pace, São Paulo, Brazil
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r19-quali@tiago
+DTSTART;TZID=Europe/Lisbon:20261107T190000
+DTEND;TZID=Europe/Lisbon:20261107T200000
+SUMMARY:📍 F1 R19 — Brazilian GP · Qualifying
+DESCRIPTION:Round 19 · Qualifying\nCircuit: Autodromo Jose Carlos Pace · 71 laps\nLocal time: 16:00 BRT
+LOCATION:Autodromo Jose Carlos Pace, São Paulo, Brazil
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r19-race@tiago
+DTSTART;TZID=Europe/Lisbon:20261108T180000
+DTEND;TZID=Europe/Lisbon:20261108T200000
+SUMMARY:🏁 F1 R19 — Brazilian GP · Interlagos
+DESCRIPTION:Round 19 · Race\nCircuit: Autodromo Jose Carlos Pace · 71 laps\nLocal time: 14:00 BRT
+LOCATION:Autodromo Jose Carlos Pace, São Paulo, Brazil
+END:VEVENT
+
+
+BEGIN:VEVENT
+UID:f1-2026-r20-fp1@tiago
+DTSTART;TZID=Europe/Lisbon:20261120T040000
+DTEND;TZID=Europe/Lisbon:20261120T050000
+SUMMARY:🔧 F1 R20 — Las Vegas GP · FP1
+DESCRIPTION:Round 20 · Free Practice 1\nCircuit: Las Vegas Street Circuit · Night Race\nLocal time: 20:00 PST
+LOCATION:Las Vegas Street Circuit, Las Vegas, USA
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r20-fp2@tiago
+DTSTART;TZID=Europe/Lisbon:20261120T080000
+DTEND;TZID=Europe/Lisbon:20261120T090000
+SUMMARY:🔧 F1 R20 — Las Vegas GP · FP2
+DESCRIPTION:Round 20 · Free Practice 2\nCircuit: Las Vegas Street Circuit · Night Race\nLocal time: 00:00 PST (Sat)
+LOCATION:Las Vegas Street Circuit, Las Vegas, USA
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r20-fp3@tiago
+DTSTART;TZID=Europe/Lisbon:20261121T040000
+DTEND;TZID=Europe/Lisbon:20261121T050000
+SUMMARY:🔧 F1 R20 — Las Vegas GP · FP3
+DESCRIPTION:Round 20 · Free Practice 3\nCircuit: Las Vegas Street Circuit · Night Race\nLocal time: 20:00 PST
+LOCATION:Las Vegas Street Circuit, Las Vegas, USA
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r20-quali@tiago
+DTSTART;TZID=Europe/Lisbon:20261121T080000
+DTEND;TZID=Europe/Lisbon:20261121T090000
+SUMMARY:📍 F1 R20 — Las Vegas GP · Qualifying
+DESCRIPTION:Round 20 · Qualifying\nCircuit: Las Vegas Street Circuit · Night Race\nLocal time: 00:00 PST (Sun)
+LOCATION:Las Vegas Street Circuit, Las Vegas, USA
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r20-race@tiago
+DTSTART;TZID=Europe/Lisbon:20261122T060000
+DTEND;TZID=Europe/Lisbon:20261122T080000
+SUMMARY:🏁🌙 F1 R20 — Las Vegas GP · Las Vegas Street Circuit
+DESCRIPTION:Round 20 · Race\nCircuit: Las Vegas Street Circuit · 50 laps · Night Race\nLocal time: 22:00 PST (Sat)
+LOCATION:Las Vegas Street Circuit, Las Vegas, USA
+END:VEVENT
+
+
+BEGIN:VEVENT
+UID:f1-2026-r21-fp1@tiago
+DTSTART;TZID=Europe/Lisbon:20261127T110000
+DTEND;TZID=Europe/Lisbon:20261127T120000
+SUMMARY:🔧 F1 R21 — Qatar GP · FP1
+DESCRIPTION:Round 21 · Free Practice 1\nCircuit: Lusail International Circuit · 57 laps\nLocal time: 14:00 AST
+LOCATION:Lusail International Circuit, Lusail, Qatar
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r21-fp2@tiago
+DTSTART;TZID=Europe/Lisbon:20261127T150000
+DTEND;TZID=Europe/Lisbon:20261127T160000
+SUMMARY:🔧 F1 R21 — Qatar GP · FP2
+DESCRIPTION:Round 21 · Free Practice 2\nCircuit: Lusail International Circuit · 57 laps\nLocal time: 18:00 AST
+LOCATION:Lusail International Circuit, Lusail, Qatar
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r21-fp3@tiago
+DTSTART;TZID=Europe/Lisbon:20261128T100000
+DTEND;TZID=Europe/Lisbon:20261128T110000
+SUMMARY:🔧 F1 R21 — Qatar GP · FP3
+DESCRIPTION:Round 21 · Free Practice 3\nCircuit: Lusail International Circuit · 57 laps\nLocal time: 13:00 AST
+LOCATION:Lusail International Circuit, Lusail, Qatar
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r21-quali@tiago
+DTSTART;TZID=Europe/Lisbon:20261128T140000
+DTEND;TZID=Europe/Lisbon:20261128T150000
+SUMMARY:📍 F1 R21 — Qatar GP · Qualifying
+DESCRIPTION:Round 21 · Qualifying\nCircuit: Lusail International Circuit · 57 laps\nLocal time: 17:00 AST
+LOCATION:Lusail International Circuit, Lusail, Qatar
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r21-race@tiago
+DTSTART;TZID=Europe/Lisbon:20261129T160000
+DTEND;TZID=Europe/Lisbon:20261129T180000
+SUMMARY:🏁 F1 R21 — Qatar GP · Lusail
+DESCRIPTION:Round 21 · Race\nCircuit: Lusail International Circuit · 57 laps\nLocal time: 19:00 AST
+LOCATION:Lusail International Circuit, Lusail, Qatar
+END:VEVENT
+
+
+BEGIN:VEVENT
+UID:f1-2026-r22-fp1@tiago
+DTSTART;TZID=Europe/Lisbon:20261204T100000
+DTEND;TZID=Europe/Lisbon:20261204T110000
+SUMMARY:🔧 F1 R22 — Abu Dhabi GP · FP1
+DESCRIPTION:Round 22 · Free Practice 1\nCircuit: Yas Marina · 58 laps · Season Finale\nLocal time: 14:00 GST
+LOCATION:Yas Marina Circuit, Abu Dhabi, UAE
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r22-fp2@tiago
+DTSTART;TZID=Europe/Lisbon:20261204T140000
+DTEND;TZID=Europe/Lisbon:20261204T150000
+SUMMARY:🔧 F1 R22 — Abu Dhabi GP · FP2
+DESCRIPTION:Round 22 · Free Practice 2\nCircuit: Yas Marina · 58 laps · Season Finale\nLocal time: 18:00 GST
+LOCATION:Yas Marina Circuit, Abu Dhabi, UAE
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r22-fp3@tiago
+DTSTART;TZID=Europe/Lisbon:20261205T090000
+DTEND;TZID=Europe/Lisbon:20261205T100000
+SUMMARY:🔧 F1 R22 — Abu Dhabi GP · FP3
+DESCRIPTION:Round 22 · Free Practice 3\nCircuit: Yas Marina · 58 laps · Season Finale\nLocal time: 13:00 GST
+LOCATION:Yas Marina Circuit, Abu Dhabi, UAE
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r22-quali@tiago
+DTSTART;TZID=Europe/Lisbon:20261205T130000
+DTEND;TZID=Europe/Lisbon:20261205T140000
+SUMMARY:📍 F1 R22 — Abu Dhabi GP · Qualifying
+DESCRIPTION:Round 22 · Qualifying\nCircuit: Yas Marina · 58 laps · Season Finale\nLocal time: 17:00 GST
+LOCATION:Yas Marina Circuit, Abu Dhabi, UAE
+END:VEVENT
+
+BEGIN:VEVENT
+UID:f1-2026-r22-race@tiago
+DTSTART;TZID=Europe/Lisbon:20261206T130000
+DTEND;TZID=Europe/Lisbon:20261206T150000
+SUMMARY:🏁 F1 R22 — Abu Dhabi GP · Season Finale 🏆
+DESCRIPTION:Round 22 · Race · SEASON FINALE\nCircuit: Yas Marina Circuit · 58 laps\nLocal time: 17:00 GST
+LOCATION:Yas Marina Circuit, Abu Dhabi, UAE
+END:VEVENT
+
+END:VCALENDAR

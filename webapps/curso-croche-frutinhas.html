@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Frutinhas de Crochet — Curso Básico</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=Nunito:ital,wght@0,400;0,600;0,700;0,800;1,600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #EFF3E9;
+    --bg-alt: #FBF8F1;
+    --bg-card: #FFFFFF;
+    --ink: #2B2420;
+    --ink-soft: #5B5348;
+    --berry: #6B1E3C;
+    --berry-dark: #4A1329;
+    --citrus: #E8963C;
+    --leaf: #5F7A4A;
+    --leaf-dark: #445938;
+    --lemon: #F2C94C;
+    --line: #D8D2C1;
+    --radius: 18px;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Nunito',sans-serif;
+    font-size:17px;
+    line-height:1.6;
+  }
+  h1,h2,h3,h4{
+    font-family:'Bricolage Grotesque',sans-serif;
+    margin:0 0 .4em 0;
+    color:var(--berry-dark);
+    letter-spacing:-0.01em;
+  }
+  .mono{font-family:'Space Mono',monospace;}
+  a{color:var(--berry);}
+  img,svg{max-width:100%;display:block;}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 24px;}
+  .eyebrow{
+    font-family:'Space Mono',monospace;
+    text-transform:uppercase;
+    letter-spacing:.12em;
+    font-size:.75rem;
+    color:var(--leaf-dark);
+    font-weight:700;
+  }
+
+  /* NAV */
+  nav{
+    position:sticky;top:0;z-index:50;
+    background:rgba(239,243,233,.92);
+    backdrop-filter:blur(6px);
+    border-bottom:1px solid var(--line);
+  }
+  .nav-inner{
+    max-width:1080px;margin:0 auto;padding:14px 24px;
+    display:flex;align-items:center;justify-content:space-between;gap:16px;
+  }
+  .brand{display:flex;align-items:center;gap:10px;font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:1.15rem;color:var(--berry-dark);}
+  .nav-links{display:flex;gap:22px;flex-wrap:wrap;font-size:.92rem;font-weight:700;}
+  .nav-links a{text-decoration:none;color:var(--ink-soft);}
+  .nav-links a:hover{color:var(--berry);}
+  @media(max-width:720px){.nav-links{display:none;}}
+
+  /* HERO */
+  .hero{
+    padding:64px 0 40px;
+    display:grid;grid-template-columns:1.1fr .9fr;gap:40px;align-items:center;
+  }
+  @media(max-width:840px){.hero{grid-template-columns:1fr;padding-top:36px;}}
+  .hero h1{font-size:clamp(2.1rem,5vw,3.2rem);line-height:1.05;}
+  .hero p.lead{font-size:1.1rem;color:var(--ink-soft);max-width:46ch;}
+  .badges{display:flex;gap:10px;flex-wrap:wrap;margin:20px 0;}
+  .badge{
+    font-family:'Space Mono',monospace;font-size:.78rem;font-weight:700;
+    background:var(--bg-card);border:1px solid var(--line);border-radius:100px;
+    padding:6px 14px;color:var(--berry-dark);
+  }
+  .cta{
+    display:inline-block;background:var(--berry);color:#fff;text-decoration:none;
+    font-weight:800;padding:14px 26px;border-radius:100px;font-size:1rem;
+    box-shadow:0 6px 0 var(--berry-dark);
+  }
+  .cta:hover{transform:translateY(2px);box-shadow:0 4px 0 var(--berry-dark);}
+
+  /* SCALLOP edge — signature element */
+  .scallop-top{height:16px;background-image:radial-gradient(circle at 10px 16px, transparent 10px, var(--bg-alt) 10.5px);background-size:20px 16px;background-repeat:repeat-x;}
+  .scallop-top.on-card{background-image:radial-gradient(circle at 10px 16px, transparent 10px, var(--bg-card) 10.5px);}
+  .scallop-bottom{height:16px;transform:rotate(180deg);background-image:radial-gradient(circle at 10px 16px, transparent 10px, var(--bg) 10.5px);background-size:20px 16px;background-repeat:repeat-x;}
+
+  section{padding:56px 0;}
+  .section-alt{background:var(--bg-alt);}
+  .section-head{max-width:64ch;margin-bottom:34px;}
+  .section-head h2{font-size:clamp(1.6rem,3.4vw,2.2rem);}
+
+  /* MATERIALS */
+  .materials-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;}
+  .mat-item{background:var(--bg-card);border:1px solid var(--line);border-radius:14px;padding:18px;}
+  .mat-item .mono{font-size:.72rem;color:var(--leaf-dark);}
+  .mat-item h4{margin:6px 0 4px;font-size:1.02rem;}
+  .mat-item p{margin:0;font-size:.9rem;color:var(--ink-soft);}
+
+  /* ROADMAP */
+  .roadmap{display:flex;gap:0;align-items:stretch;flex-wrap:wrap;}
+  .roadmap-step{flex:1;min-width:220px;background:var(--bg-card);border:1px solid var(--line);padding:22px;position:relative;}
+  .roadmap-step:first-child{border-radius:14px 0 0 14px;}
+  .roadmap-step:last-child{border-radius:0 14px 14px 0;}
+  @media(max-width:760px){.roadmap-step{border-radius:14px !important;}}
+  .roadmap-step .num{font-family:'Space Mono',monospace;font-weight:700;color:var(--citrus);font-size:.85rem;}
+  .roadmap-step.now{background:var(--berry);color:#fff;}
+  .roadmap-step.now .num{color:var(--lemon);}
+  .roadmap-step.now h4{color:#fff;}
+  .roadmap-step h4{margin:6px 0;font-size:1.05rem;}
+  .roadmap-step p{margin:0;font-size:.88rem;opacity:.85;}
+
+  /* STITCHES */
+  .stitch-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px;}
+  .stitch-card{background:var(--bg-card);border:1px solid var(--line);border-radius:16px;padding:20px;}
+  .stitch-card .icon{width:56px;height:56px;margin-bottom:10px;}
+  .stitch-card h4{font-size:1.05rem;margin-bottom:2px;}
+  .stitch-card .alt-name{font-size:.8rem;color:var(--ink-soft);margin-bottom:8px;font-style:italic;}
+  .stitch-card p{font-size:.9rem;margin:0;color:var(--ink-soft);}
+
+  /* ABBREV TABLE */
+  table{width:100%;border-collapse:collapse;background:var(--bg-card);border-radius:14px;overflow:hidden;border:1px solid var(--line);}
+  th,td{text-align:left;padding:10px 14px;font-size:.9rem;border-bottom:1px solid var(--line);}
+  th{background:var(--berry);color:#fff;font-family:'Space Mono',monospace;font-size:.78rem;text-transform:uppercase;letter-spacing:.06em;}
+  tr:last-child td{border-bottom:none;}
+  td.mono{color:var(--berry-dark);font-weight:700;}
+
+  /* PROJECTS */
+  .project-card{
+    background:var(--bg-card);border:1px solid var(--line);border-radius:var(--radius);
+    margin-bottom:22px;overflow:hidden;
+  }
+  .project-head{
+    display:flex;gap:18px;align-items:center;padding:20px 22px;cursor:pointer;list-style:none;
+  }
+  .project-head::-webkit-details-marker{display:none;}
+  .project-head .thumb{width:64px;height:64px;flex:none;}
+  .project-head .meta{flex:1;}
+  .project-head .level{font-family:'Space Mono',monospace;font-size:.72rem;color:var(--leaf-dark);font-weight:700;}
+  .project-head h3{font-size:1.2rem;margin:2px 0 0;}
+  .project-head .chevron{font-size:1.4rem;color:var(--citrus);transition:transform .2s;}
+  details[open] .chevron{transform:rotate(45deg);}
+  .project-body{padding:0 22px 26px;border-top:1px solid var(--line);}
+  .project-body h4{margin-top:20px;font-size:1rem;color:var(--berry);}
+  .steps{padding-left:0;list-style:none;margin:10px 0;}
+  .steps li{
+    display:flex;gap:12px;padding:8px 0;border-bottom:1px dashed var(--line);font-size:.94rem;
+  }
+  .steps li:last-child{border-bottom:none;}
+  .steps li .row-num{
+    font-family:'Space Mono',monospace;font-weight:700;color:#fff;background:var(--leaf);
+    border-radius:6px;padding:2px 8px;font-size:.78rem;height:fit-content;white-space:nowrap;
+  }
+  .tip{background:var(--bg-alt);border-left:3px solid var(--citrus);padding:12px 14px;border-radius:8px;font-size:.9rem;margin-top:14px;}
+
+  /* SELLING */
+  .sell-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:18px;}
+  .sell-card{background:var(--bg-card);border:1px solid var(--line);border-radius:14px;padding:20px;}
+  .sell-card .num-big{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:1.8rem;color:var(--citrus);}
+  .sell-card h4{font-size:1.02rem;margin:4px 0 6px;}
+  .sell-card p{font-size:.88rem;color:var(--ink-soft);margin:0;}
+
+  footer{
+    background:var(--berry-dark);color:#f6ece f0;color:#F7EEDD;padding:44px 0 30px;text-align:center;
+  }
+  footer h3{color:#fff;}
+  footer p{color:#E5D6C8;font-size:.9rem;max-width:50ch;margin:8px auto 0;}
+  .fruit-row{display:flex;justify-content:center;gap:18px;margin:22px 0;}
+  .fruit-row svg{width:44px;height:44px;}
+
+  @media (prefers-reduced-motion: reduce){
+    html{scroll-behavior:auto;}
+    *{transition:none !important;}
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ SVG ICON DEFINITIONS ============ -->
+<svg width="0" height="0" style="position:absolute">
+<defs>
+
+  <!-- Strawberry -->
+  <g id="ico-strawberry">
+    <path d="M32 20c-8 6-20 4-24 18-3 12 8 24 24 24s27-12 24-24c-4-14-16-12-24-18z" fill="#D6435C"/>
+    <circle cx="24" cy="38" r="1.6" fill="#F7E9C6"/>
+    <circle cx="32" cy="44" r="1.6" fill="#F7E9C6"/>
+    <circle cx="40" cy="38" r="1.6" fill="#F7E9C6"/>
+    <circle cx="27" cy="50" r="1.6" fill="#F7E9C6"/>
+    <circle cx="37" cy="50" r="1.6" fill="#F7E9C6"/>
+    <circle cx="32" cy="56" r="1.6" fill="#F7E9C6"/>
+    <path d="M32 22c-3-6-9-9-16-7 3 5 9 8 16 7z" fill="#5F7A4A"/>
+    <path d="M32 22c3-6 9-9 16-7-3 5-9 8-16 7z" fill="#6E8D56"/>
+    <path d="M32 14v10" stroke="#445938" stroke-width="2" stroke-linecap="round"/>
+  </g>
+
+  <!-- Orange slice -->
+  <g id="ico-orange">
+    <circle cx="32" cy="32" r="26" fill="#E8963C"/>
+    <circle cx="32" cy="32" r="21" fill="#FBEAD3"/>
+    <circle cx="32" cy="32" r="18" fill="#F6B94C"/>
+    <g stroke="#FBEAD3" stroke-width="2">
+      <line x1="32" y1="32" x2="32" y2="14"/>
+      <line x1="32" y1="32" x2="47" y2="23"/>
+      <line x1="32" y1="32" x2="47" y2="41"/>
+      <line x1="32" y1="32" x2="32" y2="50"/>
+      <line x1="32" y1="32" x2="17" y2="41"/>
+      <line x1="32" y1="32" x2="17" y2="23"/>
+    </g>
+  </g>
+
+  <!-- Watermelon slice -->
+  <g id="ico-watermelon">
+    <path d="M6 32a26 26 0 0 1 52 0z" fill="#5F7A4A"/>
+    <path d="M9 32a23 23 0 0 1 46 0z" fill="#EFEADB"/>
+    <path d="M13 32a19 19 0 0 1 38 0z" fill="#E4506B"/>
+    <circle cx="24" cy="27" r="1.5" fill="#2B2420"/>
+    <circle cx="32" cy="22" r="1.5" fill="#2B2420"/>
+    <circle cx="40" cy="27" r="1.5" fill="#2B2420"/>
+    <circle cx="28" cy="18" r="1.3" fill="#2B2420"/>
+    <circle cx="37" cy="18" r="1.3" fill="#2B2420"/>
+  </g>
+
+  <!-- Lemon -->
+  <g id="ico-lemon">
+    <ellipse cx="32" cy="32" rx="22" ry="17" fill="#F2C94C"/>
+    <path d="M10 32c-2-3-2-6 0-8" stroke="#D9AE2E" stroke-width="2" stroke-linecap="round" fill="none"/>
+    <path d="M54 32c2-3 2-6 0-8" stroke="#D9AE2E" stroke-width="2" stroke-linecap="round" fill="none"/>
+    <ellipse cx="32" cy="32" rx="22" ry="17" fill="none" stroke="#D9AE2E" stroke-width="1" opacity=".5"/>
+  </g>
+
+  <!-- Chain stitch symbol (corrente) -->
+  <g id="ico-chain">
+    <g fill="none" stroke="#6B1E3C" stroke-width="3" stroke-linecap="round">
+      <ellipse cx="18" cy="32" rx="9" ry="12"/>
+      <ellipse cx="32" cy="32" rx="9" ry="12"/>
+      <ellipse cx="46" cy="32" rx="9" ry="12"/>
+    </g>
+  </g>
+
+  <!-- Slip stitch symbol -->
+  <g id="ico-slip">
+    <circle cx="20" cy="32" r="4" fill="#6B1E3C"/>
+    <circle cx="32" cy="32" r="4" fill="#6B1E3C"/>
+    <circle cx="44" cy="32" r="4" fill="#6B1E3C"/>
+  </g>
+
+  <!-- Single crochet symbol (ponto baixo) - X -->
+  <g id="ico-sc">
+    <g stroke="#6B1E3C" stroke-width="3.4" stroke-linecap="round">
+      <line x1="14" y1="24" x2="26" y2="40"/>
+      <line x1="26" y1="24" x2="14" y2="40"/>
+    </g>
+    <g stroke="#6B1E3C" stroke-width="3.4" stroke-linecap="round">
+      <line x1="38" y1="24" x2="50" y2="40"/>
+      <line x1="50" y1="24" x2="38" y2="40"/>
+    </g>
+  </g>
+
+  <!-- Half double crochet (meio ponto alto) - T with one bar -->
+  <g id="ico-hdc">
+    <line x1="32" y1="16" x2="32" y2="48" stroke="#6B1E3C" stroke-width="3.4" stroke-linecap="round"/>
+    <line x1="22" y1="16" x2="42" y2="16" stroke="#6B1E3C" stroke-width="3.4" stroke-linecap="round"/>
+    <line x1="24" y1="30" x2="40" y2="30" stroke="#6B1E3C" stroke-width="3.4" stroke-linecap="round"/>
+  </g>
+
+  <!-- Double crochet (ponto alto) - T with slash -->
+  <g id="ico-dc">
+    <line x1="32" y1="14" x2="32" y2="50" stroke="#6B1E3C" stroke-width="3.4" stroke-linecap="round"/>
+    <line x1="22" y1="14" x2="42" y2="14" stroke="#6B1E3C" stroke-width="3.4" stroke-linecap="round"/>
+    <line x1="24" y1="26" x2="40" y2="34" stroke="#6B1E3C" stroke-width="3.4" stroke-linecap="round"/>
+  </g>
+
+  <!-- Magic ring -->
+  <g id="ico-magicring">
+    <circle cx="32" cy="32" r="7" fill="none" stroke="#6B1E3C" stroke-width="3"/>
+    <g stroke="#6B1E3C" stroke-width="2.6" stroke-linecap="round">
+      <line x1="32" y1="14" x2="32" y2="21"/>
+      <line x1="46" y1="20" x2="41" y2="25"/>
+      <line x1="50" y1="32" x2="43" y2="32"/>
+      <line x1="46" y1="44" x2="41" y2="39"/>
+      <line x1="32" y1="50" x2="32" y2="43"/>
+      <line x1="18" y1="44" x2="23" y2="39"/>
+      <line x1="14" y1="32" x2="21" y2="32"/>
+      <line x1="18" y1="20" x2="23" y2="25"/>
+    </g>
+  </g>
+
+  <!-- Increase / decrease -->
+  <g id="ico-incdec">
+    <path d="M20 44 L32 18 L44 44" fill="none" stroke="#6B1E3C" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="32" cy="18" r="3" fill="#E8963C"/>
+  </g>
+
+  <!-- Hook -->
+  <g id="ico-hook">
+    <path d="M46 12c-4-2-8 0-9 4l-4 12" fill="none" stroke="#6B1E3C" stroke-width="3" stroke-linecap="round"/>
+    <line x1="33" y1="28" x2="16" y2="52" stroke="#6B1E3C" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="41" cy="15" r="2.4" fill="#6B1E3C"/>
+  </g>
+
+  <!-- Yarn -->
+  <g id="ico-yarn">
+    <circle cx="32" cy="32" r="20" fill="none" stroke="#E4506B" stroke-width="3"/>
+    <path d="M14 24c10 6 16 6 30-2M12 34c12 4 20 2 32-6M16 44c8 3 18 1 28-6" fill="none" stroke="#D6435C" stroke-width="2.4" stroke-linecap="round"/>
+  </g>
+
+  <!-- Needle -->
+  <g id="ico-needle">
+    <line x1="14" y1="50" x2="46" y2="18" stroke="#6B1E3C" stroke-width="3" stroke-linecap="round"/>
+    <ellipse cx="42" cy="22" rx="5" ry="3" transform="rotate(45 42 22)" fill="none" stroke="#6B1E3C" stroke-width="2.4"/>
+  </g>
+
+  <!-- Stuffing -->
+  <g id="ico-stuffing">
+    <circle cx="22" cy="28" r="9" fill="#F7EEDD" stroke="#D8D2C1" stroke-width="2"/>
+    <circle cx="36" cy="24" r="7" fill="#F7EEDD" stroke="#D8D2C1" stroke-width="2"/>
+    <circle cx="40" cy="36" r="9" fill="#F7EEDD" stroke="#D8D2C1" stroke-width="2"/>
+    <circle cx="26" cy="40" r="7" fill="#F7EEDD" stroke="#D8D2C1" stroke-width="2"/>
+  </g>
+
+  <!-- Marker -->
+  <g id="ico-marker">
+    <circle cx="32" cy="24" r="10" fill="none" stroke="#5F7A4A" stroke-width="3"/>
+    <path d="M32 34v18l6-6" fill="none" stroke="#5F7A4A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <!-- Scissors -->
+  <g id="ico-scissors">
+    <circle cx="18" cy="18" r="6" fill="none" stroke="#6B1E3C" stroke-width="3"/>
+    <circle cx="18" cy="46" r="6" fill="none" stroke="#6B1E3C" stroke-width="3"/>
+    <line x1="23" y1="22" x2="50" y2="46" stroke="#6B1E3C" stroke-width="3" stroke-linecap="round"/>
+    <line x1="23" y1="42" x2="50" y2="18" stroke="#6B1E3C" stroke-width="3" stroke-linecap="round"/>
+  </g>
+
+</defs>
+</svg>
+
+<!-- ============ NAV ============ -->
+<nav>
+  <div class="nav-inner">
+    <div class="brand"><svg width="26" height="26"><use href="#ico-strawberry"/></svg> Frutinhas de Crochet</div>
+    <div class="nav-links">
+      <a href="#materiais">Materiais</a>
+      <a href="#pontos">Pontos básicos</a>
+      <a href="#ler-receitas">Ler receitas</a>
+      <a href="#projetos">Projetos</a>
+      <a href="#vender">Vender</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ============ HERO ============ -->
+<header class="wrap hero">
+  <div>
+    <p class="eyebrow">Curso básico · Módulo 1 de 3</p>
+    <h1>Aprende a fazer frutinhas de crochet do zero</h1>
+    <p class="lead">Um curso pensado para quem está a começar um negócio de crochet: pontos base, como ler receitas e quatro projetos de frutas — dos individuais planos aos amigurumis 3D — para já teres o que precisas para criar a tua primeira coleção.</p>
+    <div class="badges">
+      <span class="badge">4 aulas de pontos</span>
+      <span class="badge">4 projetos práticos</span>
+      <span class="badge">Nível: iniciante</span>
+    </div>
+    <a class="cta" href="#materiais">Começar o curso</a>
+  </div>
+  <div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+      <div style="background:var(--bg-card);border-radius:20px;padding:22px;border:1px solid var(--line);"><svg width="80" height="80"><use href="#ico-strawberry"/></svg></div>
+      <div style="background:var(--bg-card);border-radius:20px;padding:22px;border:1px solid var(--line);margin-top:26px;"><svg width="80" height="80"><use href="#ico-orange"/></svg></div>
+      <div style="background:var(--bg-card);border-radius:20px;padding:22px;border:1px solid var(--line);"><svg width="80" height="80"><use href="#ico-watermelon"/></svg></div>
+      <div style="background:var(--bg-card);border-radius:20px;padding:22px;border:1px solid var(--line);margin-top:26px;"><svg width="80" height="80"><use href="#ico-lemon"/></svg></div>
+    </div>
+  </div>
+</header>
+
+<!-- ============ ROADMAP ============ -->
+<section class="wrap" style="padding-top:0;">
+  <div class="roadmap">
+    <div class="roadmap-step now">
+      <span class="num">01 · agora</span>
+      <h4>O básico</h4>
+      <p>Pontos, materiais, ler receitas e 4 frutinhas para começar a vender.</p>
+    </div>
+    <div class="roadmap-step">
+      <span class="num">02 · a seguir</span>
+      <h4>Coleções &amp; amigurumi 3D</h4>
+      <p>Cestos de fruta, personagens fofos e peças maiores para diversificar o catálogo.</p>
+    </div>
+    <div class="roadmap-step">
+      <span class="num">03 · evolução</span>
+      <h4>Vender como profissional</h4>
+      <p>Precificação avançada, fotografia de produto e presença online.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ MATERIALS ============ -->
+<section id="materiais" class="section-alt">
+  <div class="scallop-top"></div>
+  <div class="wrap">
+    <div class="section-head">
+      <p class="eyebrow">Aula 1</p>
+      <h2>O que precisas antes de começar</h2>
+      <p>Não precisas de muito para arrancar — o essencial cabe numa caixa pequena.</p>
+    </div>
+    <div class="materials-grid">
+      <div class="mat-item"><svg width="34" height="34"><use href="#ico-yarn"/></svg><h4>Fio de algodão</h4><p>Tipo amigurumi/barbante, nas cores das frutas: vermelho, verde, laranja, amarelo, branco e preto.</p></div>
+      <div class="mat-item"><svg width="34" height="34"><use href="#ico-hook"/></svg><h4>Agulha de crochet</h4><p>Entre 2,5mm e 3,5mm — usa uma um pouco mais fina do que o recomendado no rótulo do fio, para um tecido mais firme.</p></div>
+      <div class="mat-item"><svg width="34" height="34"><use href="#ico-needle"/></svg><h4>Agulha de tapeçaria</h4><p>Para coser as partes e esconder as pontas do fio no final.</p></div>
+      <div class="mat-item"><svg width="34" height="34"><use href="#ico-stuffing"/></svg><h4>Enchimento</h4><p>Fibra siliconada, para dar volume às peças em 3D como o morango.</p></div>
+      <div class="mat-item"><svg width="34" height="34"><use href="#ico-marker"/></svg><h4>Marcador de ponto</h4><p>Um clipe pequeno ou um pedacinho de fio de cor diferente, para marcar o início de cada volta.</p></div>
+      <div class="mat-item"><svg width="34" height="34"><use href="#ico-scissors"/></svg><h4>Tesoura</h4><p>De ponta fina, para cortar rente sem desfazer o trabalho.</p></div>
+    </div>
+  </div>
+  <div class="scallop-bottom"></div>
+</section>
+
+<!-- ============ STITCHES ============ -->
+<section id="pontos">
+  <div class="wrap">
+    <div class="section-head">
+      <p class="eyebrow">Aula 2</p>
+      <h2>Os 6 pontos que vais usar sempre</h2>
+      <p>Com estes seis movimentos consegues fazer qualquer uma das frutinhas deste curso — e a maioria dos amigurumis que vais encontrar depois.</p>
+    </div>
+    <div class="stitch-grid">
+      <div class="stitch-card"><svg class="icon"><use href="#ico-chain"/></svg><h4>Corrente</h4><div class="alt-name">pt / ch</div><p>O ponto de partida. Faz um laço na agulha e puxa o fio através dele, repetindo — cada laço é uma corrente.</p></div>
+      <div class="stitch-card"><svg class="icon"><use href="#ico-magicring"/></svg><h4>Anel mágico</h4><div class="alt-name">am / magic ring</div><p>Enrola o fio à volta dos dedos, faz os pontos da 1ª volta dentro do anel e depois puxa a ponta para o fechar. É como começam quase todos os amigurumis.</p></div>
+      <div class="stitch-card"><svg class="icon"><use href="#ico-sc"/></svg><h4>Ponto baixo</h4><div class="alt-name">pb / single crochet</div><p>Insere a agulha no ponto, puxa um laço, tens 2 laços na agulha, puxa o fio outra vez através dos 2. É o ponto principal do amigurumi.</p></div>
+      <div class="stitch-card"><svg class="icon"><use href="#ico-slip"/></svg><h4>Ponto deslizado</h4><div class="alt-name">pd / slip stitch</div><p>Insere a agulha no ponto e puxa o fio através de tudo de uma vez. Usa-se para fechar voltas ou unir peças.</p></div>
+      <div class="stitch-card"><svg class="icon"><use href="#ico-hdc"/></svg><h4>Meio ponto alto</h4><div class="alt-name">mpa / half double</div><p>Fio sobre a agulha antes de inserir no ponto; puxa um laço (3 na agulha) e fecha tudo de uma vez. Fica mais alto que o ponto baixo.</p></div>
+      <div class="stitch-card"><svg class="icon"><use href="#ico-incdec"/></svg><h4>Aumento / diminuição</h4><div class="alt-name">aum · dim</div><p><b>Aumento:</b> 2 pontos baixos no mesmo lugar. <b>Diminuição:</b> 2 pontos baixos juntos, como se fossem um só. É assim que se molda a forma redonda das frutas.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ READING PATTERNS ============ -->
+<section id="ler-receitas" class="section-alt">
+  <div class="scallop-top"></div>
+  <div class="wrap">
+    <div class="section-head">
+      <p class="eyebrow">Aula 3</p>
+      <h2>Como ler uma receita de amigurumi</h2>
+      <p>As receitas usam abreviaturas para poupar espaço. Uma volta escreve-se assim: <span class="mono">Volta 3: (pb, aum) x6 [18]</span> — significa "repete pb e aum seis vezes, no fim tens 18 pontos".</p>
+    </div>
+    <table>
+      <tr><th>Abreviatura</th><th>Significado</th></tr>
+      <tr><td class="mono">pt</td><td>Ponto</td></tr>
+      <tr><td class="mono">am</td><td>Anel mágico</td></tr>
+      <tr><td class="mono">pb</td><td>Ponto baixo</td></tr>
+      <tr><td class="mono">pd</td><td>Ponto deslizado</td></tr>
+      <tr><td class="mono">mpa</td><td>Meio ponto alto</td></tr>
+      <tr><td class="mono">aum</td><td>Aumento (2 pb no mesmo ponto)</td></tr>
+      <tr><td class="mono">dim</td><td>Diminuição (2 pb juntos)</td></tr>
+      <tr><td class="mono">( ) x6</td><td>Repete o que está dentro do parêntesis 6 vezes</td></tr>
+      <tr><td class="mono">[18]</td><td>Total de pontos que deves ter no fim da volta</td></tr>
+    </table>
+  </div>
+  <div class="scallop-bottom"></div>
+</section>
+
+<!-- ============ PROJECTS ============ -->
+<section id="projetos">
+  <div class="wrap">
+    <div class="section-head">
+      <p class="eyebrow">Aula 4</p>
+      <h2>4 projetos, do mais fácil ao mais desafiante</h2>
+      <p>Começa pelos individuais planos e só depois avança para as peças em 3D — a ordem foi pensada para ires ganhando confiança.</p>
+    </div>
+
+    <!-- PROJECT 1 -->
+    <details class="project-card" open>
+      <summary class="project-head">
+        <svg class="thumb"><use href="#ico-orange"/></svg>
+        <div class="meta"><span class="level">Nível 1 · plano</span><h3>Individual fatia de laranja</h3></div>
+        <span class="chevron">+</span>
+      </summary>
+      <div class="project-body">
+        <p>O projeto ideal para o primeiro dia: só usa ponto baixo e uma mudança de cor. Fica pronto em cerca de uma hora.</p>
+        <h4>Precisas de</h4>
+        <p style="font-size:.9rem;color:var(--ink-soft);">Fio laranja, branco e amarelo · agulha 3,5mm · agulha de tapeçaria</p>
+        <h4>Passo a passo</h4>
+        <ul class="steps">
+          <li><span class="row-num">V1</span> Com o fio laranja, faz um anel mágico com 6 pb dentro. Fecha a volta. <span class="mono">[6]</span></li>
+          <li><span class="row-num">V2</span> Aum em cada ponto. <span class="mono">[12]</span></li>
+          <li><span class="row-num">V3</span> (pb, aum) x6. <span class="mono">[18]</span></li>
+          <li><span class="row-num">V4</span> (2pb, aum) x6. <span class="mono">[24]</span></li>
+          <li><span class="row-num">V5</span> Muda para o fio branco. (3pb, aum) x6. <span class="mono">[30]</span></li>
+          <li><span class="row-num">V6</span> Muda para o fio laranja (a casca). pb em cada ponto, trabalhando só pelo laço de trás para criar uma borda em relevo. <span class="mono">[30]</span></li>
+          <li><span class="row-num">V7</span> Corta o fio deixando uma ponta comprida e esconde-a com a agulha de tapeçaria.</li>
+        </ul>
+        <h4>Os gomos (opcional, com fio amarelo)</h4>
+        <p style="font-size:.9rem;color:var(--ink-soft);">Borda com um fio amarelo fino, do centro até à casca, seis linhas retas espaçadas — como as divisórias reais de uma laranja.</p>
+        <div class="tip">💡 Dica: bloqueia o individual no final — humedece ligeiramente, estica sobre uma superfície plana com alfinetes e deixa secar. Fica muito mais direito e profissional.</div>
+      </div>
+    </details>
+
+    <!-- PROJECT 2 -->
+    <details class="project-card">
+      <summary class="project-head">
+        <svg class="thumb"><use href="#ico-watermelon"/></svg>
+        <div class="meta"><span class="level">Nível 2 · plano, meia-volta</span><h3>Individual fatia de melancia</h3></div>
+        <span class="chevron">+</span>
+      </summary>
+      <div class="project-body">
+        <p>Aqui trabalhas em fileiras retas em vez de voltas fechadas — boa introdução às formas em meia-lua.</p>
+        <h4>Precisas de</h4>
+        <p style="font-size:.9rem;color:var(--ink-soft);">Fio vermelho, verde e um pouco de preto para as sementes · agulha 3,5mm</p>
+        <h4>Passo a passo</h4>
+        <ul class="steps">
+          <li><span class="row-num">F1</span> Com o fio vermelho, faz 20 correntes. Trabalha 19 pb a partir da 2ª corrente da agulha. <span class="mono">[19]</span></li>
+          <li><span class="row-num">F2–5</span> Continua em pb, diminuindo 1 ponto em cada extremidade a cada fileira, para arredondar a base da fatia.</li>
+          <li><span class="row-num">Sementes</span> Com um pedacinho de fio preto e a agulha de tapeçaria, borda 5–6 pequenos tracinhos espalhados pela zona vermelha.</li>
+          <li><span class="row-num">Casca</span> Muda para o fio verde e faz 2 fileiras de pb ao longo da margem curva, para formar a casca.</li>
+        </ul>
+        <div class="tip">💡 Se preferires uma versão mais rápida, faz a mesma fatia em meia-volta redonda (como a laranja, mas só a metade da volta) — funciona igualmente bem como individual.</div>
+      </div>
+    </details>
+
+    <!-- PROJECT 3 -->
+    <details class="project-card">
+      <summary class="project-head">
+        <svg class="thumb"><use href="#ico-strawberry"/></svg>
+        <div class="meta"><span class="level">Nível 3 · amigurumi 3D</span><h3>Morango fofinho</h3></div>
+        <span class="chevron">+</span>
+      </summary>
+      <div class="project-body">
+        <p>O teu primeiro amigurumi em 3D. Usa a técnica clássica de aumentar e depois diminuir, com enchimento pelo meio.</p>
+        <h4>Precisas de</h4>
+        <p style="font-size:.9rem;color:var(--ink-soft);">Fio vermelho e verde · enchimento · agulha 3mm</p>
+        <h4>Passo a passo</h4>
+        <ul class="steps">
+          <li><span class="row-num">V1</span> Fio vermelho, anel mágico com 6 pb. <span class="mono">[6]</span></li>
+          <li><span class="row-num">V2</span> Aum em cada ponto. <span class="mono">[12]</span></li>
+          <li><span class="row-num">V3</span> (pb, aum) x6. <span class="mono">[18]</span></li>
+          <li><span class="row-num">V4</span> (2pb, aum) x6. <span class="mono">[24]</span></li>
+          <li><span class="row-num">V5–7</span> pb em cada ponto, sem aumentar (esta é a parte mais larga do morango). <span class="mono">[24]</span></li>
+          <li><span class="row-num">V8</span> (2pb, dim) x6. Começa a encher com fibra a partir daqui. <span class="mono">[18]</span></li>
+          <li><span class="row-num">V9</span> (pb, dim) x6. <span class="mono">[12]</span></li>
+          <li><span class="row-num">V10</span> dim x6, acaba de encher bem. <span class="mono">[6]</span></li>
+          <li><span class="row-num">Fecho</span> Fecha o buraco final com a agulha de tapeçaria (técnica de "cesto fechado").</li>
+          <li><span class="row-num">Folhas</span> Com fio verde, faz uma pequena estrela de 5 pontas em corrente + pb e cose no topo.</li>
+        </ul>
+        <div class="tip">💡 Para dar textura de sementinhas, borda pequenos "V" com fio amarelo espalhados pela superfície vermelha, como no individual da laranja.</div>
+      </div>
+    </details>
+
+    <!-- PROJECT 4 -->
+    <details class="project-card">
+      <summary class="project-head">
+        <svg class="thumb"><use href="#ico-lemon"/></svg>
+        <div class="meta"><span class="level">Nível 3 · amigurumi 3D</span><h3>Limão decorativo</h3></div>
+        <span class="chevron">+</span>
+      </summary>
+      <div class="project-body">
+        <p>Mesma lógica do morango, mas numa forma mais ovalada — ótimo para consolidar a técnica de esfera antes de avançares para peças maiores no próximo módulo.</p>
+        <h4>Precisas de</h4>
+        <p style="font-size:.9rem;color:var(--ink-soft);">Fio amarelo · um pouco de verde para as pontas · enchimento · agulha 3mm</p>
+        <h4>Passo a passo</h4>
+        <ul class="steps">
+          <li><span class="row-num">V1</span> Fio amarelo, anel mágico com 6 pb. <span class="mono">[6]</span></li>
+          <li><span class="row-num">V2</span> Aum em cada ponto. <span class="mono">[12]</span></li>
+          <li><span class="row-num">V3</span> (pb, aum) x6. <span class="mono">[18]</span></li>
+          <li><span class="row-num">V4–6</span> pb sem aumentar (parte central, mais alongada que o morango). <span class="mono">[18]</span></li>
+          <li><span class="row-num">V7</span> (pb, dim) x6, começa a encher. <span class="mono">[12]</span></li>
+          <li><span class="row-num">V8</span> dim x6, acaba de encher. <span class="mono">[6]</span></li>
+          <li><span class="row-num">Fecho</span> Fecha com a agulha de tapeçaria e borda duas pequenas pontas verdes nos extremos, para lembrar os bicos do limão.</li>
+        </ul>
+      </div>
+    </details>
+  </div>
+</section>
+
+<!-- ============ SELLING ============ -->
+<section id="vender" class="section-alt">
+  <div class="scallop-top"></div>
+  <div class="wrap">
+    <div class="section-head">
+      <p class="eyebrow">Bónus</p>
+      <h2>Primeiros passos para vender as tuas peças</h2>
+      <p>Já com estas quatro frutinhas tens uma mini-coleção coerente para mostrar. Aqui ficam ideias simples para começares a vender.</p>
+    </div>
+    <div class="sell-grid">
+      <div class="sell-card"><div class="num-big">01</div><h4>Preço justo</h4><p>Soma o custo do material + horas de trabalho × valor à hora + margem de lucro. Não cobres só o fio — o teu tempo também vale.</p></div>
+      <div class="sell-card"><div class="num-big">02</div><h4>Fotos simples</h4><p>Luz natural, fundo neutro (madeira clara ou tecido liso) e um plano aproximado que mostre a textura dos pontos.</p></div>
+      <div class="sell-card"><div class="num-big">03</div><h4>Coleção coerente</h4><p>Vende as frutinhas como um conjunto temático — cesta de fruta, chaveiros, ou apliques para bolsas.</p></div>
+      <div class="sell-card"><div class="num-big">04</div><h4>Embalagem</h4><p>Um saquinho de papel kraft e uma etiqueta com o teu nome já dão um ar profissional sem custar muito.</p></div>
+      <div class="sell-card"><div class="num-big">05</div><h4>Onde vender</h4><p>Instagram, feiras de artesanato locais e grupos de vendas — começa por onde já tens contactos.</p></div>
+      <div class="sell-card"><div class="num-big">06</div><h4>Consistência</h4><p>Mantém a mesma qualidade e cores em todas as peças — é isso que faz um cliente voltar.</p></div>
+    </div>
+  </div>
+  <div class="scallop-bottom"></div>
+</section>
+
+<!-- ============ FOOTER ============ -->
+<footer>
+  <div class="wrap">
+    <h3>Módulo 1 concluído 🎉</h3>
+    <p>Já sabes os pontos base, sabes ler uma receita e tens quatro frutinhas prontas para a tua loja. Os próximos módulos — coleções maiores, personagens e vendas avançadas — chegam a seguir.</p>
+    <div class="fruit-row">
+      <svg><use href="#ico-strawberry"/></svg>
+      <svg><use href="#ico-orange"/></svg>
+      <svg><use href="#ico-watermelon"/></svg>
+      <svg><use href="#ico-lemon"/></svg>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
