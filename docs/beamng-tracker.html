@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Garage Ledger — BeamNG Flip Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #15171a;
+    --panel: #1e2124;
+    --panel-2: #262a2e;
+    --line: #34383c;
+    --text: #ece7e1;
+    --text-dim: #93979a;
+    --rust: #e2572b;
+    --rust-dim: #8a3a20;
+    --tape: #f2b705;
+    --profit: #6fae7f;
+    --loss: #c9584f;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:
+      radial-gradient(ellipse at top, #1b1e21 0%, var(--bg) 60%);
+    color:var(--text);
+    font-family:'Inter', sans-serif;
+    min-height:100vh;
+    padding-bottom:40px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  /* subtle concrete grain */
+  body::before{
+    content:"";
+    position:fixed; inset:0;
+    background-image:
+      repeating-linear-gradient(0deg, rgba(255,255,255,0.012) 0px, rgba(255,255,255,0.012) 1px, transparent 1px, transparent 3px);
+    pointer-events:none;
+    z-index:0;
+  }
+
+  header{
+    padding:22px 18px 14px;
+    position:relative;
+    z-index:1;
+  }
+  .eyebrow{
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px;
+    letter-spacing:0.18em;
+    color:var(--tape);
+    text-transform:uppercase;
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .eyebrow::before{
+    content:"";
+    width:8px; height:8px;
+    background: repeating-linear-gradient(45deg, var(--tape) 0 3px, #1a1a1a 3px 6px);
+    display:inline-block;
+    border-radius:1px;
+  }
+  h1{
+    font-family:'Bebas Neue', sans-serif;
+    font-size:44px;
+    letter-spacing:0.02em;
+    margin:4px 0 0;
+    line-height:0.95;
+    color:var(--text);
+  }
+  h1 span{color:var(--rust);}
+
+  /* Hero ledger board */
+  .board{
+    margin:16px 18px 0;
+    background: linear-gradient(180deg, var(--panel) 0%, #191c1f 100%);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:20px 18px 16px;
+    position:relative;
+    z-index:1;
+    box-shadow: 0 1px 0 rgba(255,255,255,0.03) inset, 0 8px 24px rgba(0,0,0,0.35);
+  }
+  .board-label{
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px;
+    color:var(--text-dim);
+    letter-spacing:0.12em;
+    text-transform:uppercase;
+  }
+  .total-figure{
+    font-family:'Bebas Neue', sans-serif;
+    font-size:64px;
+    line-height:1;
+    margin:6px 0 2px;
+    letter-spacing:0.01em;
+  }
+  .total-figure.pos{color:var(--profit);}
+  .total-figure.neg{color:var(--loss);}
+  .total-figure.zero{color:var(--text-dim);}
+  .board-sub{
+    font-family:'JetBrains Mono', monospace;
+    font-size:12px;
+    color:var(--text-dim);
+  }
+  .stat-row{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+    margin-top:16px;
+  }
+  .stat{
+    background:var(--panel-2);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:10px 12px;
+  }
+  .stat-k{
+    font-family:'JetBrains Mono', monospace;
+    font-size:10px;
+    color:var(--text-dim);
+    text-transform:uppercase;
+    letter-spacing:0.08em;
+  }
+  .stat-v{
+    font-family:'JetBrains Mono', monospace;
+    font-size:16px;
+    font-weight:700;
+    margin-top:3px;
+    color:var(--text);
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+
+  /* Add flip form */
+  .add-panel{
+    margin:16px 18px 0;
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:16px 16px 18px;
+    position:relative;
+    z-index:1;
+  }
+  .add-panel h2{
+    font-family:'Bebas Neue', sans-serif;
+    font-size:22px;
+    letter-spacing:0.03em;
+    margin:0 0 12px;
+    color:var(--text);
+  }
+  .field{
+    margin-bottom:10px;
+  }
+  .field label{
+    display:block;
+    font-family:'JetBrains Mono', monospace;
+    font-size:10px;
+    text-transform:uppercase;
+    letter-spacing:0.08em;
+    color:var(--text-dim);
+    margin-bottom:5px;
+  }
+  .field input{
+    width:100%;
+    background:var(--panel-2);
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:12px 12px;
+    color:var(--text);
+    font-family:'Inter', sans-serif;
+    font-size:16px;
+    outline:none;
+  }
+  .field input:focus{
+    border-color:var(--rust);
+  }
+  .row2{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+  }
+  .row3{
+    display:grid;
+    grid-template-columns:1fr 1fr 1fr;
+    gap:10px;
+  }
+  .sell-note{
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px;
+    color:var(--text-dim);
+    margin:-2px 0 12px;
+  }
+  .btn{
+    width:100%;
+    border:none;
+    border-radius:9px;
+    padding:14px;
+    font-family:'Inter', sans-serif;
+    font-weight:700;
+    font-size:15px;
+    cursor:pointer;
+    text-align:center;
+  }
+  .btn-primary{
+    background:var(--rust);
+    color:#191110;
+  }
+  .btn-primary:active{background:var(--rust-dim); color:var(--text);}
+  .btn-row{
+    display:flex;
+    gap:10px;
+    margin-top:4px;
+  }
+  .btn-secondary{
+    background:transparent;
+    border:1px solid var(--line);
+    color:var(--text-dim);
+  }
+  .btn-secondary:active{border-color:var(--text-dim);}
+
+  /* List */
+  .list-section{
+    margin:22px 18px 0;
+    position:relative;
+    z-index:1;
+  }
+  .list-title{
+    font-family:'Bebas Neue', sans-serif;
+    font-size:22px;
+    letter-spacing:0.03em;
+    color:var(--text);
+    margin-bottom:10px;
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+  }
+  .list-title small{
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px;
+    color:var(--text-dim);
+    font-weight:400;
+  }
+  .empty{
+    font-family:'JetBrains Mono', monospace;
+    font-size:13px;
+    color:var(--text-dim);
+    border:1px dashed var(--line);
+    border-radius:12px;
+    padding:24px 16px;
+    text-align:center;
+    line-height:1.6;
+  }
+  .card{
+    display:flex;
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:12px;
+    margin-bottom:10px;
+    overflow:hidden;
+  }
+  .card-bar{
+    width:6px;
+    flex-shrink:0;
+  }
+  .card-bar.pos{background:var(--profit);}
+  .card-bar.neg{background:var(--loss);}
+  .card-bar.pending{
+    background: repeating-linear-gradient(-45deg, var(--tape) 0 6px, #1a1a1a 6px 12px);
+  }
+  .card-body{
+    flex:1;
+    padding:12px 14px;
+  }
+  .card-top{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:8px;
+  }
+  .car-name{
+    font-family:'Inter',sans-serif;
+    font-weight:700;
+    font-size:15px;
+    color:var(--text);
+  }
+  .car-date{
+    font-family:'JetBrains Mono', monospace;
+    font-size:10px;
+    color:var(--text-dim);
+    margin-top:2px;
+  }
+  .profit-tag{
+    font-family:'JetBrains Mono', monospace;
+    font-weight:700;
+    font-size:15px;
+    white-space:nowrap;
+  }
+  .profit-tag.pos{color:var(--profit);}
+  .profit-tag.neg{color:var(--loss);}
+  .status-chip{
+    font-family:'JetBrains Mono', monospace;
+    font-size:10px;
+    letter-spacing:0.06em;
+    text-transform:uppercase;
+    color:#191110;
+    background:var(--tape);
+    padding:3px 7px;
+    border-radius:5px;
+    display:inline-block;
+  }
+  .breakdown{
+    display:flex;
+    gap:14px;
+    margin-top:8px;
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px;
+    color:var(--text-dim);
+    flex-wrap:wrap;
+  }
+  .breakdown b{color:var(--text);}
+  .card-actions{
+    display:flex;
+    gap:14px;
+    margin-top:10px;
+  }
+  .card-actions button{
+    background:none;
+    border:none;
+    color:var(--text-dim);
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:0.06em;
+    padding:4px 0;
+    cursor:pointer;
+  }
+  .card-actions button:active{color:var(--rust);}
+
+  .footer-note{
+    text-align:center;
+    font-family:'JetBrains Mono', monospace;
+    font-size:10px;
+    color:#4d5054;
+    margin-top:26px;
+    padding:0 18px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="eyebrow">Career Mode</div>
+  <h1>GARAGE<br><span>LEDGER</span></h1>
+</header>
+
+<div class="board">
+  <div class="board-label">Total profit</div>
+  <div class="total-figure zero" id="totalFigure">$0</div>
+  <div class="board-sub" id="boardSub">No flips logged yet</div>
+
+  <div class="stat-row">
+    <div class="stat">
+      <div class="stat-k">Flips sold</div>
+      <div class="stat-v" id="statCount">0</div>
+    </div>
+    <div class="stat">
+      <div class="stat-k">Avg profit</div>
+      <div class="stat-v" id="statAvg">$0</div>
+    </div>
+    <div class="stat">
+      <div class="stat-k">Best flip</div>
+      <div class="stat-v" id="statBest">—</div>
+    </div>
+    <div class="stat">
+      <div class="stat-k">In the shop</div>
+      <div class="stat-v" id="statPending">0</div>
+    </div>
+  </div>
+</div>
+
+<div class="add-panel">
+  <h2 id="formTitle">Log a car</h2>
+  <div class="field">
+    <label for="fName">Car</label>
+    <input type="text" id="fName" placeholder="e.g. Gambler 800S" autocomplete="off">
+  </div>
+  <div class="row2">
+    <div class="field">
+      <label for="fBuy">Buy price</label>
+      <input type="number" id="fBuy" inputmode="numeric" placeholder="0">
+    </div>
+    <div class="field">
+      <label for="fParts">Parts / repair</label>
+      <input type="number" id="fParts" inputmode="numeric" placeholder="0">
+    </div>
+  </div>
+  <div class="field">
+    <label for="fSell">Sell price <span style="text-transform:none;letter-spacing:0;">(leave blank if still working on it)</span></label>
+    <input type="number" id="fSell" inputmode="numeric" placeholder="0">
+  </div>
+  <div class="btn-row">
+    <button class="btn btn-primary" id="submitBtn" onclick="submitFlip()">Add to ledger</button>
+  </div>
+  <div class="btn-row" id="cancelRow" style="display:none;">
+    <button class="btn btn-secondary" onclick="cancelEdit()">Cancel edit</button>
+  </div>
+</div>
+
+<div class="list-section">
+  <div class="list-title">Flips <small id="listCount">0 total</small></div>
+  <div id="list"></div>
+</div>
+
+<div class="footer-note">Data stays on this device · Garage Ledger</div>
+
+<script>
+const STORAGE_KEY = 'beamng-flip-tracker-v1';
+let flips = [];
+let editingId = null;
+
+function loadFlips(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    flips = raw ? JSON.parse(raw) : [];
+  }catch(e){
+    flips = [];
+  }
+}
+function saveFlips(){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(flips));
+}
+function fmt(n){
+  const sign = n < 0 ? '-' : '';
+  return sign + '$' + Math.abs(Math.round(n)).toLocaleString('en-US');
+}
+function profitOf(f){
+  if(f.sell === null || f.sell === undefined) return null;
+  return f.sell - f.buy - f.parts;
+}
+
+function render(){
+  // sold vs pending
+  const sold = flips.filter(f => f.sell !== null && f.sell !== undefined);
+  const pending = flips.filter(f => f.sell === null || f.sell === undefined);
+
+  const total = sold.reduce((sum,f) => sum + profitOf(f), 0);
+  const totalEl = document.getElementById('totalFigure');
+  totalEl.textContent = fmt(total);
+  totalEl.className = 'total-figure ' + (sold.length === 0 ? 'zero' : (total > 0 ? 'pos' : (total < 0 ? 'neg' : 'zero')));
+
+  document.getElementById('boardSub').textContent = sold.length === 0
+    ? 'No flips logged yet'
+    : (sold.length + ' car' + (sold.length===1?'':'s') + ' sold' + (pending.length ? ' · ' + pending.length + ' in the shop' : ''));
+
+  document.getElementById('statCount').textContent = sold.length;
+  document.getElementById('statAvg').textContent = sold.length ? fmt(total / sold.length) : '$0';
+  document.getElementById('statPending').textContent = pending.length;
+
+  if(sold.length){
+    const best = sold.reduce((a,b) => profitOf(b) > profitOf(a) ? b : a);
+    document.getElementById('statBest').textContent = best.name + ' · ' + fmt(profitOf(best));
+  } else {
+    document.getElementById('statBest').textContent = '—';
+  }
+
+  document.getElementById('listCount').textContent = flips.length + ' total';
+
+  const listEl = document.getElementById('list');
+  if(flips.length === 0){
+    listEl.innerHTML = '<div class="empty">Nothing in the ledger yet.<br>Buy something rough, fix it up, log the flip.</div>';
+    return;
+  }
+
+  const sorted = [...flips].sort((a,b) => b.createdAt - a.createdAt);
+  listEl.innerHTML = sorted.map(f => {
+    const p = profitOf(f);
+    const isPending = p === null;
+    const barClass = isPending ? 'pending' : (p >= 0 ? 'pos' : 'neg');
+    const dateStr = new Date(f.createdAt).toLocaleDateString('en-GB', {day:'numeric', month:'short'});
+    return `
+      <div class="card">
+        <div class="card-bar ${barClass}"></div>
+        <div class="card-body">
+          <div class="card-top">
+            <div>
+              <div class="car-name">${escapeHtml(f.name)}</div>
+              <div class="car-date">${dateStr}</div>
+            </div>
+            ${isPending
+              ? '<span class="status-chip">In the shop</span>'
+              : `<span class="profit-tag ${p>=0?'pos':'neg'}">${fmt(p)}</span>`}
+          </div>
+          <div class="breakdown">
+            <span>Buy <b>${fmt(f.buy)}</b></span>
+            <span>Parts <b>${fmt(f.parts)}</b></span>
+            <span>Sell <b>${isPending ? '—' : fmt(f.sell)}</b></span>
+          </div>
+          <div class="card-actions">
+            <button onclick="editFlip('${f.id}')">Edit</button>
+            <button onclick="deleteFlip('${f.id}')">Delete</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function escapeHtml(s){
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+function submitFlip(){
+  const name = document.getElementById('fName').value.trim();
+  const buy = parseFloat(document.getElementById('fBuy').value) || 0;
+  const parts = parseFloat(document.getElementById('fParts').value) || 0;
+  const sellRaw = document.getElementById('fSell').value;
+  const sell = sellRaw === '' ? null : (parseFloat(sellRaw) || 0);
+
+  if(!name){
+    document.getElementById('fName').focus();
+    return;
+  }
+
+  if(editingId){
+    const f = flips.find(x => x.id === editingId);
+    if(f){
+      f.name = name; f.buy = buy; f.parts = parts; f.sell = sell;
+    }
+    cancelEdit();
+  } else {
+    flips.push({
+      id: 'f' + Date.now() + Math.random().toString(36).slice(2,7),
+      name, buy, parts, sell,
+      createdAt: Date.now()
+    });
+    clearForm();
+  }
+  saveFlips();
+  render();
+}
+
+function editFlip(id){
+  const f = flips.find(x => x.id === id);
+  if(!f) return;
+  editingId = id;
+  document.getElementById('fName').value = f.name;
+  document.getElementById('fBuy').value = f.buy || '';
+  document.getElementById('fParts').value = f.parts || '';
+  document.getElementById('fSell').value = (f.sell === null || f.sell === undefined) ? '' : f.sell;
+  document.getElementById('formTitle').textContent = 'Edit flip';
+  document.getElementById('submitBtn').textContent = 'Save changes';
+  document.getElementById('cancelRow').style.display = 'flex';
+  document.querySelector('.add-panel').scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+function cancelEdit(){
+  editingId = null;
+  document.getElementById('formTitle').textContent = 'Log a car';
+  document.getElementById('submitBtn').textContent = 'Add to ledger';
+  document.getElementById('cancelRow').style.display = 'none';
+  clearForm();
+}
+
+function clearForm(){
+  document.getElementById('fName').value = '';
+  document.getElementById('fBuy').value = '';
+  document.getElementById('fParts').value = '';
+  document.getElementById('fSell').value = '';
+}
+
+function deleteFlip(id){
+  flips = flips.filter(x => x.id !== id);
+  if(editingId === id) cancelEdit();
+  saveFlips();
+  render();
+}
+
+loadFlips();
+render();
+</script>
+
+</body>
+</html>

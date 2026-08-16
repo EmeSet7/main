@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<title>Elements — an ambient mixer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #10151c;
+    --panel: #1b232c;
+    --panel-2: #212b35;
+    --line: #2c3742;
+    --text: #e9ede9;
+    --muted: #7d8b94;
+    --brass: #c9a675;
+    --rain: #6fb3c9;
+    --wind: #8fae87;
+    --fire: #e58a52;
+    --waves: #5c8ba3;
+  }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color: transparent; }
+  html,body{ height:100%; }
+  body{
+    margin:0;
+    background:
+      radial-gradient(ellipse at 50% -10%, #1a222b 0%, var(--bg) 55%);
+    color:var(--text);
+    font-family:'Inter', sans-serif;
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    overflow-x:hidden;
+  }
+
+  .console{
+    width:100%;
+    max-width:880px;
+    padding:28px 18px 40px;
+  }
+
+  header{
+    text-align:center;
+    margin-bottom:28px;
+  }
+  header .eyebrow{
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px;
+    letter-spacing:0.18em;
+    text-transform:uppercase;
+    color:var(--brass);
+    margin-bottom:6px;
+  }
+  header h1{
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:700;
+    font-size:clamp(28px, 6vw, 40px);
+    margin:0 0 4px;
+    letter-spacing:-0.01em;
+  }
+  header p{
+    color:var(--muted);
+    font-size:14px;
+    margin:0;
+  }
+
+  .rack{
+    display:grid;
+    grid-template-columns:repeat(4, 1fr);
+    gap:12px;
+    background:linear-gradient(180deg, #171e26, #131920);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:18px 14px 22px;
+    box-shadow:
+      0 30px 60px -30px rgba(0,0,0,0.7),
+      inset 0 1px 0 rgba(255,255,255,0.03);
+  }
+
+  .strip{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:14px 8px 16px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:12px;
+  }
+
+  .strip .icon{
+    width:26px; height:26px;
+    color: var(--accent);
+    opacity:0.9;
+  }
+  .strip .label{
+    font-family:'Space Grotesk', sans-serif;
+    font-size:12.5px;
+    font-weight:600;
+    letter-spacing:0.03em;
+    color:var(--text);
+  }
+
+  .meter{
+    width:14px;
+    height:44px;
+    border-radius:3px;
+    background:#0e1319;
+    border:1px solid var(--line);
+    position:relative;
+    overflow:hidden;
+  }
+  .meter .level{
+    position:absolute;
+    bottom:0; left:0; right:0;
+    height:0%;
+    background: linear-gradient(180deg, #fff 0%, var(--accent) 30%, var(--accent) 100%);
+    opacity:0.85;
+    transition:height 60ms linear;
+  }
+
+  .fader{
+    position:relative;
+    width:52px;
+    height:170px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+  .fader-fill{
+    position:absolute;
+    left:50%;
+    bottom:8px;
+    width:6px;
+    height:0%;
+    max-height:calc(100% - 16px);
+    background:var(--accent);
+    border-radius:3px;
+    transform:translateX(-50%);
+    opacity:0.55;
+    pointer-events:none;
+  }
+  .fader-groove{
+    position:absolute;
+    left:50%;
+    top:8px; bottom:8px;
+    width:3px;
+    background:var(--line);
+    border-radius:3px;
+    transform:translateX(-50%);
+    pointer-events:none;
+  }
+  .fader input[type=range]{
+    position:absolute;
+    top:50%; left:50%;
+    width:154px; height:52px;
+    transform:translate(-50%,-50%) rotate(-90deg);
+    -webkit-appearance:none;
+    appearance:none;
+    background:transparent;
+    margin:0;
+    cursor:pointer;
+  }
+  .fader input[type=range]:focus-visible{
+    outline: 2px solid var(--brass);
+    outline-offset: 4px;
+    border-radius: 4px;
+  }
+  .fader input[type=range]::-webkit-slider-runnable-track{
+    height:3px; background:transparent;
+  }
+  .fader input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;
+    width:34px; height:16px;
+    border-radius:3px;
+    background:linear-gradient(180deg, #4a545d, #2a323a);
+    border:1px solid #565f68;
+    box-shadow:0 2px 4px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08);
+    margin-top:-6.5px;
+    position:relative;
+  }
+  .fader input[type=range]::-webkit-slider-thumb:hover{ background:linear-gradient(180deg, #545e68, #313a42); }
+  .fader input[type=range]::-moz-range-track{ height:3px; background:transparent; }
+  .fader input[type=range]::-moz-range-thumb{
+    width:34px; height:16px;
+    border-radius:3px;
+    background:linear-gradient(180deg, #4a545d, #2a323a);
+    border:1px solid #565f68;
+    box-shadow:0 2px 4px rgba(0,0,0,0.4);
+  }
+
+  .pct{
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px;
+    color:var(--muted);
+    letter-spacing:0.02em;
+    min-width:32px;
+    text-align:center;
+  }
+
+  .master-row{
+    margin-top:14px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:16px;
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:14px 18px;
+  }
+  .master-left{ display:flex; align-items:center; gap:12px; }
+  .power-btn{
+    width:40px; height:40px;
+    border-radius:50%;
+    background:linear-gradient(180deg, #2a323a, #1a2027);
+    border:1px solid #3a444d;
+    color:var(--brass);
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer;
+    transition:box-shadow 0.2s;
+  }
+  .power-btn.on{ box-shadow:0 0 0 3px rgba(201,166,117,0.15), 0 0 14px rgba(201,166,117,0.35); }
+  .power-btn svg{ width:18px; height:18px; }
+  .master-label{
+    font-family:'Space Grotesk', sans-serif;
+    font-size:13px; font-weight:600; color:var(--text);
+  }
+  .master-sub{ font-family:'JetBrains Mono', monospace; font-size:10.5px; color:var(--muted); }
+
+  .master-slider-wrap{
+    display:flex; align-items:center; gap:10px; flex:1; max-width:260px;
+  }
+  input[type=range].horizontal{
+    -webkit-appearance:none; appearance:none;
+    width:100%; height:3px;
+    background:var(--line);
+    border-radius:3px;
+    outline:none;
+  }
+  input[type=range].horizontal::-webkit-slider-thumb{
+    -webkit-appearance:none;
+    width:16px; height:16px;
+    border-radius:50%;
+    background:var(--brass);
+    border:2px solid #1a2027;
+    cursor:pointer;
+    margin-top:-6.5px;
+  }
+  input[type=range].horizontal::-moz-range-thumb{
+    width:16px; height:16px;
+    border-radius:50%;
+    background:var(--brass);
+    border:2px solid #1a2027;
+    cursor:pointer;
+  }
+
+  .overlay{
+    position:fixed; inset:0;
+    background:var(--bg);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:18px;
+    z-index:10;
+    transition:opacity 0.5s ease;
+  }
+  .overlay.hidden{ opacity:0; pointer-events:none; }
+  .start-btn{
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:600;
+    font-size:15px;
+    color:var(--bg);
+    background:var(--brass);
+    border:none;
+    padding:14px 30px;
+    border-radius:30px;
+    cursor:pointer;
+    letter-spacing:0.02em;
+  }
+  .overlay-sub{ color:var(--muted); font-size:13px; font-family:'Inter',sans-serif; max-width:260px; text-align:center; }
+
+  @media (max-width:640px){
+    .rack{ grid-template-columns:repeat(2, 1fr); gap:10px; }
+    .master-row{ flex-wrap:wrap; }
+    .master-slider-wrap{ max-width:none; width:100%; order:3; }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .meter .level{ transition:none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="overlay" id="overlay">
+  <div class="eyebrow" style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.18em;color:var(--brass);text-transform:uppercase;">Elements</div>
+  <button class="start-btn" id="startBtn">Power on</button>
+  <p class="overlay-sub">A synthesized ambient mixer. Rain, wind, fire, waves — blend your own weather.</p>
+</div>
+
+<div class="console">
+  <header>
+    <div class="eyebrow">Elements</div>
+    <h1>An ambient mixer</h1>
+    <p>Four channels, generated live in your browser — no recordings.</p>
+  </header>
+
+  <div class="rack" id="rack">
+    <!-- Channel strips injected by JS -->
+  </div>
+
+  <div class="master-row">
+    <div class="master-left">
+      <button class="power-btn on" id="masterToggle" aria-label="Pause all">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" id="powerIcon">
+          <path d="M12 2v8"/><path d="M6.3 6.3a8 8 0 1 0 11.4 0"/>
+        </svg>
+      </button>
+      <div>
+        <div class="master-label">Master</div>
+        <div class="master-sub" id="masterState">Running</div>
+      </div>
+    </div>
+    <div class="master-slider-wrap">
+      <input type="range" class="horizontal" id="masterSlider" min="0" max="100" value="80">
+      <span class="pct" id="masterPct">80%</span>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const CHANNELS = [
+    {
+      id:'rain', label:'Rain', accent:'var(--rain)', default:40,
+      icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M8 14v4M12 14v4M16 14v4"/><path d="M6 10a4 4 0 0 1 .5-7.97A5 5 0 0 1 16 4.5 4 4 0 0 1 17 12H7a4 4 0 0 1-1-2z"/></svg>'
+    },
+    {
+      id:'wind', label:'Wind', accent:'var(--wind)', default:0,
+      icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 8h11a3 3 0 1 0-3-3"/><path d="M3 13h15a3 3 0 1 1-3 3"/><path d="M3 18h8a2.5 2.5 0 1 0-2.5-2.5"/></svg>'
+    },
+    {
+      id:'fire', label:'Fire', accent:'var(--fire)', default:0,
+      icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 2c1 3-2 4-2 7a3 3 0 0 0 6 0c1 1 1.5 2.5 1.5 4A5.5 5.5 0 1 1 8 13c0-2 1.5-3 1.5-5"/></svg>'
+    },
+    {
+      id:'waves', label:'Waves', accent:'var(--waves)', default:35,
+      icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M2 8c2 0 2-2 4-2s2 2 4 2 2-2 4-2 2 2 4 2 2-2 4-2"/><path d="M2 14c2 0 2-2 4-2s2 2 4 2 2-2 4-2 2 2 4 2 2-2 4-2"/><path d="M2 20c2 0 2-2 4-2s2 2 4 2 2-2 4-2 2 2 4 2 2-2 4-2"/></svg>'
+    }
+  ];
+
+  const rack = document.getElementById('rack');
+  const meters = {};
+  const faders = {};
+  const fills = {};
+  const pcts = {};
+
+  CHANNELS.forEach(ch => {
+    const strip = document.createElement('div');
+    strip.className = 'strip';
+    strip.style.setProperty('--accent', ch.accent);
+    strip.innerHTML = `
+      <div class="icon">${ch.icon}</div>
+      <div class="label">${ch.label}</div>
+      <div class="meter"><div class="level" id="level-${ch.id}"></div></div>
+      <div class="fader">
+        <div class="fader-groove"></div>
+        <div class="fader-fill" id="fill-${ch.id}"></div>
+        <input type="range" id="fader-${ch.id}" min="0" max="100" value="${ch.default}">
+      </div>
+      <div class="pct" id="pct-${ch.id}">${ch.default}%</div>
+    `;
+    rack.appendChild(strip);
+    meters[ch.id] = document.getElementById(`level-${ch.id}`);
+    faders[ch.id] = document.getElementById(`fader-${ch.id}`);
+    fills[ch.id] = document.getElementById(`fill-${ch.id}`);
+    pcts[ch.id] = document.getElementById(`pct-${ch.id}`);
+  });
+
+  function setFill(id, val){
+    fills[id].style.height = val + '%';
+    pcts[id].textContent = Math.round(val) + '%';
+  }
+  CHANNELS.forEach(ch => setFill(ch.id, ch.default));
+
+  // ---------- Audio engine ----------
+  let ctx = null;
+  let masterGain = null;
+  let running = false;
+  const channelNodes = {};
+  const analysers = {};
+  let animId = null;
+  let fireCrackleTimer = null;
+  let startFireCrackle = null;
+  let rainDropTimer = null;
+  let startRainDrops = null;
+
+  function createNoiseBuffer(seconds){
+    const len = Math.floor(ctx.sampleRate * seconds);
+    const buffer = ctx.createBuffer(1, len, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for(let i=0;i<len;i++) data[i] = Math.random()*2 - 1;
+    return buffer;
+  }
+
+  function makeChannel(id, defaultVal){
+    const fader = ctx.createGain();
+    fader.gain.value = defaultVal/100;
+    const analyser = ctx.createAnalyser();
+    analyser.fftSize = 256;
+    fader.connect(analyser).connect(masterGain);
+    channelNodes[id] = fader;
+    analysers[id] = analyser;
+  }
+
+  function buildRain(){
+    // Soft, broad hiss bed — the "distance" layer of rain
+    const bedNoise = ctx.createBufferSource();
+    bedNoise.buffer = createNoiseBuffer(4);
+    bedNoise.loop = true;
+    const bedHp = ctx.createBiquadFilter();
+    bedHp.type = 'highpass'; bedHp.frequency.value = 700; bedHp.Q.value = 0.5;
+    const bedLp = ctx.createBiquadFilter();
+    bedLp.type = 'lowpass'; bedLp.frequency.value = 6000; bedLp.Q.value = 0.4;
+    const bedGain = ctx.createGain(); bedGain.gain.value = 0.55;
+    const flutter = ctx.createGain(); flutter.gain.value = 1;
+    const flutterLfo = ctx.createOscillator(); flutterLfo.frequency.value = 4.5; flutterLfo.type = 'sine';
+    const flutterAmt = ctx.createGain(); flutterAmt.gain.value = 0.08;
+    flutterLfo.connect(flutterAmt).connect(flutter.gain);
+    bedNoise.connect(bedHp).connect(bedLp).connect(bedGain).connect(flutter).connect(channelNodes.rain);
+    bedNoise.start(); flutterLfo.start();
+
+    // Individual droplet transients — short bright ticks at randomized times/pitches
+    const dropBuffer = createNoiseBuffer(0.15);
+    function drop(){
+      if(!running) return;
+      const src = ctx.createBufferSource();
+      src.buffer = dropBuffer;
+      const bp = ctx.createBiquadFilter();
+      bp.type = 'bandpass';
+      bp.frequency.value = 2800 + Math.random()*4500;
+      bp.Q.value = 6 + Math.random()*6;
+      const g = ctx.createGain();
+      const now = ctx.currentTime;
+      const peak = 0.15 + Math.random()*0.35;
+      g.gain.setValueAtTime(0, now);
+      g.gain.linearRampToValueAtTime(peak, now + 0.001);
+      g.gain.exponentialRampToValueAtTime(0.001, now + 0.02 + Math.random()*0.03);
+      src.connect(bp).connect(g).connect(channelNodes.rain);
+      src.start(now);
+      src.stop(now + 0.15);
+      rainDropTimer = setTimeout(drop, 12 + Math.random()*40);
+    }
+    startRainDrops = drop;
+    drop();
+  }
+
+  function buildWind(){
+    const noise = ctx.createBufferSource();
+    noise.buffer = createNoiseBuffer(4);
+    noise.loop = true;
+    const lp = ctx.createBiquadFilter();
+    lp.type = 'lowpass'; lp.frequency.value = 500; lp.Q.value = 0.8;
+    const lfo = ctx.createOscillator(); lfo.frequency.value = 0.08; lfo.type = 'sine';
+    const lfoGain = ctx.createGain(); lfoGain.gain.value = 260;
+    lfo.connect(lfoGain).connect(lp.frequency);
+    const boost = ctx.createGain(); boost.gain.value = 1.4;
+    noise.connect(lp).connect(boost).connect(channelNodes.wind);
+    noise.start(); lfo.start();
+  }
+
+  function buildFire(){
+    // Warm low rumble bed — the "body" of a contained fire, not a roaring blaze
+    const bedNoise = ctx.createBufferSource();
+    bedNoise.buffer = createNoiseBuffer(4);
+    bedNoise.loop = true;
+    const lp = ctx.createBiquadFilter();
+    lp.type = 'lowpass'; lp.frequency.value = 550; lp.Q.value = 0.5;
+    const bedGain = ctx.createGain(); bedGain.gain.value = 0.35;
+    const rumbleLfo = ctx.createOscillator(); rumbleLfo.frequency.value = 0.35; rumbleLfo.type = 'sine';
+    const rumbleAmt = ctx.createGain(); rumbleAmt.gain.value = 0.08;
+    rumbleLfo.connect(rumbleAmt).connect(bedGain.gain);
+    bedNoise.connect(lp).connect(bedGain).connect(channelNodes.fire);
+    bedNoise.start(); rumbleLfo.start();
+
+    // Wood crackle — sparse, low-pitched pops with the occasional bigger snap
+    const crackleBuffer = createNoiseBuffer(0.3);
+    function crackle(){
+      if(!running){ return; }
+      const src = ctx.createBufferSource();
+      src.buffer = crackleBuffer;
+      const bp = ctx.createBiquadFilter();
+      bp.type = 'bandpass';
+      const isBigSnap = Math.random() < 0.12;
+      bp.frequency.value = isBigSnap ? (250 + Math.random()*400) : (500 + Math.random()*1400);
+      bp.Q.value = 2.5 + Math.random()*3;
+      const lp2 = ctx.createBiquadFilter();
+      lp2.type = 'lowpass'; lp2.frequency.value = 3500;
+      const g = ctx.createGain();
+      const now = ctx.currentTime;
+      const peakLevel = isBigSnap ? (0.5 + Math.random()*0.3) : (0.12 + Math.random()*0.22);
+      g.gain.setValueAtTime(0, now);
+      g.gain.linearRampToValueAtTime(peakLevel, now + 0.004);
+      g.gain.exponentialRampToValueAtTime(0.001, now + (isBigSnap ? 0.18 : 0.08) + Math.random()*0.1);
+      src.connect(bp).connect(lp2).connect(g).connect(channelNodes.fire);
+      src.start(now);
+      src.stop(now + 0.3);
+      fireCrackleTimer = setTimeout(crackle, 260 + Math.random()*900);
+    }
+    startFireCrackle = crackle;
+    crackle();
+  }
+
+  function buildWaves(){
+    const noise = ctx.createBufferSource();
+    noise.buffer = createNoiseBuffer(5);
+    noise.loop = true;
+    const lp = ctx.createBiquadFilter();
+    lp.type = 'lowpass'; lp.frequency.value = 700; lp.Q.value = 0.7;
+    const swell = ctx.createGain(); swell.gain.value = 0.5;
+    const lfoA = ctx.createOscillator(); lfoA.frequency.value = 0.06; lfoA.type = 'sine';
+    const lfoAGain = ctx.createGain(); lfoAGain.gain.value = 0.28;
+    const lfoB = ctx.createOscillator(); lfoB.frequency.value = 0.13; lfoB.type = 'sine';
+    const lfoBGain = ctx.createGain(); lfoBGain.gain.value = 0.12;
+    lfoA.connect(lfoAGain).connect(swell.gain);
+    lfoB.connect(lfoBGain).connect(swell.gain);
+    noise.connect(lp).connect(swell).connect(channelNodes.waves);
+    noise.start(); lfoA.start(); lfoB.start();
+  }
+
+  function initAudio(){
+    ctx = new (window.AudioContext || window.webkitAudioContext)();
+    masterGain = ctx.createGain();
+    masterGain.gain.value = document.getElementById('masterSlider').value/100;
+    masterGain.connect(ctx.destination);
+
+    CHANNELS.forEach(ch => makeChannel(ch.id, ch.default));
+    buildRain();
+    buildWind();
+    buildFire();
+    buildWaves();
+
+    running = true;
+    startMeterLoop();
+  }
+
+  function startMeterLoop(){
+    const dataArrays = {};
+    CHANNELS.forEach(ch => {
+      dataArrays[ch.id] = new Uint8Array(analysers[ch.id].fftSize);
+    });
+    function loop(){
+      CHANNELS.forEach(ch => {
+        const arr = dataArrays[ch.id];
+        analysers[ch.id].getByteTimeDomainData(arr);
+        let sum = 0;
+        for(let i=0;i<arr.length;i++){
+          const v = (arr[i]-128)/128;
+          sum += v*v;
+        }
+        const rms = Math.sqrt(sum/arr.length);
+        const pct = Math.min(100, rms * 260);
+        meters[ch.id].style.height = pct + '%';
+      });
+      animId = requestAnimationFrame(loop);
+    }
+    loop();
+  }
+
+  // ---------- UI wiring ----------
+  document.getElementById('startBtn').addEventListener('click', () => {
+    if(!ctx){ initAudio(); }
+    if(ctx.state === 'suspended'){ ctx.resume(); }
+    document.getElementById('overlay').classList.add('hidden');
+    setTimeout(()=> document.getElementById('overlay').style.display='none', 500);
+  });
+
+  CHANNELS.forEach(ch => {
+    faders[ch.id].addEventListener('input', (e) => {
+      const val = parseFloat(e.target.value);
+      setFill(ch.id, val);
+      if(channelNodes[ch.id]){
+        channelNodes[ch.id].gain.setTargetAtTime(val/100, ctx.currentTime, 0.015);
+      }
+    });
+  });
+
+  const masterSlider = document.getElementById('masterSlider');
+  const masterPct = document.getElementById('masterPct');
+  masterSlider.addEventListener('input', (e) => {
+    const val = parseFloat(e.target.value);
+    masterPct.textContent = Math.round(val) + '%';
+    if(masterGain){
+      masterGain.gain.setTargetAtTime(val/100, ctx.currentTime, 0.015);
+    }
+  });
+
+  const masterToggle = document.getElementById('masterToggle');
+  const masterState = document.getElementById('masterState');
+  masterToggle.addEventListener('click', () => {
+    if(!ctx) return;
+    if(ctx.state === 'running'){
+      ctx.suspend();
+      running = false;
+      masterToggle.classList.remove('on');
+      masterState.textContent = 'Paused';
+      if(animId) cancelAnimationFrame(animId);
+      if(fireCrackleTimer) clearTimeout(fireCrackleTimer);
+      if(rainDropTimer) clearTimeout(rainDropTimer);
+    } else {
+      ctx.resume();
+      running = true;
+      masterToggle.classList.add('on');
+      masterState.textContent = 'Running';
+      startMeterLoop();
+      if(startFireCrackle) startFireCrackle();
+      if(startRainDrops) startRainDrops();
+    }
+  });
+})();
+</script>
+
+</body>
+</html>

@@ -165,7 +165,7 @@
   #beforeCanvas{
     position: absolute;
     top:0; left:0;
-    clip-path: inset(0 0 0 var(--split, 50%));
+    clip-path: inset(0 calc(100% - var(--split, 50%)) 0 0);
   }
   .slider-handle{
     position: absolute;
