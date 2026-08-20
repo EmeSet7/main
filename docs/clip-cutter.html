@@ -13,12 +13,10 @@
     --panel:#17181a;
     --panel-2:#1e2022;
     --edge:#2b2d30;
-    --edge-soft:#232527;
     --text:#e9e6df;
     --text-dim:#8a8d92;
     --text-faint:#54575c;
     --accent:#ff6a1f;
-    --accent-dim:#7a3a17;
     --accent2:#f2c14e;
     --danger:#e5484d;
     --radius:3px;
@@ -150,39 +148,6 @@
     max-height:100%;
     display:block;
   }
-  #cropBox{
-    position:absolute;
-    border:1.5px solid var(--accent);
-    box-shadow:0 0 0 2000px rgba(0,0,0,0.55);
-    cursor:move;
-    touch-action:none;
-  }
-  #cropBox::before{
-    content:"";
-    position:absolute;
-    inset:0;
-    background-image:
-      linear-gradient(to right, transparent 33%, rgba(255,255,255,0.25) 33%, rgba(255,255,255,0.25) calc(33% + 1px), transparent calc(33% + 1px), transparent 66%, rgba(255,255,255,0.25) 66%, rgba(255,255,255,0.25) calc(66% + 1px), transparent calc(66% + 1px)),
-      linear-gradient(to bottom, transparent 33%, rgba(255,255,255,0.25) 33%, rgba(255,255,255,0.25) calc(33% + 1px), transparent calc(33% + 1px), transparent 66%, rgba(255,255,255,0.25) 66%, rgba(255,255,255,0.25) calc(66% + 1px), transparent calc(66% + 1px));
-    pointer-events:none;
-  }
-  .crop-label{
-    position:absolute;
-    top:-20px; left:0;
-    font-family:"JetBrains Mono",monospace;
-    font-size:10px;
-    color:var(--accent);
-    letter-spacing:1px;
-    white-space:nowrap;
-  }
-  .handle{
-    position:absolute;
-    width:14px;height:14px;
-    background:var(--accent);
-    border:1px solid #000;
-    border-radius:1px;
-  }
-  .handle.br{right:-7px;bottom:-7px;cursor:nwse-resize;}
 
   /* ---- Transport ---- */
   #transport{
@@ -298,8 +263,8 @@
   }
   .clip-card.selected{border-color:var(--accent);}
   .clip-thumb{
-    width:44px;
-    height:78px;
+    width:78px;
+    height:44px;
     background:#000;
     border-radius:2px;
     object-fit:cover;
@@ -336,17 +301,6 @@
   }
 
   #exportSettings{padding:14px 16px; border-top:1px solid var(--edge); display:flex; flex-direction:column; gap:10px;}
-  .row{display:flex; align-items:center; justify-content:space-between; gap:8px;}
-  .row label{font-family:"JetBrains Mono",monospace; font-size:10px; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.5px;}
-  select{
-    background:var(--panel-2);
-    color:var(--text);
-    border:1px solid var(--edge);
-    border-radius:var(--radius);
-    font-family:"JetBrains Mono",monospace;
-    font-size:11px;
-    padding:6px 8px;
-  }
   #exportLog{
     font-family:"JetBrains Mono",monospace;
     font-size:10px;
@@ -374,7 +328,7 @@
 <header>
   <div>
     <h1>CLIP <span>CUTTER</span></h1>
-    <div class="sub">trim &amp; crop to vertical — local, no upload</div>
+    <div class="sub">trim gameplay footage — local, no upload</div>
   </div>
   <div class="status-pill" id="statusPill"><span class="dot"></span><span id="statusText">idle</span></div>
 </header>
@@ -391,14 +345,9 @@
     <div class="panel">
       <div class="panel-head">
         <h2>PREVIEW</h2>
-        <span class="mono" id="cropReadout" style="font-size:10px;color:var(--text-faint);"></span>
       </div>
       <div id="stage">
         <video id="video" playsinline></video>
-        <div id="cropBox">
-          <div class="crop-label">9:16</div>
-          <div class="handle br" id="cropHandle"></div>
-        </div>
       </div>
       <div id="transport">
         <button class="icon" id="playBtn" title="Play/Pause (Space)">▶</button>
@@ -416,7 +365,7 @@
       </div>
       <div class="sprockets"></div>
       <div id="ioRow">
-        <span class="hint">click timeline to seek · drag box on preview to reposition crop · drag corner to zoom · ←/→ step frame</span>
+        <span class="hint">click timeline to seek · ←/→ step frame · cuts are lossless (no re-encode)</span>
       </div>
     </div>
 
@@ -431,13 +380,6 @@
         </div>
       </div>
       <div id="exportSettings">
-        <div class="row">
-          <label>Output size</label>
-          <select id="resSelect">
-            <option value="1080">1080 × 1920 (sharp)</option>
-            <option value="720" selected>720 × 1280 (fast)</option>
-          </select>
-        </div>
         <button class="primary" id="exportAllBtn" disabled>EXPORT ALL AS ZIP</button>
         <div id="exportLog"></div>
       </div>
@@ -455,24 +397,20 @@ const state = {
   file: null,
   url: null,
   duration: 0,
-  clips: [],           // {id,name,start,end,crop:{x,y,w,h} fractions of intrinsic video size}
+  clips: [],           // {id,name,start,end}
   selectedId: null,
   pendingIn: null,
-  crop: null,           // live crop editor state (fractions), applies to the active selection or next new clip
 };
 let nextId = 1;
 let ffmpeg = null;
 let ffmpegLoading = null;
+let inputWritten = false;
 
 // ---------- Elements ----------
 const dropzone = document.getElementById('dropzone');
 const fileInput = document.getElementById('fileInput');
 const editor = document.getElementById('editor');
 const video = document.getElementById('video');
-const stage = document.getElementById('stage');
-const cropBox = document.getElementById('cropBox');
-const cropHandle = document.getElementById('cropHandle');
-const cropReadout = document.getElementById('cropReadout');
 const playBtn = document.getElementById('playBtn');
 const curTimeEl = document.getElementById('curTime');
 const durTimeEl = document.getElementById('durTime');
@@ -486,7 +424,6 @@ const emptyReel = document.getElementById('emptyReel');
 const clipCount = document.getElementById('clipCount');
 const exportAllBtn = document.getElementById('exportAllBtn');
 const exportLog = document.getElementById('exportLog');
-const resSelect = document.getElementById('resSelect');
 const loadNewBtn = document.getElementById('loadNewBtn');
 const statusPill = document.getElementById('statusPill');
 const statusText = document.getElementById('statusText');
@@ -533,6 +470,7 @@ function resetAll(){
   state.selectedId = null;
   state.pendingIn = null;
   nextId = 1;
+  inputWritten = false;
   renderReel();
   editor.classList.remove('active');
   dropzone.style.display = '';
@@ -554,13 +492,12 @@ function loadFile(f){
 video.addEventListener('loadedmetadata', () => {
   state.duration = video.duration;
   durTimeEl.textContent = fmtTime(state.duration);
-  state.crop = defaultCrop();
-  layoutCropBox();
   renderTimelineMarkers();
 });
 video.addEventListener('timeupdate', () => {
   curTimeEl.textContent = fmtTime(video.currentTime);
   updatePlayhead();
+  if(state.pendingIn !== null) renderTimelineMarkers();
 });
 video.addEventListener('play', () => playBtn.textContent = '❚❚');
 video.addEventListener('pause', () => playBtn.textContent = '▶');
@@ -611,8 +548,6 @@ function renderTimelineMarkers(){
     timeline.appendChild(div);
   }
 }
-// live-update pending range preview while scrubbing
-video.addEventListener('timeupdate', () => { if(state.pendingIn !== null) renderTimelineMarkers(); });
 
 // ---------- In / Out ----------
 setInBtn.addEventListener('click', markIn);
@@ -637,8 +572,7 @@ function markOut(){
   const clip = {
     id: nextId++,
     name: 'clip'+(state.clips.length+1),
-    start, end,
-    crop: { ...state.crop }
+    start, end
   };
   state.clips.push(clip);
   state.pendingIn = null;
@@ -650,111 +584,17 @@ function markOut(){
   generateThumb(clip);
 }
 
-// ---------- Crop box ----------
-function defaultCrop(){
-  const vw = video.videoWidth, vh = video.videoHeight;
-  let w = vh * (9/16);
-  let h = vh;
-  if(w > vw){ w = vw; h = vw / (9/16); }
-  return {
-    x: (vw - w)/2/vw,
-    y: (vh - h)/2/vh,
-    w: w/vw,
-    h: h/vh
-  };
-}
-function getVideoDisplayRect(){
-  // rect of the actual rendered video pixels within #stage (accounts for object-fit:contain letterboxing)
-  const sr = stage.getBoundingClientRect();
-  const vw = video.videoWidth, vh = video.videoHeight;
-  if(!vw || !vh) return {left:0,top:0,width:sr.width,height:sr.height};
-  const stageRatio = sr.width/sr.height;
-  const vidRatio = vw/vh;
-  let w,h,left,top;
-  if(vidRatio > stageRatio){
-    w = sr.width; h = w/vidRatio;
-    left = 0; top = (sr.height-h)/2;
-  } else {
-    h = sr.height; w = h*vidRatio;
-    top = 0; left = (sr.width-w)/2;
-  }
-  return {left,top,width:w,height:h};
-}
-function layoutCropBox(){
-  if(!state.crop || !video.videoWidth) return;
-  const dr = getVideoDisplayRect();
-  cropBox.style.left = (dr.left + state.crop.x*dr.width) + 'px';
-  cropBox.style.top = (dr.top + state.crop.y*dr.height) + 'px';
-  cropBox.style.width = (state.crop.w*dr.width) + 'px';
-  cropBox.style.height = (state.crop.h*dr.height) + 'px';
-  cropReadout.textContent = Math.round(state.crop.w*video.videoWidth) + '×' + Math.round(state.crop.h*video.videoHeight) + ' px crop';
-}
-window.addEventListener('resize', layoutCropBox);
-
-let dragMode = null, dragStart = null, cropStart = null;
-cropBox.addEventListener('pointerdown', e => {
-  if(e.target === cropHandle) return;
-  dragMode = 'move';
-  dragStart = {x:e.clientX,y:e.clientY};
-  cropStart = {...state.crop};
-  cropBox.setPointerCapture(e.pointerId);
-});
-cropHandle.addEventListener('pointerdown', e => {
-  e.stopPropagation();
-  dragMode = 'resize';
-  dragStart = {x:e.clientX,y:e.clientY};
-  cropStart = {...state.crop};
-  cropHandle.setPointerCapture(e.pointerId);
-});
-window.addEventListener('pointermove', e => {
-  if(!dragMode) return;
-  const dr = getVideoDisplayRect();
-  if(dr.width<=0||dr.height<=0) return;
-  const dxFrac = (e.clientX - dragStart.x)/dr.width;
-  const dyFrac = (e.clientY - dragStart.y)/dr.height;
-  if(dragMode === 'move'){
-    let x = cropStart.x + dxFrac;
-    let y = cropStart.y + dyFrac;
-    x = Math.max(0, Math.min(1-cropStart.w, x));
-    y = Math.max(0, Math.min(1-cropStart.h, y));
-    state.crop = {...cropStart, x, y};
-  } else if(dragMode === 'resize'){
-    // resize keeping 9:16 aspect, anchored at top-left corner
-    let newH = Math.max(0.08, Math.min(1-cropStart.y, cropStart.h + dyFrac));
-    let newW = newH * (9/16) * (video.videoHeight/video.videoWidth);
-    if(cropStart.x + newW > 1){ newW = 1-cropStart.x; newH = newW / ((9/16)*(video.videoHeight/video.videoWidth)); }
-    state.crop = {...cropStart, w:newW, h:newH};
-  }
-  layoutCropBox();
-  if(state.selectedId){
-    const c = state.clips.find(c=>c.id===state.selectedId);
-    if(c){ c.crop = {...state.crop}; }
-  }
-});
-window.addEventListener('pointerup', () => {
-  if(dragMode === 'resize' || dragMode === 'move'){
-    if(state.selectedId){
-      const c = state.clips.find(c=>c.id===state.selectedId);
-      if(c) generateThumb(c);
-    }
-  }
-  dragMode = null;
-});
-
 // ---------- Reel ----------
 function selectClip(id){
   state.selectedId = id;
   const c = state.clips.find(c=>c.id===id);
-  if(c){
-    state.crop = {...c.crop};
-    video.currentTime = c.start;
-    layoutCropBox();
-  }
+  if(c) video.currentTime = c.start;
   renderReel();
 }
 function renderReel(){
   clipCount.textContent = state.clips.length;
   exportAllBtn.disabled = state.clips.length === 0;
+  updateExportBtnLabel();
   reelList.querySelectorAll('.clip-card').forEach(n=>n.remove());
   emptyReel.style.display = state.clips.length ? 'none' : '';
   state.clips.forEach(c => {
@@ -766,7 +606,7 @@ function renderReel(){
         <input class="clip-name mono" value="${c.name}">
         <div class="clip-time mono">${fmtTime(c.start)} → ${fmtTime(c.end)} · ${(c.end-c.start).toFixed(1)}s</div>
         <div class="clip-actions">
-          <button class="small" data-act="select">EDIT</button>
+          <button class="small" data-act="select">SEEK</button>
           <button class="small" data-act="export">EXPORT</button>
           <button class="small danger-outline" data-act="delete">DEL</button>
         </div>
@@ -800,10 +640,9 @@ async function generateThumb(clip){
     thumbVideo.currentTime = clip.start;
   });
   const vw = thumbVideo.videoWidth, vh = thumbVideo.videoHeight;
-  const sx = clip.crop.x*vw, sy = clip.crop.y*vh, sw = clip.crop.w*vw, sh = clip.crop.h*vh;
-  thumbCanvas.width = 90; thumbCanvas.height = 160;
+  thumbCanvas.width = 160; thumbCanvas.height = 90;
   const ctx = thumbCanvas.getContext('2d');
-  ctx.drawImage(thumbVideo, sx, sy, sw, sh, 0, 0, 90, 160);
+  ctx.drawImage(thumbVideo, 0, 0, vw, vh, 0, 0, 160, 90);
   clip.thumb = thumbCanvas.toDataURL('image/jpeg', 0.7);
   const img = document.getElementById('thumb-'+clip.id);
   if(img) img.src = clip.thumb;
@@ -829,7 +668,6 @@ async function ensureFFmpeg(){
   return ffmpegLoading;
 }
 
-let inputWritten = false;
 async function ensureInputWritten(f){
   if(inputWritten) return;
   setStatus('busy','reading file…');
@@ -838,16 +676,7 @@ async function ensureInputWritten(f){
   setStatus('ready','engine ready');
 }
 
-function cropFilterFor(clip, outW, outH){
-  const vw = video.videoWidth, vh = video.videoHeight;
-  let cw = Math.round(clip.crop.w*vw); cw -= cw%2;
-  let ch = Math.round(clip.crop.h*vh); ch -= ch%2;
-  let cx = Math.round(clip.crop.x*vw); cx -= cx%2;
-  let cy = Math.round(clip.crop.y*vh); cy -= cy%2;
-  return `crop=${cw}:${ch}:${cx}:${cy},scale=${outW}:${outH}:flags=fast_bilinear`;
-}
-
-async function runExport(clip, outW, outH){
+async function runExport(clip){
   const f = await ensureFFmpeg();
   await ensureInputWritten(f);
   const duration = clip.end - clip.start;
@@ -856,10 +685,8 @@ async function runExport(clip, outW, outH){
     '-ss', String(clip.start),
     '-i', 'input.mp4',
     '-t', String(duration),
-    '-vf', cropFilterFor(clip, outW, outH),
-    '-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '23',
-    '-c:a', 'aac', '-b:a', '128k',
-    '-movflags', '+faststart',
+    '-c', 'copy',
+    '-avoid_negative_ts', 'make_zero',
     outName
   ]);
   const data = await f.readFile(outName);
@@ -867,16 +694,11 @@ async function runExport(clip, outW, outH){
   return { name: outName, data };
 }
 
-function targetRes(){
-  return resSelect.value === '1080' ? [1080,1920] : [720,1280];
-}
-
 async function exportClip(clip){
   try{
     setStatus('busy','exporting '+clip.name+'…');
     log('exporting '+clip.name+'…');
-    const [w,h] = targetRes();
-    const {name,data} = await runExport(clip, w, h);
+    const {name,data} = await runExport(clip);
     const blob = new Blob([data], {type:'video/mp4'});
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
@@ -894,13 +716,19 @@ async function exportClip(clip){
 exportAllBtn.addEventListener('click', async () => {
   if(!state.clips.length) return;
   exportAllBtn.disabled = true;
+
+  if(state.clips.length === 1){
+    await exportClip(state.clips[0]);
+    exportAllBtn.disabled = false;
+    return;
+  }
+
   const zip = new JSZip();
-  const [w,h] = targetRes();
   for(const clip of state.clips){
     try{
       setStatus('busy','exporting '+clip.name+'…');
       log('exporting '+clip.name+'…');
-      const {name,data} = await runExport(clip, w, h);
+      const {name,data} = await runExport(clip);
       zip.file(name, data);
       log(name+' done', 'ok');
     }catch(err){
@@ -918,6 +746,10 @@ exportAllBtn.addEventListener('click', async () => {
   setStatus('ready','engine ready');
   exportAllBtn.disabled = false;
 });
+
+function updateExportBtnLabel(){
+  exportAllBtn.textContent = state.clips.length === 1 ? 'EXPORT CLIP' : 'EXPORT ALL AS ZIP';
+}
 
 setStatus('', 'idle — engine loads on first export');
 </script>
