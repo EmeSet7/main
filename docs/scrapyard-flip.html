@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Scrapyard Flip</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #15171a;
+    --panel: #1e2124;
+    --panel-2: #262a2e;
+    --line: #34383c;
+    --text: #ece7e1;
+    --text-dim: #93979a;
+    --rust: #e2572b;
+    --rust-dim: #8a3a20;
+    --tape: #f2b705;
+    --profit: #6fae7f;
+    --loss: #c9584f;
+    --mint: #8fe0a0;
+    --gold: #e8c14a;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background: radial-gradient(ellipse at top, #1b1e21 0%, var(--bg) 60%);
+    color:var(--text);
+    font-family:'Inter', sans-serif;
+    min-height:100vh;
+    padding-bottom:50px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  body::before{
+    content:"";
+    position:fixed; inset:0;
+    background-image: repeating-linear-gradient(0deg, rgba(255,255,255,0.012) 0px, rgba(255,255,255,0.012) 1px, transparent 1px, transparent 3px);
+    pointer-events:none;
+    z-index:0;
+  }
+  header{ padding:20px 18px 12px; position:relative; z-index:1; }
+  .eyebrow{
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px; letter-spacing:0.18em; color:var(--tape);
+    text-transform:uppercase; display:flex; align-items:center; gap:8px;
+  }
+  .eyebrow::before{
+    content:""; width:8px; height:8px;
+    background: repeating-linear-gradient(45deg, var(--tape) 0 3px, #1a1a1a 3px 6px);
+    display:inline-block; border-radius:1px;
+  }
+  h1{
+    font-family:'Bebas Neue', sans-serif; font-size:40px; letter-spacing:0.02em;
+    margin:4px 0 0; line-height:0.95; color:var(--text);
+  }
+  h1 span{color:var(--rust);}
+
+  .board{
+    margin:14px 18px 0;
+    background: linear-gradient(180deg, var(--panel) 0%, #191c1f 100%);
+    border:1px solid var(--line); border-radius:14px; padding:18px 18px 16px;
+    position:relative; z-index:1;
+    box-shadow: 0 1px 0 rgba(255,255,255,0.03) inset, 0 8px 24px rgba(0,0,0,0.35);
+  }
+  .board-label{ font-family:'JetBrains Mono', monospace; font-size:11px; color:var(--text-dim); letter-spacing:0.12em; text-transform:uppercase; }
+  .cash-figure{ font-family:'Bebas Neue', sans-serif; font-size:58px; line-height:1; margin:6px 0 2px; color:var(--tape); }
+  .board-sub{ font-family:'JetBrains Mono', monospace; font-size:12px; color:var(--text-dim); }
+  .tick-row{
+    margin-top:12px; display:flex; justify-content:space-between; align-items:center;
+    background:var(--panel-2); border:1px solid var(--line); border-radius:10px; padding:9px 12px;
+  }
+  .tick-row span{ font-family:'JetBrains Mono', monospace; font-size:11px; color:var(--text-dim); }
+  .tick-row b{ color:var(--rust); font-family:'JetBrains Mono', monospace; }
+  .event-banner{
+    margin-top:8px; display:flex; justify-content:space-between; align-items:center; gap:8px;
+    background:rgba(232,193,74,0.1); border:1px solid var(--gold); border-radius:10px; padding:9px 12px;
+  }
+  .event-banner .event-label{ font-family:'JetBrains Mono', monospace; font-size:11px; color:var(--gold); }
+  .event-banner .event-ticks{ font-family:'JetBrains Mono', monospace; font-size:10px; color:var(--text-dim); white-space:nowrap; }
+  .feed-line{
+    margin-top:8px; font-family:'JetBrains Mono', monospace; font-size:11px; color:var(--text-dim);
+    padding:8px 12px; border-left:2px solid var(--rust-dim); background:var(--panel-2); border-radius:0 8px 8px 0;
+  }
+
+  .tabs{
+    display:flex; margin:16px 18px 0; background:var(--panel);
+    border:1px solid var(--line); border-radius:12px; overflow:hidden; position:relative; z-index:1;
+  }
+  .tab{
+    flex:1; text-align:center; padding:12px 4px; font-family:'JetBrains Mono', monospace;
+    font-size:11px; letter-spacing:0.05em; text-transform:uppercase; color:var(--text-dim);
+    cursor:pointer; border-bottom:2px solid transparent; position:relative;
+  }
+  .tab .badge{
+    display:inline-block; min-width:16px; padding:0 4px; margin-left:4px; border-radius:8px;
+    background:var(--rust-dim); color:var(--text); font-size:10px; line-height:16px;
+  }
+  .tab.active{ color:var(--text); border-bottom-color:var(--rust); background:var(--panel-2); }
+
+  .section{ margin:16px 18px 0; position:relative; z-index:1; display:none; }
+  .section.active{ display:block; }
+
+  .section-title{
+    font-family:'Bebas Neue', sans-serif; font-size:22px; letter-spacing:0.03em; color:var(--text);
+    margin-bottom:10px; display:flex; justify-content:space-between; align-items:baseline;
+  }
+  .section-title small{ font-family:'JetBrains Mono', monospace; font-size:11px; color:var(--text-dim); font-weight:400; }
+  .empty{
+    font-family:'JetBrains Mono', monospace; font-size:13px; color:var(--text-dim);
+    border:1px dashed var(--line); border-radius:12px; padding:24px 16px; text-align:center; line-height:1.6;
+  }
+
+  /* Listing card */
+  .listing{
+    background:var(--panel); border:1px solid var(--line); border-radius:12px;
+    padding:14px; margin-bottom:10px; position:relative;
+  }
+  .listing.barn{ border-color:var(--gold); box-shadow:0 0 0 1px var(--gold) inset, 0 4px 16px rgba(232,193,74,0.12); }
+  .barn-tag{
+    font-family:'JetBrains Mono', monospace; font-size:10px; letter-spacing:0.08em;
+    color:#1a1a1a; background:var(--gold); display:inline-block; padding:2px 7px;
+    border-radius:6px; margin-bottom:6px; text-transform:uppercase;
+  }
+  .listing-top{ display:flex; justify-content:space-between; align-items:flex-start; gap:8px; }
+  .listing-name{ font-family:'Bebas Neue', sans-serif; font-size:21px; color:var(--text); line-height:1.05; }
+  .listing-tier{ font-family:'JetBrains Mono', monospace; font-size:10px; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.06em; }
+  .listing-price{ font-family:'JetBrains Mono', monospace; font-weight:700; font-size:19px; color:var(--tape); white-space:nowrap; }
+  .band{
+    display:inline-block; font-family:'JetBrains Mono', monospace; font-size:10px; letter-spacing:0.05em;
+    padding:3px 8px; border-radius:6px; text-transform:uppercase; margin-top:8px;
+  }
+  .band-wreck{ background:rgba(201,88,79,0.18); color:var(--loss); }
+  .band-rough{ background:rgba(226,87,43,0.18); color:var(--rust); }
+  .band-fair{ background:rgba(242,183,5,0.16); color:var(--tape); }
+  .band-clean{ background:rgba(111,174,127,0.16); color:var(--profit); }
+  .band-mint{ background:rgba(143,224,160,0.16); color:var(--mint); }
+  .listing-est{ font-family:'JetBrains Mono', monospace; font-size:11px; color:var(--text-dim); margin-top:6px; }
+  .btn{
+    border:none; border-radius:9px; padding:12px; font-family:'Inter', sans-serif;
+    font-weight:700; font-size:14px; cursor:pointer; text-align:center;
+  }
+  .btn-primary{ background:var(--rust); color:#191110; width:100%; margin-top:10px; }
+  .btn-primary:active{ background:var(--rust-dim); color:var(--text); }
+  .btn-mini{
+    background:var(--panel-2); border:1px solid var(--line); color:var(--text);
+    border-radius:7px; padding:8px 10px; font-size:12px; font-weight:600; cursor:pointer;
+  }
+  .btn-mini:active{ border-color:var(--text-dim); }
+  .btn-mini.danger{ color:var(--loss); }
+  .btn-mini.good{ color:var(--profit); }
+
+  /* Garage car */
+  .car-card{ background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:14px; margin-bottom:12px; }
+  .car-head{ display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:4px; }
+  .car-name{ font-family:'Bebas Neue', sans-serif; font-size:22px; color:var(--text); line-height:1.05; }
+  .car-meta{ font-family:'JetBrains Mono', monospace; font-size:11px; color:var(--text-dim); margin-top:2px; }
+  .car-value{ font-family:'JetBrains Mono', monospace; font-size:15px; font-weight:700; color:var(--mint); white-space:nowrap; }
+  .part-row{
+    display:flex; align-items:center; justify-content:space-between; gap:8px;
+    padding:8px 0; border-top:1px solid var(--line);
+  }
+  .part-info{ flex:1; min-width:0; }
+  .part-slot{ font-family:'JetBrains Mono', monospace; font-size:11px; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em; }
+  .part-detail{ font-size:13px; margin-top:2px; }
+  .part-detail.empty-slot{ color:var(--loss); font-family:'JetBrains Mono', monospace; font-size:12px; }
+  .part-actions{ display:flex; gap:6px; flex-shrink:0; align-items:center; }
+  .part-select{
+    background:var(--panel-2); border:1px solid var(--line); color:var(--text);
+    border-radius:7px; padding:7px 6px; font-size:11px; max-width:118px;
+  }
+  .warn-text{ font-family:'JetBrains Mono', monospace; font-size:11px; color:var(--loss); margin-top:8px; }
+  .car-actions{ display:flex; gap:8px; margin-top:12px; }
+  .car-actions .btn{ flex:1; margin-top:0; }
+  .plate{
+    display:inline-block; font-family:'JetBrains Mono', monospace; font-size:10px; letter-spacing:0.06em;
+    background:var(--panel-2); border:1px solid var(--line); color:var(--text-dim);
+    padding:2px 6px; border-radius:5px; margin-top:3px;
+  }
+  .offer-panel{
+    margin-top:12px; background:var(--panel-2); border:1px solid var(--tape); border-radius:10px; padding:12px;
+  }
+  .offer-headline{ font-family:'JetBrains Mono', monospace; font-size:11px; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em; }
+  .offer-price{ font-family:'Bebas Neue', sans-serif; font-size:30px; color:var(--tape); line-height:1.1; margin-top:2px; }
+  .offer-price.lowball{ color:var(--loss); }
+  .offer-tag{ font-family:'JetBrains Mono', monospace; font-size:10px; color:var(--loss); text-transform:uppercase; }
+  .offer-actions{ display:flex; gap:8px; margin-top:10px; }
+  .offer-actions .btn-mini{ flex:1; text-align:center; }
+
+  /* Inventory */
+  .inv-card{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:12px 14px; margin-bottom:9px;
+  }
+  .inv-info{ min-width:0; }
+  .inv-slot{ font-family:'JetBrains Mono', monospace; font-size:10px; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.06em; }
+  .inv-name{ font-size:14px; margin-top:2px; }
+  .inv-value{ font-family:'JetBrains Mono', monospace; font-size:12px; color:var(--text-dim); margin-top:2px; }
+  .inv-actions{ display:flex; gap:6px; flex-shrink:0; }
+
+  /* Ledger */
+  .stat-row{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:0 0 14px; }
+  .stat{ background:var(--panel-2); border:1px solid var(--line); border-radius:10px; padding:10px 12px; }
+  .stat-k{ font-family:'JetBrains Mono', monospace; font-size:10px; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.08em; }
+  .stat-v{ font-family:'JetBrains Mono', monospace; font-size:16px; font-weight:700; margin-top:3px; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .ledger-card{ display:flex; background:var(--panel); border:1px solid var(--line); border-radius:12px; margin-bottom:9px; overflow:hidden; }
+  .ledger-bar{ width:6px; flex-shrink:0; }
+  .ledger-bar.pos{ background:var(--profit); }
+  .ledger-bar.neg{ background:var(--loss); }
+  .ledger-body{ flex:1; padding:11px 13px; }
+  .ledger-top{ display:flex; justify-content:space-between; align-items:baseline; }
+  .ledger-name{ font-family:'Bebas Neue', sans-serif; font-size:18px; }
+  .ledger-date{ font-family:'JetBrains Mono', monospace; font-size:10px; color:var(--text-dim); }
+  .ledger-profit{ font-family:'JetBrains Mono', monospace; font-weight:700; font-size:14px; }
+  .ledger-profit.pos{ color:var(--profit); }
+  .ledger-profit.neg{ color:var(--loss); }
+  .ledger-breakdown{ display:flex; gap:12px; margin-top:5px; font-family:'JetBrains Mono', monospace; font-size:11px; color:var(--text-dim); flex-wrap:wrap; }
+  .ledger-breakdown b{ color:var(--text); }
+
+  .save-row{ display:flex; gap:8px; margin-top:16px; }
+  .reset-row{ margin-top:12px; text-align:center; }
+  .reset-link{ font-family:'JetBrains Mono', monospace; font-size:11px; color:var(--text-dim); text-decoration:underline; background:none; border:none; cursor:pointer; }
+
+  #toast{
+    position:fixed; left:50%; bottom:24px; transform:translateX(-50%) translateY(20px);
+    background:var(--panel-2); border:1px solid var(--line); color:var(--text);
+    font-family:'JetBrains Mono', monospace; font-size:12px; padding:11px 16px; border-radius:10px;
+    opacity:0; transition:opacity 0.25s, transform 0.25s; z-index:50; max-width:88vw; text-align:center;
+    box-shadow:0 8px 24px rgba(0,0,0,0.4);
+  }
+  #toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="eyebrow">Career Mode Side Hustle</div>
+  <h1>Scrapyard <span>Flip</span></h1>
+</header>
+
+<div class="board">
+  <div class="board-label">Cash on hand</div>
+  <div class="cash-figure" id="cashFigure">$0</div>
+  <div class="board-sub" id="boardSub">—</div>
+  <div class="tick-row">
+    <span>Market shifts in</span>
+    <b id="tickCountdown">--:--</b>
+  </div>
+  <div class="event-banner" id="eventBanner" style="display:none;">
+    <span class="event-label"></span>
+    <span class="event-ticks"></span>
+  </div>
+  <div class="feed-line" id="feedLine" style="display:none;"></div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" data-tab="market" onclick="switchTab('market')">Market</div>
+  <div class="tab" data-tab="garage" onclick="switchTab('garage')">Garage<span class="badge" id="garageBadge">0</span></div>
+  <div class="tab" data-tab="inventory" onclick="switchTab('inventory')">Parts<span class="badge" id="invBadge">0</span></div>
+  <div class="tab" data-tab="ledger" onclick="switchTab('ledger')">Ledger</div>
+</div>
+
+<div class="section active" id="section-market">
+  <div class="section-title">For Sale <small id="marketCount">0 listings</small></div>
+  <div id="marketList"></div>
+</div>
+
+<div class="section" id="section-garage">
+  <div class="section-title">Your Garage <small id="garageCount">0 cars</small></div>
+  <div id="garageList"></div>
+</div>
+
+<div class="section" id="section-inventory">
+  <div class="section-title">Parts Bin <small id="invCount">0 parts</small></div>
+  <div id="invList"></div>
+</div>
+
+<div class="section" id="section-ledger">
+  <div class="section-title">Flip History</div>
+  <div class="stat-row">
+    <div class="stat"><div class="stat-k">Cars flipped</div><div class="stat-v" id="statFlipped">0</div></div>
+    <div class="stat"><div class="stat-k">Total profit</div><div class="stat-v" id="statProfit">$0</div></div>
+  </div>
+  <div id="ledgerList"></div>
+  <div class="save-row">
+    <button class="btn-mini" style="flex:1" onclick="exportData()">Export save</button>
+    <label class="btn-mini" style="flex:1; text-align:center;">
+      Import save
+      <input type="file" accept="application/json" onchange="importData(event)" style="display:none;">
+    </label>
+  </div>
+  <div class="reset-row"><button class="reset-link" onclick="resetGame()">Reset save</button></div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const STORAGE_KEY = 'scrapyard-flip-save-v1';
+const TICK_MS = 5 * 60 * 1000;
+const MAX_CATCHUP_TICKS = 8;
+const MAX_GARAGE = 4;
+const FEED_LIMIT = 20;
+
+const EVENTS = [
+  { type:'carshow', label:'Car show in town — sell offers are running hot', mult:1.12, ticks:4 },
+  { type:'shortage', label:'Parts shortage — shop prices spiking', mult:1.25, ticks:3 },
+  { type:'buyers',  label:"Buyer's market — asking prices are soft", mult:0.90, ticks:4 },
+  { type:'boom',    label:'Scrap boom — the parts bin is paying well', mult:1.30, ticks:3 }
+];
+
+const SLOTS = ['engine','transmission','suspension','brakes','tires','body','interior'];
+const SLOT_LABELS = { engine:'Engine', transmission:'Transmission', suspension:'Suspension', brakes:'Brakes', tires:'Tires', body:'Body', interior:'Interior' };
+const SLOT_BASE = { engine:1400, transmission:700, suspension:550, brakes:350, tires:300, body:750, interior:450 };
+
+const QUALITY = {
+  junk:  { label:'Junk',        mult:0.4, buyable:false },
+  worn:  { label:'Worn',        mult:0.7, buyable:false },
+  stock: { label:'Stock',       mult:1.0, buyable:true  },
+  perf:  { label:'Performance', mult:1.5, buyable:true  },
+  race:  { label:'Race',        mult:2.0, buyable:true  }
+};
+const BUYABLE_TIERS = ['stock','perf','race'];
+
+const ARCHETYPES = [
+  { name:'Halcyon Drifter',   tier:'Budget',  mult:0.55 },
+  { name:'Ridgemont Basic',   tier:'Budget',  mult:0.50 },
+  { name:'Coastal Wagoneer',  tier:'Budget',  mult:0.60 },
+  { name:'Vantree Saloon',    tier:'Mid',     mult:1.00 },
+  { name:'Ironfox GT',        tier:'Mid',     mult:1.10 },
+  { name:'Northline Utility', tier:'Mid',     mult:0.95 },
+  { name:'Basswood Coupe',    tier:'Mid',     mult:1.05 },
+  { name:'Aurelia Grand',     tier:'Premium', mult:1.80 },
+  { name:'Solandra Prestige', tier:'Premium', mult:1.90 },
+  { name:'Meridian Vantage',  tier:'Premium', mult:1.70 }
+];
+
+let state = null;
+let activeTab = 'market';
+
+function randInt(min,max){ return Math.floor(Math.random()*(max-min+1))+min; }
+function randFloat(min,max){ return Math.random()*(max-min)+min; }
+function choice(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+function fmt(n){ const sign = n<0?'-':''; return sign+'$'+Math.abs(Math.round(n)).toLocaleString('en-US'); }
+function genId(prefix){ return prefix+Date.now()+Math.random().toString(36).slice(2,7); }
+function escapeHtml(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+function genPlate(){
+  const letters = 'ABCDEFGHJKLMNPRSTVXZ';
+  const L = ()=> letters[randInt(0,letters.length-1)];
+  return `${randInt(10,99)}-${L()}${L()}-${randInt(10,99)}`;
+}
+function pushFeed(msg){
+  state.feed = state.feed || [];
+  state.feed.unshift({ msg, at: Date.now() });
+  state.feed = state.feed.slice(0, FEED_LIMIT);
+}
+
+function toast(msg){
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(el._t);
+  el._t = setTimeout(()=> el.classList.remove('show'), 2600);
+}
+
+/* ---------- generation ---------- */
+function genQualityForListing(barn){
+  const r = Math.random();
+  if(barn){
+    if(r<0.30) return 'junk';
+    if(r<0.75) return 'worn';
+    if(r<0.93) return 'stock';
+    if(r<0.98) return 'perf';
+    return 'race';
+  }
+  if(r<0.15) return 'junk';
+  if(r<0.55) return 'worn';
+  if(r<0.88) return 'stock';
+  if(r<0.97) return 'perf';
+  return 'race';
+}
+function genConditionForQuality(q){
+  if(q==='junk') return randInt(5,35);
+  if(q==='worn') return randInt(25,70);
+  if(q==='stock') return randInt(50,95);
+  if(q==='perf') return randInt(60,100);
+  return randInt(70,100);
+}
+function generateCarParts(barn){
+  const parts = {};
+  SLOTS.forEach(slot=>{
+    const q = genQualityForListing(barn);
+    parts[slot] = { quality:q, condition:genConditionForQuality(q) };
+  });
+  return parts;
+}
+function partAbsValue(slot, archMult, quality, condition){
+  return SLOT_BASE[slot]*archMult*QUALITY[quality].mult*(condition/100);
+}
+function carTrueValue(parts, archMult){
+  return SLOTS.reduce((sum,slot)=> sum + partAbsValue(slot, archMult, parts[slot].quality, parts[slot].condition), 0);
+}
+function priceFactorRoll(barn){
+  if(barn) return randFloat(0.3,0.55);
+  const r = Math.random();
+  if(r<0.08) return randFloat(0.35,0.6);
+  if(r<0.90) return randFloat(0.7,1.15);
+  return randFloat(1.3,1.8);
+}
+function bandForCondition(avg){
+  if(avg<25) return {label:'Wreck', cls:'wreck'};
+  if(avg<45) return {label:'Rough', cls:'rough'};
+  if(avg<65) return {label:'Fair', cls:'fair'};
+  if(avg<85) return {label:'Clean', cls:'clean'};
+  return {label:'Mint', cls:'mint'};
+}
+function generateListing(barn, event){
+  let arch;
+  if(barn){
+    const pool = ARCHETYPES.filter(a=>a.tier!=='Budget');
+    arch = choice(pool.length?pool:ARCHETYPES);
+  } else {
+    arch = choice(ARCHETYPES);
+  }
+  const parts = generateCarParts(barn);
+  const trueValue = carTrueValue(parts, arch.mult);
+  let factor = priceFactorRoll(barn);
+  if(event && event.type==='buyers') factor *= event.mult;
+  const price = Math.max(100, Math.round(trueValue*factor/10)*10);
+  const avgCond = Math.round(SLOTS.reduce((s,slot)=>s+parts[slot].condition,0)/SLOTS.length);
+  return {
+    id: genId('L'),
+    archetype: arch.name, tier: arch.tier, archMult: arch.mult,
+    parts, trueValue, price,
+    avgCond, band: bandForCondition(avgCond),
+    estLow: Math.max(50, Math.round(trueValue*0.85/10)*10),
+    estHigh: Math.round(trueValue*1.15/10)*10,
+    barn: !!barn, listedAt: Date.now()
+  };
+}
+function shopCost(slot, archMult, tier){
+  let cost = SLOT_BASE[slot]*archMult*QUALITY[tier].mult*1.15;
+  if(state && state.activeEvent && state.activeEvent.type==='shortage') cost *= state.activeEvent.mult;
+  return Math.round(cost/5)*5;
+}
+function partValueAtBuy(slot, archMult, tier){
+  return SLOT_BASE[slot]*archMult*QUALITY[tier].mult;
+}
+
+/* ---------- state ---------- */
+function defaultState(){
+  const listings = [];
+  for(let i=0;i<30;i++) listings.push(generateListing(false, null));
+  if(Math.random()<0.4){
+    const idx = randInt(0, listings.length-1);
+    listings[idx] = generateListing(true, null);
+  }
+  return {
+    cash: 5000,
+    listings, garage: [], inventory: [], ledger: [],
+    stats: { flipped: 0, totalProfit: 0 },
+    feed: [], activeEvent: null,
+    lastTick: Date.now()
+  };
+}
+function load(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    state = raw ? JSON.parse(raw) : defaultState();
+  }catch(e){
+    state = defaultState();
+  }
+  // backfill fields for saves made before these features existed
+  state.feed = state.feed || [];
+  state.activeEvent = state.activeEvent || null;
+  state.garage.forEach(c => { if(!c.plate) c.plate = genPlate(); });
+
+  const elapsed = Date.now() - state.lastTick;
+  let ticks = Math.floor(elapsed / TICK_MS);
+  if(ticks > 0){
+    ticks = Math.min(ticks, MAX_CATCHUP_TICKS);
+    for(let i=0;i<ticks;i++) doTick();
+    state.lastTick = Date.now();
+  }
+  save();
+}
+function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+function findCar(carId){ return state.garage.find(c=>c.id===carId); }
+
+/* ---------- market tick ---------- */
+function doTick(){
+  // event lifecycle
+  if(state.activeEvent){
+    state.activeEvent.ticksRemaining -= 1;
+    if(state.activeEvent.ticksRemaining <= 0){
+      pushFeed(`${state.activeEvent.label.split(' — ')[0]} wrapped up — back to normal.`);
+      state.activeEvent = null;
+    }
+  } else if(Math.random() < 0.12){
+    const ev = choice(EVENTS);
+    state.activeEvent = { ...ev, ticksRemaining: ev.ticks };
+    pushFeed(`📢 ${ev.label}`);
+  }
+
+  state.listings.forEach(l=>{
+    l.price = Math.max(100, Math.round(l.price*randFloat(0.96,0.995)/10)*10);
+  });
+  const withRatio = state.listings.map(l=>({ l, ratio: l.price/Math.max(1,l.trueValue) }));
+  withRatio.sort((a,b)=>a.ratio-b.ratio);
+  const sniped = withRatio.slice(0,10).map(x=>x.l);
+  const stale = withRatio.slice(-10).map(x=>x.l);
+  const removeIds = new Set([...sniped, ...stale].map(l=>l.id));
+
+  shuffleSample(sniped, 2).forEach(l => pushFeed(`Someone snagged the ${l.archetype} for ${fmt(l.price)}.`));
+  if(stale.length) pushFeed(`The ${stale[stale.length-1].archetype} sat too long — dealer swapped it out.`);
+
+  const removedCount = removeIds.size;
+  state.listings = state.listings.filter(l=>!removeIds.has(l.id));
+  for(let i=0;i<removedCount;i++) state.listings.push(generateListing(false, state.activeEvent));
+
+  // Barn finds REPLACE an existing non-barn listing rather than adding to the pool,
+  // so the market never balloons in size over a long play session.
+  const barnCount = state.listings.filter(l=>l.barn).length;
+  if(barnCount<2 && Math.random()<0.10){
+    const candidates = state.listings.filter(l=>!l.barn);
+    if(candidates.length){
+      const victim = choice(candidates);
+      const idx = state.listings.findIndex(l=>l.id===victim.id);
+      state.listings[idx] = generateListing(true, state.activeEvent);
+      pushFeed('🌟 A barn find just hit the lot.');
+    }
+  }
+}
+function shuffleSample(arr, n){
+  const copy = [...arr];
+  for(let i=copy.length-1;i>0;i--){ const j=randInt(0,i); [copy[i],copy[j]]=[copy[j],copy[i]]; }
+  return copy.slice(0, Math.min(n, copy.length));
+}
+
+/* ---------- actions ---------- */
+function buyListing(listingId){
+  const l = state.listings.find(x=>x.id===listingId);
+  if(!l) return;
+  if(state.garage.length >= MAX_GARAGE){ toast(`Garage's full (${MAX_GARAGE} bays) — sell or part out a car first.`); return; }
+  if(state.cash < l.price){ toast("Not enough cash for that one."); return; }
+  state.cash -= l.price;
+  const carParts = {};
+  SLOTS.forEach(slot=>{
+    const p = l.parts[slot];
+    carParts[slot] = { quality:p.quality, condition:p.condition, value: Math.round(partAbsValue(slot,l.archMult,p.quality,p.condition)) };
+  });
+  state.garage.push({
+    id: genId('C'), archetype: l.archetype, tier: l.tier, archMult: l.archMult, plate: genPlate(),
+    buyPrice: l.price, partsSpent: 0, parts: carParts, saleOffer: null, boughtAt: Date.now()
+  });
+  state.listings = state.listings.filter(x=>x.id!==listingId);
+  save(); renderAll();
+  toast(`Bought the ${l.archetype} for ${fmt(l.price)}.`);
+  switchTab('garage');
+}
+function stripPart(carId, slot){
+  const car = findCar(carId); if(!car) return;
+  const p = car.parts[slot]; if(!p) return;
+  state.inventory.push({ id: genId('P'), slot, quality:p.quality, condition:p.condition, value:p.value });
+  car.parts[slot] = null;
+  save(); renderAll();
+}
+function applySelect(carId, slot){
+  const sel = document.getElementById(carId+'_'+slot+'_sel');
+  if(!sel) return;
+  const val = sel.value;
+  if(val==='none') return;
+  const [action, key] = val.split('|');
+  if(action==='install') installFromInventory(carId, slot, key);
+  else if(action==='buy') buyShopPart(carId, slot, key);
+}
+function installFromInventory(carId, slot, invId){
+  const car = findCar(carId); if(!car) return;
+  const idx = state.inventory.findIndex(p=>p.id===invId); if(idx<0) return;
+  const invPart = state.inventory[idx];
+  if(car.parts[slot]){
+    const old = car.parts[slot];
+    state.inventory.push({ id: genId('P'), slot, quality:old.quality, condition:old.condition, value:old.value });
+  }
+  car.parts[slot] = { quality: invPart.quality, condition: invPart.condition, value: invPart.value };
+  state.inventory.splice(idx,1);
+  save(); renderAll();
+}
+function buyShopPart(carId, slot, tier){
+  const car = findCar(carId); if(!car) return;
+  const cost = shopCost(slot, car.archMult, tier);
+  if(state.cash < cost){ toast("Not enough cash for that part."); return; }
+  state.cash -= cost;
+  car.partsSpent += cost;
+  if(car.parts[slot]){
+    const old = car.parts[slot];
+    state.inventory.push({ id: genId('P'), slot, quality:old.quality, condition:old.condition, value:old.value });
+  }
+  car.parts[slot] = { quality: tier, condition: 100, value: Math.round(partValueAtBuy(slot, car.archMult, tier)) };
+  save(); renderAll();
+}
+function sellInvPart(invId){
+  const idx = state.inventory.findIndex(p=>p.id===invId); if(idx<0) return;
+  const p = state.inventory[idx];
+  let mult = 0.6;
+  if(state.activeEvent && state.activeEvent.type==='boom') mult *= state.activeEvent.mult;
+  const amt = Math.round(p.value*mult);
+  state.cash += amt;
+  state.inventory.splice(idx,1);
+  save(); renderAll();
+  toast(`Sold the part for ${fmt(amt)}.`);
+}
+function carCurrentValue(car){
+  return SLOTS.reduce((s,slot)=> s + (car.parts[slot] ? car.parts[slot].value : 0), 0);
+}
+function generateOffer(car, holdsUsed){
+  const currentValue = carCurrentValue(car);
+  let factor, lowball = false;
+  if(holdsUsed===0){
+    if(Math.random()<0.35){ factor = randFloat(0.65,0.85); lowball = true; }
+    else factor = randFloat(0.9,1.15);
+  } else if(holdsUsed===1){
+    // holding out usually pays off, but there's real overlap with lowball territory — no free lunch
+    factor = randFloat(0.78,1.2);
+  } else {
+    // final counter-offer: widest spread, take-it-or-leave-it
+    factor = randFloat(0.7,1.3);
+  }
+  if(state.activeEvent && state.activeEvent.type==='carshow') factor *= state.activeEvent.mult;
+  const price = Math.max(50, Math.round(currentValue*factor/10)*10);
+  return { price, lowball, holdsUsed };
+}
+function startSale(carId){
+  const car = findCar(carId); if(!car) return;
+  if(SLOTS.some(slot=>!car.parts[slot])){ toast("Fill every slot before you can sell it."); return; }
+  car.saleOffer = generateOffer(car, 0);
+  save(); renderAll();
+}
+function holdOut(carId){
+  const car = findCar(carId); if(!car || !car.saleOffer) return;
+  const holds = car.saleOffer.holdsUsed + 1;
+  if(holds > 2){
+    car.saleOffer = null;
+    save(); renderAll();
+    toast('Buyer walked. List it again when you\'re ready.');
+    return;
+  }
+  car.saleOffer = generateOffer(car, holds);
+  save(); renderAll();
+}
+function cancelSale(carId){
+  const car = findCar(carId); if(!car) return;
+  car.saleOffer = null;
+  save(); renderAll();
+}
+function acceptOffer(carId){
+  const car = findCar(carId); if(!car || !car.saleOffer) return;
+  const sellPrice = car.saleOffer.price;
+  const profit = sellPrice - car.buyPrice - car.partsSpent;
+  state.cash += sellPrice;
+  state.stats.flipped += 1;
+  state.stats.totalProfit += profit;
+  state.ledger.push({ id: genId('S'), name: car.archetype, buy: car.buyPrice, parts: car.partsSpent, sell: sellPrice, profit, date: Date.now() });
+  pushFeed(`You sold the ${car.archetype} for ${fmt(sellPrice)}.`);
+  state.garage = state.garage.filter(c=>c.id!==carId);
+  save(); renderAll();
+  toast(`Sold for ${fmt(sellPrice)} — ${profit>=0?'profit':'loss'} of ${fmt(Math.abs(profit))}.`);
+  switchTab('ledger');
+}
+function partOutCar(carId){
+  const car = findCar(carId); if(!car) return;
+  SLOTS.forEach(slot=>{
+    if(car.parts[slot]){
+      const p = car.parts[slot];
+      state.inventory.push({ id: genId('P'), slot, quality:p.quality, condition:p.condition, value:p.value });
+    }
+  });
+  const scrap = randInt(40,150);
+  state.cash += scrap;
+  state.garage = state.garage.filter(c=>c.id!==carId);
+  save(); renderAll();
+  toast(`Parted out the ${car.archetype} — scrapped the shell for ${fmt(scrap)}.`);
+}
+function exportData(){
+  const payload = { app: 'scrapyard-flip', exportedAt: new Date().toISOString(), state };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const stamp = new Date().toISOString().slice(0,10);
+  a.href = url;
+  a.download = `scrapyard-flip-save-${stamp}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+function importData(event){
+  const file = event.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try{
+      const data = JSON.parse(reader.result);
+      const incoming = data && data.state ? data.state : data;
+      if(!incoming || !Array.isArray(incoming.listings) || !Array.isArray(incoming.garage)){
+        throw new Error('Not a Scrapyard Flip save file');
+      }
+      state = {
+        cash: Number(incoming.cash) || 0,
+        listings: Array.isArray(incoming.listings) ? incoming.listings : [],
+        garage: Array.isArray(incoming.garage) ? incoming.garage : [],
+        inventory: Array.isArray(incoming.inventory) ? incoming.inventory : [],
+        ledger: Array.isArray(incoming.ledger) ? incoming.ledger : [],
+        stats: incoming.stats || { flipped: 0, totalProfit: 0 },
+        lastTick: Number(incoming.lastTick) || Date.now()
+      };
+      save();
+      renderAll();
+      toast('Save imported.');
+    }catch(e){
+      alert("Could not read that file. Make sure it's a Scrapyard Flip export.");
+    }
+    event.target.value = '';
+  };
+  reader.readAsText(file);
+}
+
+function resetGame(){
+  if(!confirm("Reset your whole save? Cash, garage, parts bin and history will all be wiped.")) return;
+  state = defaultState();
+  save(); renderAll();
+  toast("Fresh start.");
+}
+
+/* ---------- tabs ---------- */
+function switchTab(tab){
+  activeTab = tab;
+  document.querySelectorAll('.tab').forEach(t=> t.classList.toggle('active', t.dataset.tab===tab));
+  document.querySelectorAll('.section').forEach(s=> s.classList.toggle('active', s.id==='section-'+tab));
+  window.scrollTo({top:0, behavior:'instant'});
+}
+
+/* ---------- render ---------- */
+function renderHeader(){
+  document.getElementById('cashFigure').textContent = fmt(state.cash);
+  document.getElementById('boardSub').textContent =
+    `${state.garage.length}/${MAX_GARAGE} bays used · ${state.inventory.length} part${state.inventory.length===1?'':'s'} in the bin`;
+  document.getElementById('garageBadge').textContent = state.garage.length;
+  document.getElementById('invBadge').textContent = state.inventory.length;
+
+  const evEl = document.getElementById('eventBanner');
+  if(state.activeEvent){
+    evEl.style.display = 'flex';
+    evEl.querySelector('.event-label').textContent = state.activeEvent.label;
+    evEl.querySelector('.event-ticks').textContent = state.activeEvent.ticksRemaining + ' shift' + (state.activeEvent.ticksRemaining===1?'':'s') + ' left';
+  } else {
+    evEl.style.display = 'none';
+  }
+
+  const feedEl = document.getElementById('feedLine');
+  if(state.feed && state.feed.length){
+    feedEl.style.display = 'block';
+    feedEl.textContent = state.feed[0].msg;
+  } else {
+    feedEl.style.display = 'none';
+  }
+}
+function renderMarket(){
+  document.getElementById('marketCount').textContent = state.listings.length + ' listings';
+  const listEl = document.getElementById('marketList');
+  if(!state.listings.length){ listEl.innerHTML = '<div class="empty">Nothing on the lot right now. Check back at the next market shift.</div>'; return; }
+  const recentFeed = (state.feed||[]).slice(0,3).map(f=>`<div class="feed-line" style="margin-top:0;margin-bottom:8px;">${escapeHtml(f.msg)}</div>`).join('');
+  const sorted = [...state.listings].sort((a,b)=> (b.barn?1:0)-(a.barn?1:0) || b.listedAt-a.listedAt);
+  listEl.innerHTML = recentFeed + sorted.map(l => `
+    <div class="listing ${l.barn?'barn':''}">
+      ${l.barn ? '<div class="barn-tag">★ Barn Find</div>' : ''}
+      <div class="listing-top">
+        <div>
+          <div class="listing-name">${escapeHtml(l.archetype)}</div>
+          <div class="listing-tier">${l.tier}</div>
+        </div>
+        <div class="listing-price">${fmt(l.price)}</div>
+      </div>
+      <span class="band band-${l.band.cls}">${l.band.label} · ~${l.avgCond}%</span>
+      <div class="listing-est">Est. value ${fmt(l.estLow)}&ndash;${fmt(l.estHigh)}</div>
+      <button class="btn btn-primary" onclick="buyListing('${l.id}')">Buy for ${fmt(l.price)}</button>
+    </div>
+  `).join('');
+}
+function partOptionsHtml(car, slot){
+  let html = '<option value="none">Change part…</option>';
+  state.inventory.filter(p=>p.slot===slot).forEach(p=>{
+    html += `<option value="install|${p.id}">Install ${QUALITY[p.quality].label} ${p.condition}% (free)</option>`;
+  });
+  BUYABLE_TIERS.forEach(tier=>{
+    const cost = shopCost(slot, car.archMult, tier);
+    html += `<option value="buy|${tier}">Buy ${QUALITY[tier].label} — ${fmt(cost)}</option>`;
+  });
+  return html;
+}
+function renderGarage(){
+  document.getElementById('garageCount').textContent = state.garage.length + ' cars';
+  const listEl = document.getElementById('garageList');
+  if(!state.garage.length){ listEl.innerHTML = '<div class="empty">Garage is empty.<br>Go find a deal on the Market tab.</div>'; return; }
+  listEl.innerHTML = state.garage.map(car => {
+    const currentValue = SLOTS.reduce((s,slot)=> s + (car.parts[slot] ? car.parts[slot].value : 0), 0);
+    const missing = SLOTS.some(slot=>!car.parts[slot]);
+    const partsHtml = SLOTS.map(slot => {
+      const p = car.parts[slot];
+      const detail = p
+        ? `<div class="part-detail">${QUALITY[p.quality].label} · ${p.condition}% · ${fmt(p.value)}</div>`
+        : `<div class="part-detail empty-slot">— empty —</div>`;
+      return `
+        <div class="part-row">
+          <div class="part-info">
+            <div class="part-slot">${SLOT_LABELS[slot]}</div>
+            ${detail}
+          </div>
+          <div class="part-actions">
+            ${p ? `<button class="btn-mini danger" onclick="stripPart('${car.id}','${slot}')">Strip</button>` : ''}
+            <select class="part-select" id="${car.id}_${slot}_sel">${partOptionsHtml(car, slot)}</select>
+            <button class="btn-mini" onclick="applySelect('${car.id}','${slot}')">Go</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+    const offer = car.saleOffer;
+    const offerHtml = offer ? `
+      <div class="offer-panel">
+        <div class="offer-headline">${offer.lowball ? 'Lowball offer' : 'Buyer offers'}</div>
+        <div class="offer-price ${offer.lowball?'lowball':''}">${fmt(offer.price)}</div>
+        ${offer.lowball ? '<div class="offer-tag">Feels light — worth holding out?</div>' : ''}
+        <div class="offer-actions">
+          <button class="btn-mini good" onclick="acceptOffer('${car.id}')">Accept</button>
+          ${offer.holdsUsed<2 ? `<button class="btn-mini" onclick="holdOut('${car.id}')">Hold out</button>` : ''}
+          <button class="btn-mini danger" onclick="cancelSale('${car.id}')">Cancel</button>
+        </div>
+      </div>
+    ` : `
+      <div class="car-actions">
+        <button class="btn-mini good" style="flex:1" onclick="startSale('${car.id}')" ${missing?'disabled':''}>Sell</button>
+        <button class="btn-mini" style="flex:1" onclick="partOutCar('${car.id}')">Part it out</button>
+      </div>
+    `;
+    return `
+      <div class="car-card">
+        <div class="car-head">
+          <div>
+            <div class="car-name">${escapeHtml(car.archetype)}</div>
+            <div class="car-meta">Bought ${fmt(car.buyPrice)} · Parts spent ${fmt(car.partsSpent)}</div>
+            <div class="plate">${car.plate || ''}</div>
+          </div>
+          <div class="car-value">${fmt(currentValue)}</div>
+        </div>
+        ${partsHtml}
+        ${missing ? '<div class="warn-text">Fill every slot before you can sell this car.</div>' : ''}
+        ${offerHtml}
+      </div>
+    `;
+  }).join('');
+}
+function renderInventory(){
+  document.getElementById('invCount').textContent = state.inventory.length + ' parts';
+  const listEl = document.getElementById('invList');
+  if(!state.inventory.length){ listEl.innerHTML = '<div class="empty">No spare parts yet.<br>Strip parts off cars in your garage to stock the bin.</div>'; return; }
+  const sorted = [...state.inventory].sort((a,b)=> SLOTS.indexOf(a.slot)-SLOTS.indexOf(b.slot));
+  listEl.innerHTML = sorted.map(p => `
+    <div class="inv-card">
+      <div class="inv-info">
+        <div class="inv-slot">${SLOT_LABELS[p.slot]}</div>
+        <div class="inv-name">${QUALITY[p.quality].label} · ${p.condition}%</div>
+        <div class="inv-value">Worth ${fmt(p.value)}</div>
+      </div>
+      <div class="inv-actions">
+        <button class="btn-mini good" onclick="sellInvPart('${p.id}')">Sell ${fmt(Math.round(p.value*0.6))}</button>
+      </div>
+    </div>
+  `).join('');
+}
+function renderLedger(){
+  document.getElementById('statFlipped').textContent = state.stats.flipped;
+  document.getElementById('statProfit').textContent = fmt(state.stats.totalProfit);
+  const listEl = document.getElementById('ledgerList');
+  if(!state.ledger.length){ listEl.innerHTML = '<div class="empty">No flips logged yet.</div>'; return; }
+  const sorted = [...state.ledger].sort((a,b)=>b.date-a.date);
+  listEl.innerHTML = sorted.map(f => {
+    const dateStr = new Date(f.date).toLocaleDateString('en-GB', {day:'numeric', month:'short'});
+    return `
+      <div class="ledger-card">
+        <div class="ledger-bar ${f.profit>=0?'pos':'neg'}"></div>
+        <div class="ledger-body">
+          <div class="ledger-top">
+            <span class="ledger-name">${escapeHtml(f.name)}</span>
+            <span class="ledger-profit ${f.profit>=0?'pos':'neg'}">${fmt(f.profit)}</span>
+          </div>
+          <div class="ledger-date">${dateStr}</div>
+          <div class="ledger-breakdown">
+            <span>Buy <b>${fmt(f.buy)}</b></span>
+            <span>Parts <b>${fmt(f.parts)}</b></span>
+            <span>Sell <b>${fmt(f.sell)}</b></span>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+function renderAll(){
+  renderHeader();
+  renderMarket();
+  renderGarage();
+  renderInventory();
+  renderLedger();
+}
+
+/* ---------- tick countdown ---------- */
+function updateCountdown(){
+  const remaining = Math.max(0, TICK_MS - (Date.now() - state.lastTick));
+  const mm = String(Math.floor(remaining/60000)).padStart(2,'0');
+  const ss = String(Math.floor((remaining%60000)/1000)).padStart(2,'0');
+  document.getElementById('tickCountdown').textContent = mm+':'+ss;
+  if(remaining <= 0){
+    doTick();
+    state.lastTick = Date.now();
+    save();
+    renderAll();
+  }
+}
+
+load();
+renderAll();
+setInterval(updateCountdown, 1000);
+updateCountdown();
+</script>
+
+</body>
+</html>

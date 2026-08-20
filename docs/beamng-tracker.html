@@ -189,6 +189,14 @@
     grid-template-columns:1fr 1fr 1fr;
     gap:10px;
   }
+  .parts-note{
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px;
+    line-height:1.5;
+    color:var(--text-dim);
+    margin:-3px 0 12px;
+  }
+  .parts-note b{color:var(--tape);}
   .sell-note{
     font-family:'JetBrains Mono', monospace;
     font-size:11px;
@@ -341,6 +349,74 @@
   }
   .card-actions button:active{color:var(--rust);}
 
+  /* Data tools */
+  .data-panel{
+    margin:16px 18px 0;
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:14px 16px 16px;
+    position:relative;
+    z-index:1;
+  }
+  .data-panel h2{
+    font-family:'Bebas Neue', sans-serif;
+    font-size:20px;
+    letter-spacing:0.03em;
+    margin:0 0 4px;
+    color:var(--text);
+  }
+  .data-sub{
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px;
+    color:var(--text-dim);
+    margin-bottom:12px;
+    line-height:1.5;
+  }
+  .data-row{
+    display:flex;
+    gap:10px;
+  }
+  .btn-ghost{
+    flex:1;
+    background:var(--panel-2);
+    border:1px solid var(--line);
+    color:var(--text);
+    border-radius:9px;
+    padding:11px;
+    font-family:'Inter', sans-serif;
+    font-weight:600;
+    font-size:13px;
+    cursor:pointer;
+    text-align:center;
+  }
+  .btn-ghost:active{border-color:var(--rust);}
+  .snippet-status{
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px;
+    margin-top:10px;
+    min-height:14px;
+  }
+  .snippet-status.ok{color:var(--profit);}
+  .snippet-status.err{color:var(--loss);}
+  .snippet-box{
+    display:none;
+    margin-top:10px;
+  }
+  .snippet-box.open{display:block;}
+  .snippet-box textarea{
+    width:100%;
+    min-height:140px;
+    background:var(--panel-2);
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:10px 12px;
+    color:var(--text);
+    font-family:'JetBrains Mono', monospace;
+    font-size:11.5px;
+    outline:none;
+    resize:vertical;
+  }
   .footer-note{
     text-align:center;
     font-family:'JetBrains Mono', monospace;
@@ -396,9 +472,10 @@
     </div>
     <div class="field">
       <label for="fParts">Parts / repair</label>
-      <input type="number" id="fParts" inputmode="numeric" placeholder="0">
+      <input type="number" id="fParts" inputmode="numeric" placeholder="0" step="any">
     </div>
   </div>
+  <div class="parts-note">Sold some parts off it? Enter a <b>negative</b> number here (e.g. -50) to add that cash back instead of subtracting it.</div>
   <div class="field">
     <label for="fSell">Sell price <span style="text-transform:none;letter-spacing:0;">(leave blank if still working on it)</span></label>
     <input type="number" id="fSell" inputmode="numeric" placeholder="0">
@@ -411,6 +488,24 @@
   </div>
 </div>
 
+<div class="data-panel">
+  <h2>Backup &amp; transfer</h2>
+  <div class="data-sub">Data only lives in this browser. Export a file to back it up or move it to another device/browser.</div>
+  <div class="data-row">
+    <button class="btn-ghost" onclick="exportData()">Export JSON</button>
+    <button class="btn-ghost" onclick="document.getElementById('importFile').click()">Import JSON</button>
+  </div>
+  <input type="file" id="importFile" accept="application/json" style="display:none" onchange="importData(event)">
+
+  <div class="btn-row" style="margin-top:10px;">
+    <button class="btn-ghost" onclick="copyArchiveSnippet()">Copy as ARCHIVE_FLIPS code</button>
+  </div>
+  <div class="snippet-status" id="snippetStatus"></div>
+  <div class="snippet-box" id="snippetBox">
+    <textarea id="snippetText" readonly onclick="this.select()"></textarea>
+  </div>
+</div>
+
 <div class="list-section">
   <div class="list-title">Flips <small id="listCount">0 total</small></div>
   <div id="list"></div>
@@ -420,6 +515,19 @@
 
 <script>
 const STORAGE_KEY = 'beamng-flip-tracker-v1';
+
+/*
+  ARCHIVE — hardcoded flips baked directly into the file.
+  This is where I (Claude) drop in a batch of past flips when you ask
+  for a hardcode/reset. Each one runs through the exact same fields as
+  the form: buy, parts (negative = recovered), sell (null = not sold).
+  On first load, anything in here gets merged into your saved data once,
+  then it's tracked as applied so re-opening the file won't duplicate it.
+*/
+const ARCHIVE_FLIPS = [
+  { name: "Gambler 800S", buy: 2000, parts: 500, sell: 4200 }
+];
+
 let flips = [];
 let editingId = null;
 
@@ -430,7 +538,28 @@ function loadFlips(){
   }catch(e){
     flips = [];
   }
+  applyArchive();
 }
+
+function applyArchive(){
+  if(!ARCHIVE_FLIPS.length) return;
+  const archiveKey = STORAGE_KEY + '-archive-applied';
+  if(localStorage.getItem(archiveKey)) return;
+
+  ARCHIVE_FLIPS.forEach(f => {
+    flips.push({
+      id: 'f' + Date.now() + Math.random().toString(36).slice(2,7),
+      name: f.name,
+      buy: Number(f.buy) || 0,
+      parts: Number(f.parts) || 0,
+      sell: (f.sell === null || f.sell === undefined) ? null : Number(f.sell),
+      createdAt: f.createdAt || Date.now()
+    });
+  });
+  localStorage.setItem(archiveKey, '1');
+  saveFlips();
+}
+
 function saveFlips(){
   localStorage.setItem(STORAGE_KEY, JSON.stringify(flips));
 }
@@ -497,7 +626,7 @@ function render(){
           </div>
           <div class="breakdown">
             <span>Buy <b>${fmt(f.buy)}</b></span>
-            <span>Parts <b>${fmt(f.parts)}</b></span>
+            <span>${f.parts < 0 ? 'Parts recovered' : 'Parts'} <b>${f.parts < 0 ? fmt(Math.abs(f.parts)) : fmt(f.parts)}</b></span>
             <span>Sell <b>${isPending ? '—' : fmt(f.sell)}</b></span>
           </div>
           <div class="card-actions">
@@ -580,6 +709,99 @@ function deleteFlip(id){
   if(editingId === id) cancelEdit();
   saveFlips();
   render();
+}
+
+function exportData(){
+  const payload = {
+    app: 'beamng-flip-tracker',
+    exportedAt: new Date().toISOString(),
+    flips
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const stamp = new Date().toISOString().slice(0,10);
+  a.href = url;
+  a.download = `garage-ledger-export-${stamp}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function importData(event){
+  const file = event.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try{
+      const data = JSON.parse(reader.result);
+      const incoming = Array.isArray(data) ? data : data.flips;
+      if(!Array.isArray(incoming)) throw new Error('No flips array found');
+
+      let added = 0;
+      incoming.forEach(f => {
+        if(!f || typeof f.name !== 'string') return;
+        flips.push({
+          id: 'f' + Date.now() + Math.random().toString(36).slice(2,7),
+          name: f.name,
+          buy: Number(f.buy) || 0,
+          parts: Number(f.parts) || 0,
+          sell: (f.sell === null || f.sell === undefined || f.sell === '') ? null : Number(f.sell),
+          createdAt: f.createdAt || Date.now()
+        });
+        added++;
+      });
+      saveFlips();
+      render();
+      alert(added + ' flip(s) imported and merged into your ledger.');
+    }catch(e){
+      alert('Could not read that file. Make sure it\'s a Garage Ledger export.');
+    }
+    event.target.value = '';
+  };
+  reader.readAsText(file);
+}
+
+
+function buildArchiveSnippet(){
+  if(!flips.length) return null;
+  const sorted = [...flips].sort((a,b) => a.createdAt - b.createdAt);
+  const lines = sorted.map(f => {
+    const sellStr = (f.sell === null || f.sell === undefined) ? 'null' : f.sell;
+    return `  { name: ${JSON.stringify(f.name)}, buy: ${f.buy}, parts: ${f.parts}, sell: ${sellStr} }`;
+  });
+  return `const ARCHIVE_FLIPS = [\n${lines.join(',\n')}\n];`;
+}
+
+function copyArchiveSnippet(){
+  const statusEl = document.getElementById('snippetStatus');
+  const boxEl = document.getElementById('snippetBox');
+  const snippet = buildArchiveSnippet();
+
+  if(!snippet){
+    statusEl.textContent = 'No flips to export yet.';
+    statusEl.className = 'snippet-status err';
+    boxEl.classList.remove('open');
+    return;
+  }
+
+  const showFallback = () => {
+    document.getElementById('snippetText').value = snippet;
+    boxEl.classList.add('open');
+    statusEl.textContent = "Couldn't auto-copy — tap the box below, select all, and copy manually.";
+    statusEl.className = 'snippet-status err';
+  };
+
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(snippet).then(() => {
+      statusEl.textContent = 'Copied — paste over ARCHIVE_FLIPS in the code, then ask me to reset the ledger.';
+      statusEl.className = 'snippet-status ok';
+      boxEl.classList.remove('open');
+    }).catch(showFallback);
+  } else {
+    showFallback();
+  }
 }
 
 loadFlips();
