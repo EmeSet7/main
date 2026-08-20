@@ -536,6 +536,16 @@ function loadFile(f){
   video.src = state.url;
   dropzone.style.display = 'none';
   editor.classList.add('active');
+  warmUpEngine();
+}
+
+async function warmUpEngine(){
+  try{
+    const f = await ensureFFmpeg();
+    await ensureInputWritten(f);
+  }catch(err){
+    console.warn('warm-up failed, will retry on export', err);
+  }
 }
 
 video.addEventListener('loadedmetadata', () => {
@@ -715,21 +725,34 @@ async function generateThumb(clip){
 }
 
 // ---------- ffmpeg ----------
+function withTimeout(promise, ms, msg){
+  return Promise.race([
+    promise,
+    new Promise((_,reject) => setTimeout(() => reject(new Error(msg)), ms))
+  ]);
+}
+
 async function ensureFFmpeg(){
   if(ffmpeg) return ffmpeg;
   if(ffmpegLoading) return ffmpegLoading;
   ffmpegLoading = (async () => {
     setStatus('busy','loading engine…');
-    const f = new FFmpeg();
-    f.on('log', ({message}) => { /* console.log(message); */ });
-    const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm';
-    await f.load({
-      coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
-      wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
-    });
-    ffmpeg = f;
-    setStatus('ready','engine ready');
-    return f;
+    try{
+      const f = new FFmpeg();
+      f.on('log', ({message}) => { /* console.log(message); */ });
+      const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm';
+      await withTimeout(f.load({
+        coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
+        wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
+      }), 45000, 'engine load timed out');
+      ffmpeg = f;
+      setStatus('ready','engine ready');
+      return f;
+    }catch(err){
+      ffmpegLoading = null;
+      setStatus('', 'engine failed to load — tap export to retry');
+      throw err;
+    }
   })();
   return ffmpegLoading;
 }
@@ -737,9 +760,15 @@ async function ensureFFmpeg(){
 async function ensureInputWritten(f){
   if(inputWritten) return;
   setStatus('busy','reading file…');
-  await f.writeFile('input.mp4', await fetchFile(state.file));
-  inputWritten = true;
-  setStatus('ready','engine ready');
+  try{
+    await f.writeFile('input.mp4', await fetchFile(state.file));
+    inputWritten = true;
+    setStatus('ready','engine ready');
+  }catch(err){
+    inputWritten = false;
+    setStatus('', 'failed to read file — tap export to retry');
+    throw err;
+  }
 }
 
 async function runExport(clip){
@@ -775,7 +804,9 @@ async function exportClip(clip){
   }catch(err){
     console.error(err);
     log('failed: '+clip.name+' — '+err.message, 'err');
-    setStatus('ready','engine ready');
+    if(statusText.textContent.indexOf('failed') === -1 && statusText.textContent.indexOf('timed out') === -1){
+      setStatus('', 'export failed — tap export to retry');
+    }
   }
 }
 
@@ -817,7 +848,7 @@ function updateExportBtnLabel(){
   exportAllBtn.textContent = state.clips.length === 1 ? 'EXPORT CLIP' : 'EXPORT ALL AS ZIP';
 }
 
-setStatus('', 'idle — engine loads on first export');
+setStatus('', 'idle — drop a file to begin');
 </script>
 
 </body>
