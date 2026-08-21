@@ -7,7 +7,6 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/jszip@3.10.1/dist/jszip.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/mediabunny/dist/mediabunny.cjs"></script>
 <style>
   :root{
     --bg:#0b0c0d;
@@ -439,6 +438,7 @@
 </main>
 
 <script type="module">
+import { Input, Output, Conversion, ALL_FORMATS, BlobSource, BufferTarget, Mp4OutputFormat } from 'https://cdn.jsdelivr.net/npm/mediabunny/+esm';
 
 // ---------- State ----------
 const state = {
@@ -707,15 +707,7 @@ async function generateThumb(clip){
 }
 
 // ---------- Export engine (Mediabunny — lossless remux via WebCodecs) ----------
-function getMediabunny(){
-  if(!window.Mediabunny){
-    throw new Error('export library failed to load — check your connection and reload the page');
-  }
-  return window.Mediabunny;
-}
-
 async function runExport(clip){
-  const { Input, Output, Conversion, ALL_FORMATS, BlobSource, BufferTarget, Mp4OutputFormat } = getMediabunny();
   const input = new Input({ source: new BlobSource(state.file), formats: ALL_FORMATS });
   const output = new Output({ format: new Mp4OutputFormat(), target: new BufferTarget() });
   const conversion = await Conversion.init({
