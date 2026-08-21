@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/jszip@3.10.1/dist/jszip.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mediabunny/dist/mediabunny.cjs"></script>
 <style>
   :root{
     --bg:#0b0c0d;
@@ -438,8 +439,6 @@
 </main>
 
 <script type="module">
-import { FFmpeg } from 'https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js';
-import { fetchFile, toBlobURL } from 'https://unpkg.com/@ffmpeg/util@0.12.1/dist/esm/index.js';
 
 // ---------- State ----------
 const state = {
@@ -451,9 +450,6 @@ const state = {
   pendingIn: null,
 };
 let nextId = 1;
-let ffmpeg = null;
-let ffmpegLoading = null;
-let inputWritten = false;
 
 // ---------- Elements ----------
 const dropzone = document.getElementById('dropzone');
@@ -519,15 +515,11 @@ function resetAll(){
   state.selectedId = null;
   state.pendingIn = null;
   nextId = 1;
-  inputWritten = false;
   renderReel();
   editor.classList.remove('active');
   dropzone.style.display = '';
   exportLog.innerHTML = '';
   exportLog.classList.remove('show');
-  if(ffmpeg){
-    ffmpeg.deleteFile('input.mp4').catch(()=>{});
-  }
 }
 
 function loadFile(f){
@@ -536,16 +528,6 @@ function loadFile(f){
   video.src = state.url;
   dropzone.style.display = 'none';
   editor.classList.add('active');
-  warmUpEngine();
-}
-
-async function warmUpEngine(){
-  try{
-    const f = await ensureFFmpeg();
-    await ensureInputWritten(f);
-  }catch(err){
-    console.warn('warm-up failed, will retry on export', err);
-  }
 }
 
 video.addEventListener('loadedmetadata', () => {
@@ -724,69 +706,29 @@ async function generateThumb(clip){
   if(img) img.src = clip.thumb;
 }
 
-// ---------- ffmpeg ----------
-function withTimeout(promise, ms, msg){
-  return Promise.race([
-    promise,
-    new Promise((_,reject) => setTimeout(() => reject(new Error(msg)), ms))
-  ]);
-}
-
-async function ensureFFmpeg(){
-  if(ffmpeg) return ffmpeg;
-  if(ffmpegLoading) return ffmpegLoading;
-  ffmpegLoading = (async () => {
-    setStatus('busy','loading engine…');
-    try{
-      const f = new FFmpeg();
-      f.on('log', ({message}) => { /* console.log(message); */ });
-      const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm';
-      await withTimeout(f.load({
-        coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
-        wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
-      }), 45000, 'engine load timed out');
-      ffmpeg = f;
-      setStatus('ready','engine ready');
-      return f;
-    }catch(err){
-      ffmpegLoading = null;
-      setStatus('', 'engine failed to load — tap export to retry');
-      throw err;
-    }
-  })();
-  return ffmpegLoading;
-}
-
-async function ensureInputWritten(f){
-  if(inputWritten) return;
-  setStatus('busy','reading file…');
-  try{
-    await f.writeFile('input.mp4', await fetchFile(state.file));
-    inputWritten = true;
-    setStatus('ready','engine ready');
-  }catch(err){
-    inputWritten = false;
-    setStatus('', 'failed to read file — tap export to retry');
-    throw err;
+// ---------- Export engine (Mediabunny — lossless remux via WebCodecs) ----------
+function getMediabunny(){
+  if(!window.Mediabunny){
+    throw new Error('export library failed to load — check your connection and reload the page');
   }
+  return window.Mediabunny;
 }
 
 async function runExport(clip){
-  const f = await ensureFFmpeg();
-  await ensureInputWritten(f);
-  const duration = clip.end - clip.start;
+  const { Input, Output, Conversion, ALL_FORMATS, BlobSource, BufferTarget, Mp4OutputFormat } = getMediabunny();
+  const input = new Input({ source: new BlobSource(state.file), formats: ALL_FORMATS });
+  const output = new Output({ format: new Mp4OutputFormat(), target: new BufferTarget() });
+  const conversion = await Conversion.init({
+    input, output,
+    trim: { start: clip.start, end: clip.end }
+  });
+  if(!conversion.isValid){
+    const reasons = (conversion.discardedTracks || []).map(t => t.reason).join(', ');
+    throw new Error('unsupported clip' + (reasons ? ' — ' + reasons : ''));
+  }
+  await conversion.execute();
   const outName = clip.name.replace(/[^a-z0-9_-]/gi,'_') + '.mp4';
-  await f.exec([
-    '-ss', String(clip.start),
-    '-i', 'input.mp4',
-    '-t', String(duration),
-    '-c', 'copy',
-    '-avoid_negative_ts', 'make_zero',
-    outName
-  ]);
-  const data = await f.readFile(outName);
-  await f.deleteFile(outName);
-  return { name: outName, data };
+  return { name: outName, data: new Uint8Array(output.target.buffer) };
 }
 
 async function exportClip(clip){
@@ -800,13 +742,11 @@ async function exportClip(clip){
     a.download = name;
     a.click();
     log(name+' done ('+(blob.size/1024/1024).toFixed(1)+' MB)', 'ok');
-    setStatus('ready','engine ready');
+    setStatus('ready','done');
   }catch(err){
     console.error(err);
     log('failed: '+clip.name+' — '+err.message, 'err');
-    if(statusText.textContent.indexOf('failed') === -1 && statusText.textContent.indexOf('timed out') === -1){
-      setStatus('', 'export failed — tap export to retry');
-    }
+    setStatus('', 'export failed — tap export to retry');
   }
 }
 
@@ -840,7 +780,7 @@ exportAllBtn.addEventListener('click', async () => {
   a.download = 'clips.zip';
   a.click();
   log('zip ready — download started', 'ok');
-  setStatus('ready','engine ready');
+  setStatus('ready','done');
   exportAllBtn.disabled = false;
 });
 
