@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Workbench</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #EDE6D6;
+    --hole: #C9BFA8;
+    --ink: #23201B;
+    --games: #FF5A36;
+    --craft: #2BB3A3;
+    --media: #7C5CFF;
+    --utility: #E8A400;
+    --card: #FFFDF8;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background-color: var(--bg);
+    background-image: radial-gradient(var(--hole) 2.5px, transparent 2.5px);
+    background-size: 28px 28px;
+    color: var(--ink);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    padding: 48px 20px 80px;
+  }
+
+  header {
+    max-width: 900px;
+    margin: 0 auto 56px;
+    text-align: center;
+  }
+
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--ink);
+    opacity: 0.55;
+    margin-bottom: 10px;
+  }
+
+  h1 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: clamp(2.4rem, 6vw, 4rem);
+    margin: 0 0 12px;
+    line-height: 1;
+  }
+
+  header p {
+    font-size: 15px;
+    opacity: 0.65;
+    max-width: 480px;
+    margin: 0 auto;
+  }
+
+  main {
+    max-width: 1000px;
+    margin: 0 auto;
+  }
+
+  .section {
+    margin-bottom: 46px;
+  }
+
+  .section-label {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 18px;
+  }
+
+  .section-label .dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .section-label .line {
+    flex: 1;
+    height: 2px;
+    background: currentColor;
+    opacity: 0.15;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 18px;
+  }
+
+  .tag {
+    position: relative;
+    background: var(--card);
+    border-radius: 10px;
+    padding: 26px 18px 18px;
+    text-decoration: none;
+    color: var(--ink);
+    display: block;
+    box-shadow: 0 3px 0 rgba(35,32,27,0.08), 0 8px 18px rgba(35,32,27,0.06);
+    transform: rotate(var(--tilt, 0deg));
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    border-top: 4px solid var(--accent, var(--ink));
+  }
+
+  .tag:nth-child(2n) { --tilt: 1.1deg; }
+  .tag:nth-child(3n) { --tilt: -1.3deg; }
+  .tag:nth-child(5n) { --tilt: 0.6deg; }
+
+  .tag:hover {
+    transform: rotate(0deg) translateY(-4px);
+    box-shadow: 0 6px 0 rgba(35,32,27,0.1), 0 14px 26px rgba(35,32,27,0.12);
+  }
+
+  .peg {
+    position: absolute;
+    top: -7px;
+    left: 18px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--bg);
+    border: 3px solid var(--hole);
+  }
+
+  .tag h3 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 17px;
+    margin: 0 0 6px;
+  }
+
+  .tag p {
+    font-size: 13px;
+    opacity: 0.7;
+    margin: 0 0 14px;
+    line-height: 1.4;
+  }
+
+  .tag .file {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    opacity: 0.5;
+  }
+
+  .games .section-label, .games .dot { color: var(--games); background: var(--games); }
+  .craft .section-label, .craft .dot { color: var(--craft); background: var(--craft); }
+  .media .section-label, .media .dot { color: var(--media); background: var(--media); }
+  .utility .section-label, .utility .dot { color: var(--utility); background: var(--utility); }
+
+  .games .tag { --accent: var(--games); }
+  .craft .tag { --accent: var(--craft); }
+  .media .tag { --accent: var(--media); }
+  .utility .tag { --accent: var(--utility); }
+
+  footer {
+    max-width: 900px;
+    margin: 60px auto 0;
+    text-align: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    opacity: 0.45;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .tag { transition: none; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="eyebrow">index.html</div>
+  <h1>The Workbench</h1>
+  <p>Every tool, tracker, and time-waster, hung up in one place.</p>
+</header>
+
+<main>
+
+  <div class="section games">
+    <div class="section-label"><span class="dot"></span>Games &amp; Loops<span class="line"></span></div>
+    <div class="grid">
+      <a class="tag" href="beamng-tracker.html">
+        <span class="peg"></span>
+        <h3>BeamNG Tracker</h3>
+        <p>Career mode log for the car-flipping loop.</p>
+        <span class="file">beamng-tracker.html</span>
+      </a>
+      <a class="tag" href="scrapyard-flip.html">
+        <span class="peg"></span>
+        <h3>Scrapyard Flip</h3>
+        <p>Idle junkyard flipping game with parts, haggling, and barn finds.</p>
+        <span class="file">scrapyard-flip.html</span>
+      </a>
+      <a class="tag" href="gt1-cheatsheet.html">
+        <span class="peg"></span>
+        <h3>GT1 Cheat Sheet</h3>
+        <p>Career mode reference &mdash; League events, Special Events, and Licenses.</p>
+        <span class="file">gt1-cheatsheet.html</span>
+      </a>
+    </div>
+  </div>
+
+  <div class="section craft">
+    <div class="section-label"><span class="dot"></span>Craft &amp; Stitch<span class="line"></span></div>
+    <div class="grid">
+      <a class="tag" href="croche.html">
+        <span class="peg"></span>
+        <h3>Croch&ecirc;</h3>
+        <p>Crochet project and pattern tracker.</p>
+        <span class="file">croche.html</span>
+      </a>
+      <a class="tag" href="cross-stitch.html">
+        <span class="peg"></span>
+        <h3>Cross-Stitch</h3>
+        <p>Pattern and progress tracker for cross-stitch projects.</p>
+        <span class="file">cross-stitch.html</span>
+      </a>
+    </div>
+  </div>
+
+  <div class="section media">
+    <div class="section-label"><span class="dot"></span>Media &amp; Sound<span class="line"></span></div>
+    <div class="grid">
+      <a class="tag" href="clip-cutter.html">
+        <span class="peg"></span>
+        <h3>Clip Cutter</h3>
+        <p>Trim raw footage into clips ready to upload.</p>
+        <span class="file">clip-cutter.html</span>
+      </a>
+      <a class="tag" href="darkroom.html">
+        <span class="peg"></span>
+        <h3>Darkroom</h3>
+        <p>Photo editing tool.</p>
+        <span class="file">darkroom.html</span>
+      </a>
+      <a class="tag" href="soundscape.html">
+        <span class="peg"></span>
+        <h3>Soundscape</h3>
+        <p>Synthesized ambient sound mixer.</p>
+        <span class="file">soundscape.html</span>
+      </a>
+    </div>
+  </div>
+
+  <div class="section utility">
+    <div class="section-label"><span class="dot"></span>Everyday Utility<span class="line"></span></div>
+    <div class="grid">
+      <a class="tag" href="stock_io.html">
+        <span class="peg"></span>
+        <h3>Stock IO</h3>
+        <p>Stock and inventory management.</p>
+        <span class="file">stock_io.html</span>
+      </a>
+      <a class="tag" href="stock_io-autofill.html">
+        <span class="peg"></span>
+        <h3>Stock IO &mdash; Autofill</h3>
+        <p>Same tracker, with learned autofill for parts.</p>
+        <span class="file">stock_io-autofill.html</span>
+      </a>
+      <a class="tag" href="countdown.html">
+        <span class="peg"></span>
+        <h3>Countdown</h3>
+        <p>Days-until tracker for upcoming shows and releases.</p>
+        <span class="file">countdown.html</span>
+      </a>
+    </div>
+  </div>
+
+</main>
+
+<footer>
+  bookmark this page &mdash; everything else hangs off it
+</footer>
+
+</body>
+</html>

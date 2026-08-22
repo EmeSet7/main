@@ -201,8 +201,8 @@
     border-top:1px solid var(--edge);
     flex-wrap:wrap;
   }
-  .step-group{display:flex; gap:6px;}
-  .step-group button{min-width:44px;}
+  .step-group{display:flex; gap:5px;}
+  .step-group button{min-width:38px; padding:5px 8px;}
   .fps-field{
     display:flex;
     align-items:center;
@@ -392,6 +392,7 @@
       </div>
       <div id="frameControls">
         <div class="step-group">
+          <button class="small" data-step="-1000">-1000</button>
           <button class="small" data-step="-100">-100</button>
           <button class="small" data-step="-10">-10</button>
           <button class="small" data-step="-1">-1</button>
@@ -404,6 +405,7 @@
           <button class="small" data-step="1">+1</button>
           <button class="small" data-step="10">+10</button>
           <button class="small" data-step="100">+100</button>
+          <button class="small" data-step="1000">+1000</button>
         </div>
       </div>
       <div class="sprockets"></div>
@@ -714,13 +716,32 @@ async function runExport(clip){
     input, output,
     trim: { start: clip.start, end: clip.end }
   });
-  if(!conversion.isValid){
+  if(!conversion.isValid || (conversion.discardedTracks && conversion.discardedTracks.length)){
     const reasons = (conversion.discardedTracks || []).map(t => t.reason).join(', ');
-    throw new Error('unsupported clip' + (reasons ? ' — ' + reasons : ''));
+    throw new Error('this browser could not decode part of the video' + (reasons ? ' — ' + reasons : '') + ' (try Chrome or Edge)');
   }
   await conversion.execute();
   const outName = clip.name.replace(/[^a-z0-9_-]/gi,'_') + '.mp4';
   return { name: outName, data: new Uint8Array(output.target.buffer) };
+}
+
+// ---------- Delivery: share sheet (lets you pick where to save) with download fallback ----------
+async function deliverFile(blob, name, mime){
+  try{
+    const file = new File([blob], name, {type: mime});
+    if(navigator.canShare && navigator.canShare({files:[file]})){
+      await navigator.share({files:[file], title:name});
+      return 'share';
+    }
+  }catch(err){
+    if(err.name === 'AbortError') return 'cancelled';
+    // fall through to plain download
+  }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  a.click();
+  return 'download';
 }
 
 async function exportClip(clip){
@@ -729,17 +750,30 @@ async function exportClip(clip){
     log('exporting '+clip.name+'…');
     const {name,data} = await runExport(clip);
     const blob = new Blob([data], {type:'video/mp4'});
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = name;
-    a.click();
-    log(name+' done ('+(blob.size/1024/1024).toFixed(1)+' MB)', 'ok');
+    const method = await deliverFile(blob, name, 'video/mp4');
+    if(method === 'cancelled'){
+      log(name+' — cancelled', '');
+    }else{
+      log(name+' done ('+(blob.size/1024/1024).toFixed(1)+' MB)'+(method==='share'?' — shared':''), 'ok');
+    }
     setStatus('ready','done');
   }catch(err){
     console.error(err);
     log('failed: '+clip.name+' — '+err.message, 'err');
     setStatus('', 'export failed — tap export to retry');
   }
+}
+
+async function runWithConcurrency(items, limit, worker){
+  let idx = 0;
+  async function lane(){
+    while(idx < items.length){
+      const i = idx++;
+      await worker(items[i], i);
+    }
+  }
+  const lanes = Array.from({length: Math.min(limit, items.length)}, lane);
+  await Promise.all(lanes);
 }
 
 exportAllBtn.addEventListener('click', async () => {
@@ -753,10 +787,10 @@ exportAllBtn.addEventListener('click', async () => {
   }
 
   const zip = new JSZip();
-  for(const clip of state.clips){
+  setStatus('busy', `exporting ${state.clips.length} clips…`);
+  state.clips.forEach(c => log('exporting '+c.name+'…'));
+  await runWithConcurrency(state.clips, 2, async (clip) => {
     try{
-      setStatus('busy','exporting '+clip.name+'…');
-      log('exporting '+clip.name+'…');
       const {name,data} = await runExport(clip);
       zip.file(name, data);
       log(name+' done', 'ok');
@@ -764,14 +798,11 @@ exportAllBtn.addEventListener('click', async () => {
       console.error(err);
       log('failed: '+clip.name+' — '+err.message, 'err');
     }
-  }
+  });
   setStatus('busy','zipping…');
   const content = await zip.generateAsync({type:'blob'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(content);
-  a.download = 'clips.zip';
-  a.click();
-  log('zip ready — download started', 'ok');
+  const method = await deliverFile(content, 'clips.zip', 'application/zip');
+  log(method === 'cancelled' ? 'zip — cancelled' : 'zip ready' + (method==='share'?' — shared':' — download started'), method === 'cancelled' ? '' : 'ok');
   setStatus('ready','done');
   exportAllBtn.disabled = false;
 });

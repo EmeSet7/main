@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GT1 — Career Cheat Sheet</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy-deep:#070c1e;
+    --navy:#0d1638;
+    --navy-panel:#121f4a;
+    --chrome-hi:#dce6f2;
+    --chrome-lo:#7e93b8;
+    --gold:#f2b705;
+    --gold-dim:#c99a2e;
+    --text:#e7edf7;
+    --text-dim:#9aa8c4;
+    --line:rgba(220,230,242,0.12);
+    --good:#5fd97a;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(ellipse at 20% -10%, rgba(120,150,255,0.12), transparent 45%),
+      radial-gradient(ellipse at 100% 0%, rgba(242,183,5,0.08), transparent 40%),
+      linear-gradient(180deg, var(--navy-deep), var(--navy) 40%, var(--navy-deep));
+    background-attachment:fixed;
+    color:var(--text);
+    font-family:'Inter',sans-serif;
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  /* ===== Chrome header bar ===== */
+  header{
+    position:sticky; top:0; z-index:50;
+    background:linear-gradient(180deg, #17254f, #0c1636 90%);
+    border-bottom:1px solid var(--line);
+    box-shadow:0 8px 24px rgba(0,0,0,0.35);
+  }
+  .header-inner{
+    max-width:1180px; margin:0 auto; padding:14px 20px;
+    display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;
+  }
+  .brand{display:flex; align-items:baseline; gap:10px;}
+  .brand h1{
+    font-family:'Bebas Neue',sans-serif;
+    font-size:32px; letter-spacing:2px; margin:0;
+    background:linear-gradient(180deg,#fff, var(--chrome-lo));
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    text-shadow:0 1px 0 rgba(255,255,255,0.1);
+  }
+  .brand span{font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--text-dim); letter-spacing:1px;}
+
+  .credits-box{
+    font-family:'JetBrains Mono',monospace;
+    background:linear-gradient(180deg,#0a1230,#050a1c);
+    border:1px solid var(--gold-dim);
+    border-radius:6px;
+    padding:8px 16px;
+    text-align:right;
+    box-shadow:inset 0 0 12px rgba(242,183,5,0.08);
+  }
+  .credits-box .label{font-size:10px; color:var(--text-dim); letter-spacing:2px; display:block;}
+  .credits-box .amount{font-size:22px; color:var(--gold); font-weight:700;}
+  .credits-box .amount::before{content:"¥ ";opacity:0.6;font-size:15px;}
+
+  nav.tabs{
+    max-width:1180px; margin:0 auto; padding:0 20px 12px;
+    display:flex; gap:8px; flex-wrap:wrap;
+  }
+  nav.tabs button{
+    font-family:'Inter',sans-serif; font-weight:600; font-size:13px;
+    background:rgba(255,255,255,0.04); color:var(--text-dim);
+    border:1px solid var(--line); border-radius:20px;
+    padding:6px 14px; cursor:pointer; transition:all .15s ease;
+  }
+  nav.tabs button:hover{color:var(--text); border-color:var(--chrome-lo);}
+  nav.tabs button.active{
+    background:linear-gradient(180deg,#3a5aa8,#22335f);
+    color:#fff; border-color:#6b8cd9;
+  }
+
+  main{max-width:1180px; margin:0 auto; padding:24px 20px 80px;}
+
+  section.league{display:none;}
+  section.league.active{display:block; animation:fade .25s ease;}
+  @keyframes fade{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);}}
+
+  .league-title{
+    font-family:'Bebas Neue',sans-serif; font-size:26px; letter-spacing:1.5px;
+    margin:28px 0 4px; color:var(--chrome-hi);
+    border-bottom:2px solid var(--line); padding-bottom:8px;
+  }
+  .league-sub{color:var(--text-dim); font-size:13px; margin-bottom:18px;}
+
+  /* ===== Event card ===== */
+  .event{
+    background:linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0.01));
+    border:1px solid var(--line);
+    border-radius:10px;
+    margin-bottom:16px;
+    overflow:hidden;
+    transition:border-color .15s ease;
+  }
+  .event.done{border-color:rgba(95,217,122,0.5);}
+  .event-head{
+    display:flex; align-items:center; gap:14px;
+    padding:14px 18px; cursor:pointer;
+  }
+  .event-head .chk{
+    width:22px; height:22px; border-radius:5px;
+    border:2px solid var(--chrome-lo); flex-shrink:0;
+    display:flex; align-items:center; justify-content:center;
+    font-size:14px; color:var(--good); background:rgba(255,255,255,0.03);
+  }
+  .event.done .chk{border-color:var(--good); background:rgba(95,217,122,0.12);}
+  .event-head .titles{flex:1; min-width:200px;}
+  .event-head .titles h3{margin:0; font-size:17px; font-weight:700;}
+  .event-head .titles .quote{margin:2px 0 0; font-size:12.5px; color:var(--text-dim); font-style:italic;}
+  .license-badge{
+    font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:700;
+    padding:3px 9px; border-radius:4px; letter-spacing:1px; white-space:nowrap;
+  }
+  .lic-B{background:rgba(120,180,255,0.15); color:#8fc4ff; border:1px solid rgba(120,180,255,0.4);}
+  .lic-A{background:rgba(242,183,5,0.15); color:var(--gold); border:1px solid rgba(242,183,5,0.4);}
+  .lic-IA{background:rgba(255,90,90,0.15); color:#ff8f8f; border:1px solid rgba(255,90,90,0.4);}
+  .champ-total{
+    font-family:'JetBrains Mono',monospace; font-size:14px; color:var(--gold); font-weight:700; white-space:nowrap;
+  }
+  .caret{color:var(--text-dim); transition:transform .2s ease; font-size:12px;}
+  .event.open .caret{transform:rotate(90deg);}
+
+  .event-body{
+    display:none; padding:0 18px 18px; border-top:1px solid var(--line);
+  }
+  .event.open .event-body{display:block;}
+
+  .grid2{display:grid; grid-template-columns:1.3fr 1fr; gap:18px; margin-top:14px;}
+  @media (max-width:720px){.grid2{grid-template-columns:1fr;}}
+
+  table.races{width:100%; border-collapse:collapse; font-size:13px;}
+  table.races th{
+    text-align:left; font-family:'JetBrains Mono',monospace; font-size:10.5px;
+    color:var(--text-dim); letter-spacing:1px; padding:6px 8px; border-bottom:1px solid var(--line);
+  }
+  table.races td{padding:6px 8px; border-bottom:1px solid rgba(255,255,255,0.05);}
+  table.races td.mono, table.races th.mono{font-family:'JetBrains Mono',monospace;}
+
+  .prize-list{list-style:none; margin:0; padding:0; font-size:13px;}
+  .prize-list li{
+    display:flex; justify-content:space-between; padding:4px 0;
+    border-bottom:1px dashed rgba(255,255,255,0.06);
+  }
+  .prize-list li span:last-child{font-family:'JetBrains Mono',monospace; color:var(--gold);}
+  .prize-list li.total{font-weight:700; border-bottom:none; margin-top:4px; padding-top:8px; border-top:1px solid var(--line);}
+
+  .restrict{
+    font-size:12.5px; color:#ffb8b8; background:rgba(255,90,90,0.08);
+    border:1px solid rgba(255,90,90,0.25); border-radius:6px; padding:6px 10px; margin-top:10px;
+  }
+  .restrict.none{color:var(--good); background:rgba(95,217,122,0.08); border-color:rgba(95,217,122,0.25);}
+
+  .best-car{
+    margin-top:14px; background:rgba(242,183,5,0.06);
+    border:1px solid rgba(242,183,5,0.3); border-radius:8px; padding:10px 14px;
+  }
+  .best-car .bc-label{
+    font-family:'JetBrains Mono',monospace; font-size:10.5px; letter-spacing:1.5px;
+    color:var(--gold); display:block; margin-bottom:4px;
+  }
+  .best-car p{margin:0; font-size:13.5px; line-height:1.5;}
+
+  .prize-car{font-size:12.5px; color:var(--text-dim); margin-top:10px;}
+  .prize-car b{color:var(--chrome-hi);}
+
+  /* license section */
+  .lic-table{width:100%; border-collapse:collapse; font-size:13px; margin-top:10px;}
+  .lic-table th, .lic-table td{border:1px solid var(--line); padding:8px 10px; text-align:left;}
+  .lic-table th{font-family:'JetBrains Mono',monospace; font-size:10.5px; color:var(--text-dim); letter-spacing:1px;}
+
+  .note{
+    font-size:12.5px; color:var(--text-dim); background:rgba(255,255,255,0.03);
+    border-left:3px solid var(--chrome-lo); padding:8px 14px; border-radius:0 6px 6px 0; margin:16px 0;
+  }
+
+  footer{
+    max-width:1180px; margin:0 auto; padding:20px; text-align:center;
+    color:var(--text-dim); font-size:11.5px;
+  }
+  .reset-btn{
+    font-family:'Inter',sans-serif; font-size:12px; background:none; color:var(--text-dim);
+    border:1px solid var(--line); border-radius:14px; padding:5px 12px; cursor:pointer; margin-top:10px;
+  }
+  .reset-btn:hover{color:#ff8f8f; border-color:#ff8f8f;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="brand">
+      <h1>GT LEAGUE // CHEAT SHEET</h1>
+      <span>GRAN TURISMO (1997) &nbsp;·&nbsp; TAP EVENTS TO EXPAND &nbsp;·&nbsp; CHECK OFF AS YOU CLEAR THEM</span>
+    </div>
+    <div class="credits-box">
+      <span class="label">CHAMPIONSHIP CREDITS BANKED</span>
+      <span class="amount" id="creditsTotal">0</span>
+    </div>
+  </div>
+  <nav class="tabs" id="tabs">
+    <button data-target="gtleague" class="active">GT League</button>
+    <button data-target="special">Special Events</button>
+    <button data-target="licenses">Licenses</button>
+  </nav>
+</header>
+
+<main>
+
+  <!-- ============ GT LEAGUE ============ -->
+  <section class="league active" id="gtleague">
+    <div class="league-title">GT League</div>
+    <div class="league-sub">Four championships, raced in order. Every course is driven in its normal direction. No car restrictions in this league — bring whatever you're comfortable with.</div>
+
+    <div class="event" data-id="sunday">
+      <div class="event-head">
+        <div class="chk">✓</div>
+        <div class="titles">
+          <h3>Sunday Cup</h3>
+          <p class="quote">"Gateway to the world of Gran Turismo. A great place to improve your skills!"</p>
+        </div>
+        <span class="license-badge lic-B">B-LICENSE</span>
+        <span class="champ-total">28,500 max</span>
+        <span class="caret">▶</span>
+      </div>
+      <div class="event-body">
+        <div class="grid2">
+          <div>
+            <table class="races">
+              <tr><th>Track</th><th class="mono">Laps</th><th>Dir.</th></tr>
+              <tr><td>Autumn Ring Mini</td><td class="mono">2</td><td>Normal</td></tr>
+              <tr><td>High Speed Ring</td><td class="mono">2</td><td>Normal</td></tr>
+              <tr><td>Grand Valley – East</td><td class="mono">2</td><td>Normal</td></tr>
+            </table>
+            <div class="restrict none">No car type restrictions.</div>
+          </div>
+          <div>
+            <ul class="prize-list">
+              <li><span>Pole position bonus</span><span>1,500</span></li>
+              <li><span>1st place (×3 races)</span><span>3,000</span></li>
+              <li><span>Championship win</span><span>15,000 + car</span></li>
+              <li class="total"><span>Max possible</span><span>28,500</span></li>
+            </ul>
+          </div>
+        </div>
+        <div class="best-car">
+          <span class="bc-label">BEST CAR</span>
+          <p>A 1990 Mazda RX-7 FC GT-X or an MA70 Toyota Supra Turbo Limited from the used lot — both sit comfortably inside a starting ~10,000 Cr budget and are far quicker than anything the AI fields here. Basically anything with a pulse wins the Sunday Cup; save your money rather than overspending on this one.</p>
+        </div>
+        <div class="prize-car"><b>Champion's prize car:</b> a Sprinter Trueno GT-Apex (AE86) '83 or Mazdaspeed Demio A-spec, depending on region. Neither is worth keeping — sell it straight to the dealer.</div>
+      </div>
+    </div>
+
+    <div class="event" data-id="clubman">
+      <div class="event-head">
+        <div class="chk">✓</div>
+        <div class="titles">
+          <h3>Clubman Cup</h3>
+          <p class="quote">"The next step after graduating from amateur class. Advanced skills required."</p>
+        </div>
+        <span class="license-badge lic-A">A-LICENSE</span>
+        <span class="champ-total">56,500 max</span>
+        <span class="caret">▶</span>
+      </div>
+      <div class="event-body">
+        <div class="grid2">
+          <div>
+            <table class="races">
+              <tr><th>Track</th><th class="mono">Laps</th><th>Dir.</th></tr>
+              <tr><td>Autumn Ring (full)</td><td class="mono">2</td><td>Normal</td></tr>
+              <tr><td>Clubman Stage Route 5</td><td class="mono">2</td><td>Normal</td></tr>
+              <tr><td>Trial Mountain</td><td class="mono">2</td><td>Normal</td></tr>
+            </table>
+            <div class="restrict none">No car type restrictions.</div>
+          </div>
+          <div>
+            <ul class="prize-list">
+              <li><span>Pole position bonus</span><span>2,500</span></li>
+              <li><span>1st place (×3 races)</span><span>7,000</span></li>
+              <li><span>Championship win</span><span>20,000 + car</span></li>
+              <li class="total"><span>Max possible</span><span>56,500</span></li>
+            </ul>
+          </div>
+        </div>
+        <div class="best-car">
+          <span class="bc-label">BEST CAR</span>
+          <p>A tuned Nissan Skyline GT-R (R32) or your Sunday Cup car with a Stage 2 engine upgrade and sports suspension. Trial Mountain's terrain punishes soft suspension setups, so spend on chassis parts before raw power.</p>
+        </div>
+        <div class="prize-car"><b>Champion's prize car:</b> Chevrolet Camaro Z28 30th Anniversary Edition — usable in a pinch, but most players roll straight into the next tier.</div>
+      </div>
+    </div>
+
+    <div class="event" data-id="gtcup">
+      <div class="event-head">
+        <div class="chk">✓</div>
+        <div class="titles">
+          <h3>Gran Turismo Cup</h3>
+          <p class="quote">"Pit yourself against top-class drivers in this high caliber battle fought with hard-tuned cars."</p>
+        </div>
+        <span class="license-badge lic-A">A-LICENSE</span>
+        <span class="champ-total">87,000 max</span>
+        <span class="caret">▶</span>
+      </div>
+      <div class="event-body">
+        <div class="grid2">
+          <div>
+            <table class="races">
+              <tr><th>Track</th><th class="mono">Laps</th><th>Dir.</th></tr>
+              <tr><td>Grand Valley Speedway (full)</td><td class="mono">3</td><td>Normal</td></tr>
+              <tr><td>Deep Forest Raceway</td><td class="mono">3</td><td>Normal</td></tr>
+              <tr><td>Special Stage Route 5</td><td class="mono">3</td><td>Normal</td></tr>
+              <tr><td>Trial Mountain</td><td class="mono">3</td><td>Normal</td></tr>
+            </table>
+            <div class="restrict none">No car type restrictions.</div>
+          </div>
+          <div>
+            <ul class="prize-list">
+              <li><span>Pole position bonus</span><span>5,500</span></li>
+              <li><span>1st place (×4 races)</span><span>10,000</span></li>
+              <li><span>Championship win</span><span>25,000 + car</span></li>
+              <li class="total"><span>Max possible</span><span>87,000</span></li>
+            </ul>
+          </div>
+        </div>
+        <div class="best-car">
+          <span class="bc-label">BEST CAR</span>
+          <p>A Race-Modified mid-tier sports car — a Skyline GT-R or RX-7 with full engine stages plus RM does the job. Competition steps up noticeably here, so this is a good point to start Race Modifying rather than just bolting on parts.</p>
+        </div>
+        <div class="prize-car"><b>Champion's prize car:</b> Toyota Chaser LM Edition.</div>
+      </div>
+    </div>
+
+    <div class="event" data-id="worldcup">
+      <div class="event-head">
+        <div class="chk">✓</div>
+        <div class="titles">
+          <h3>Gran Turismo World Cup</h3>
+          <p class="quote">"The highest class in Gran Turismo. The ultimate challenge with real racing cars."</p>
+        </div>
+        <span class="license-badge lic-IA">INTL A-LICENSE</span>
+        <span class="champ-total">230,000 max</span>
+        <span class="caret">▶</span>
+      </div>
+      <div class="event-body">
+        <div class="grid2">
+          <div>
+            <table class="races">
+              <tr><th>Track</th><th class="mono">Laps</th><th>Dir.</th></tr>
+              <tr><td>High Speed Ring</td><td class="mono">3</td><td>Normal</td></tr>
+              <tr><td>Trial Mountain</td><td class="mono">3</td><td>Normal</td></tr>
+              <tr><td>Grand Valley Speedway</td><td class="mono">3</td><td>Normal</td></tr>
+              <tr><td>Special Stage Route 5</td><td class="mono">3</td><td>Normal</td></tr>
+              <tr><td>Deep Forest Raceway</td><td class="mono">3</td><td>Normal</td></tr>
+              <tr><td>Special Stage Route 11</td><td class="mono">3</td><td>Normal</td></tr>
+            </table>
+            <div class="restrict none">No car type restrictions — you must at least podium (top 3) in Sunday Cup, Clubman Cup, and GT Cup first to unlock this.</div>
+          </div>
+          <div>
+            <ul class="prize-list">
+              <li><span>Pole position bonus</span><span>10,000</span></li>
+              <li><span>1st place (×6 races)</span><span>20,000</span></li>
+              <li><span>Championship win</span><span>50,000</span></li>
+              <li class="total"><span>Max possible</span><span>230,000</span></li>
+            </ul>
+          </div>
+        </div>
+        <div class="best-car">
+          <span class="bc-label">BEST CAR</span>
+          <p>Your best fully Race-Modified special/road car — a Race-Modified Toyota Supra RM, Nissan Skyline GT-R RM, or a genuine Special Model like the TWR Jaguar XJ220. Six full-length races back to back means reliability and stable handling across both fast (High Speed Ring) and technical (Trial Mountain, Special Stage 11) sections matter more than peak top speed.</p>
+        </div>
+        <div class="prize-car"><b>No prize car</b> — instead you unlock GT Hi-Fi mode (60fps on Clubman Stage 5, SS Route 5 &amp; SS Route 11) and the game's ending credits roll. This is the actual "finish the game" moment.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SPECIAL EVENTS ============ -->
+  <section class="league" id="special">
+    <div class="league-title">Special Events</div>
+    <div class="league-sub">13 events split across skill challenges, manufacturer derbies, speed contests, and three endurance races. This is where most of the campaign's money and hours actually go. Required license is shown per event.</div>
+
+    <div class="event" data-id="ff">
+      <div class="event-head">
+        <div class="chk">✓</div>
+        <div class="titles"><h3>FF Challenge</h3><p class="quote">"The fastest front-engine front-drive car is...?"</p></div>
+        <span class="license-badge lic-B">B-LICENSE</span>
+        <span class="champ-total">29,500 max</span>
+        <span class="caret">▶</span>
+      </div>
+      <div class="event-body">
+        <div class="grid2">
+          <div>
+            <table class="races">
+              <tr><th>Track</th><th class="mono">Laps</th><th>Dir.</th></tr>
+              <tr><td>Deep Forest Raceway</td><td class="mono">2</td><td>Reverse</td></tr>
+              <tr><td>Grand Valley – East</td><td class="mono">2</td><td>Normal</td></tr>
+              <tr><td>Special Stage Route 11</td><td class="mono">2</td><td>Normal</td></tr>
+            </table>
+            <div class="restrict">FF (front-engine, front-wheel-drive) cars only.</div>
+          </div>
+          <div>
+            <ul class="prize-list">
+              <li><span>Pole position bonus</span><span>1,500</span></li>
+              <li><span>1st place (×3 races)</span><span>5,000</span></li>
+              <li><span>Championship win</span><span>10,000 + car</span></li>
+              <li class="total"><span>Max possible</span><span>29,500</span></li>
+            </ul>
+          </div>
+        </div>
+        <div class="best-car">
+          <span class="bc-label">BEST CAR</span>
+          <p>Honda CR-X SiR or Civic Type R — light, FWD, and easy to hustle without torque-steering into a wall. FF cars are hard to spin out, which makes this one of the more forgiving Special Events.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="event" data-id="fr">
+      <div class="event-head">
+        <div class="chk">✓</div>
+        <div class="titles"><h3>FR Challenge</h3><p class="quote">"The real McCoy of sports cars. The world of front-engine rear-drive."</p></div>
+        <span class="license-badge lic-B">B-LICENSE</span>
+        <span class="champ-total">29,500 max</span>
+        <span class="caret">▶</span>
+      </div>
+      <div class="event-body">
+        <div class="grid2">
+          <div>
+            <table class="races">
+              <tr><th>Track</th><th class="mono">Laps</th><th>Dir.</th></tr>
+              <tr><td>Grand Valley – East</td><td class="mono">2</td><td>Reverse</td></tr>
+              <tr><td>Deep Forest Raceway</td><td class="mono">2</td><td>Normal</td></tr>
+              <tr><td>Grand Valley Speedway</td><td class="mono">2</td><td>Reverse</td></tr>
+            </table>
+            <div class="restrict">Front-engine, rear-wheel-drive cars only.</div>
+          </div>
+          <div>
+            <ul class="prize-list">
+              <li><span>Pole position bonus</span><span>1,500</span></li>
+              <li><span>1st place (×3 races)</span><span>5,000</span></li>
+              <li><span>Championship win</span><span>10,000 + car</span></li>
+              <li class="total"><span>Max possible</span><span>29,500</span></li>
+            </ul>
+          </div>
+        </div>
+        <div class="best-car">
+          <span class="bc-label">BEST CAR</span>
+          <p>Mazda RX-7 FD or Nissan Silvia (S13/S14) with mild power upgrades. FR cars love to snap sideways under throttle — smooth inputs matter more than horsepower here.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="event" data-id="4wd">
+      <div class="event-head">
+        <div class="chk">✓</div>
+        <div class="titles"><h3>4WD Challenge</h3><p class="quote">"The ultimate battle of 4-wheel drive sports cars!!"</p></div>
+        <span class="license-badge lic-B">B-LICENSE</span>
+        <span class="champ-total">29,500 max</span>
+        <span class="caret">▶</span>
+      </div>
+      <div class="event-body">
+        <div class="grid2">
+          <div>
+            <table class="races">
+              <tr><th>Track</th><th class="mono">Laps</th><th>Dir.</th></tr>
+              <tr><td>Trial Mountain</td><td class="mono">2</td><td>Reverse</td></tr>
+              <tr><td>Grand Valley Speedway</td><td class="mono">2</td><td>Normal</td></tr>
+              <tr><td>Special Stage Route 5</td><td class="mono">2</td><td>Reverse</td></tr>
+            </table>
+            <div class="restrict">4WD cars only.</div>
+          </div>
+          <div>
+            <ul class="prize-list">
+              <li><span>Pole position bonus</span><span>1,500</span></li>
+              <li><span>1st place (×3 races)</span><span>5,000</span></li>
+              <li><span>Championship win</span><span>10,000 + car</span></li>
+              <li class="total"><span>Max possible</span><span>29,500</span></li>
+            </ul>
+          </div>
+        </div>
+        <div class="best-car">
+          <span class="bc-label">BEST CAR</span>
+          <p>Mitsubishi Lancer Evolution IV GSR or GTO Twin-Turbo MR. The extra traction covers up a lot of driver error on Trial Mountain's rough surface — lean on it.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="event" data-id="lightweight">
+      <div class="event-head">
+        <div class="chk">✓</div>
+        <div class="titles"><h3>Lightweight Sports Battle Stage</h3><p class="quote">"Fierce battle with lightweight cars!!"</p></div>
+        <span class="license-badge lic-B">B-LICENSE</span>
+        <span class="champ-total">31,000 max</span>
+        <span class="caret">▶</span>
+      </div>
+      <div class="event-body">
+        <div class="grid2">
+          <div>
+            <table class="races">
+              <tr><th>Track</th><th class="mono">Laps</th><th>Dir.</th></tr>
+              <tr><td>Autumn Ring Mini</td><td class="mono">2</td><td>Reverse</td></tr>
+              <tr><td>Clubman Stage Route 5</td><td class="mono">2</td><td>Normal</td></tr>
+              <tr><td>Deep Forest Raceway</td><td class="mono">2</td><td>Reverse</td></tr>
+            </table>
+            <div class="restrict">Lightweight compacts only — Civic/CR-X, Mitsubishi FTO, Mazda Miata (the only lightweight FR car eligible), Mirage, Corolla, Starlet, Sprinter.</div>
+          </div>
+          <div>
+            <ul class="prize-list">
+              <li><span>Pole position bonus</span><span>2,000</span></li>
+              <li><span>1st place (×3 races)</span><span>5,000</span></li>
+              <li><span>Championship win</span><span>10,000 + car</span></li>
+              <li class="total"><span>Max possible</span><span>31,000</span></li>
+            </ul>
+          </div>
+        </div>
+        <div class="best-car">
+          <span class="bc-label">BEST CAR</span>
+          <p>Honda CR-X SiR, fully tuned. It's the lightest legal car with a genuinely tunable engine, and short technical tracks favor its low weight over raw power.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="event" data-id="usjapan">
+      <div class="event-head">
+        <div class="chk">✓</div>
+        <div class="titles"><h3>US vs. Japan</h3><p class="quote">"Japanese and American cars meet head on!"</p></div>
+        <span class="license-badge lic-A">A-LICENSE</span>
+        <span class="champ-total">85,000 max</span>
+        <span class="caret">▶</span>
+      </div>
+      <div class="event-body">
+        <div class="grid2">
+          <div>
+            <table class="races">
+              <tr><th>Track</th><th class="mono">Laps</th><th>Dir.</th></tr>
+              <tr><td>Trial Mountain</td><td class="mono">3</td><td>Reverse</td></tr>
+              <tr><td>Special Stage Route 5</td><td class="mono">3</td><td>Normal</td></tr>
+              <tr><td>High Speed Ring</td><td class="mono">3</td><td>Normal</td></tr>
+              <tr><td>Grand Valley – East</td><td class="mono">3</td><td>Reverse</td></tr>
+              <tr><td>Special Stage Route 11</td><td class="mono">3</td><td>Normal</td></tr>
+            </table>
+            <div class="restrict">Japanese and American manufacturers only. Opponents run Race-Modified cars.</div>
+          </div>
+          <div>
+            <ul class="prize-list">
+              <li><span>Pole position bonus</span><span>3,000</span></li>
+              <li><span>1st place (×5 races)</span><span>10,000</span></li>
+              <li><span>Championship win</span><span>20,000 + car</span></li>
+              <li class="total"><span>Max possible</span><span>85,000</span></li>
+            </ul>
+          </div>
+        </div>
+        <div class="best-car">
+          <span class="bc-label">BEST CAR</span>
+          <p>A Race-Modified Nissan Skyline GT-R — Japanese cars heavily outnumber the two American makes here, and the GT-R's balance handles all five tracks well. If you want to play the underdog, a Race-Modified Dodge Viper GTS brings big power to compensate for fewer chassis options.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="event" data-id="ukjapan">
+      <div class="event-head">
+        <div class="chk">✓</div>
+        <div class="titles"><h3>UK vs. Japan</h3><p class="quote">"The clash between Japanese sports cars and British sports cars!"</p></div>
+        <span class="license-badge lic-A">A-LICENSE</span>
+        <span class="champ-total">85,000 max</span>
+        <span class="caret">▶</span>
+      </div>
+      <div class="event-body">
+        <div class="grid2">
+          <div>
+            <table class="races">
+              <tr><th>Track</th><th class="mono">Laps</th><th>Dir.</th></tr>
+              <tr><td>Trial Mountain</td><td class="mono">3</td><td>Reverse</td></tr>
+              <tr><td>Special Stage Route 5</td><td class="mono">3</td><td>Normal</td></tr>
+              <tr><td>High Speed Ring</td><td class="mono">3</td><td>Normal</td></tr>
+              <tr><td>Grand Valley – East</td><td class="mono">3</td><td>Reverse</td></tr>
+              <tr><td>Special Stage Route 11</td><td class="mono">3</td><td>Normal</td></tr>
+            </table>
+            <div class="restrict">British and Japanese manufacturers only. Opponents run Race-Modified cars.</div>
+          </div>
+          <div>
+            <ul class="prize-list">
+              <li><span>Pole position bonus</span><span>3,000</span></li>
+              <li><span>1st place (×5 races)</span><span>10,000</span></li>
+              <li><span>Championship win</span><span>20,000 + car</span></li>
+              <li class="total"><span>Max possible</span><span>85,000</span></li>
+            </ul>
+          </div>
+        </div>
+        <div class="best-car">
+          <span class="bc-label">BEST CAR</span>
+          <p>A Race-Modified TVR Griffith 400 or Nissan Skyline GT-R. The Griffith is light and brutally powerful for its weight; either works, so pick whichever chassis you already have tuned.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="event" data-id="ukus">
+      <div class="event-head">
+        <div class="chk">✓</div>
+        <div class="titles"><h3>UK vs. US</h3><p class="quote">"British sports cars vs. American sports cars."</p></div>
+        <span class="license-badge lic-A">A-LICENSE</span>
+        <span class="champ-total">85,000 max</span>
+        <span class="caret">▶</span>
+      </div>
+      <div class="event-body">
+        <div class="grid2">
+          <div>
+            <table class="races">
+              <tr><th>Track</th><th class="mono">Laps</th><th>Dir.</th></tr>
+              <tr><td>Trial Mountain</td><td class="mono">3</td><td>Reverse</td></tr>
+              <tr><td>Special Stage Route 5</td><td class="mono">3</td><td>Normal</td></tr>
+              <tr><td>High Speed Ring</td><td class="mono">3</td><td>Normal</td></tr>
+              <tr><td>Grand Valley – East</td><td class="mono">3</td><td>Reverse</td></tr>
+              <tr><td>Special Stage Route 11</td><td class="mono">3</td><td>Normal</td></tr>
+            </table>
+            <div class="restrict">British and American manufacturers only — the smallest car pool of the three derbies. Opponents run Race-Modified cars.</div>
+          </div>
+          <div>
+            <ul class="prize-list">
+              <li><span>Pole position bonus</span><span>3,000</span></li>
+              <li><span>1st place (×5 races)</span><span>10,000</span></li>
+              <li><span>Championship win</span><span>20,000 + car</span></li>
+              <li class="total"><span>Max possible</span><span>85,000</span></li>
+            </ul>
+          </div>
+        </div>
+        <div class="best-car">
+          <span class="bc-label">BEST CAR</span>
+          <p>A Race-Modified Dodge Viper GTS. Raw power papers over the limited chassis choice on both sides of this matchup.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="event" data-id="megaspeed">
+      <div class="event-head">
+        <div class="chk">✓</div>
+        <div class="titles"><h3>Megaspeed Cup</h3><p class="quote">"Who will win the ultra-high-speed battle?"</p></div>
+        <span class="license-badge lic-A">A-LICENSE</span>
+        <span class="champ-total">90,000 max</span>
+        <span class="caret">▶</span>
+      </div>
+      <div class="event-body">
+        <div class="grid2">
+          <div>
+            <table class="races">
+              <tr><th>Track</th><th class="mono">Laps</th><th>Dir.</th></tr>
+              <tr><td>High Speed Ring</td><td class="mono">3</td><td>Normal</td></tr>
+              <tr><td>Test Course</td><td class="mono">3</td><td>—</td></tr>
+              <tr><td>High Speed Ring</td><td class="mono">3</td><td>Reverse</td></tr>
+            </table>
+            <div class="restrict none">No car type restrictions — but you need serious top-end power. This is the only event raced on Test Course against opponents.</div>
+          </div>
+          <div>
+            <ul class="prize-list">
+              <li><span>Pole position bonus</span><span>5,000</span></li>
+              <li><span>1st place (×3 races)</span><span>15,000</span></li>
+              <li><span>Championship win</span><span>30,000 + car</span></li>
+              <li class="total"><span>Max possible</span><span>90,000</span></li>
+            </ul>
+          </div>
+        </div>
+        <div class="best-car">
+          <span class="bc-label">BEST CAR</span>
+          <p>Mitsubishi GTO Twin-Turbo MR — fully staged, it pushes past 900hp and turns this into a straight-line demolition. High Speed Ring in reverse is the only race here that actually asks anything of the driver.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="event" data-id="normalcar">
+      <div class="event-head">
+        <div class="chk">✓</div>
+        <div class="titles"><h3>Normal Car World Speed Contest</h3><p class="quote">"The world's fastest commercially available car is...?"</p></div>
+        <span class="license-badge lic-A">A-LICENSE</span>
+        <span class="champ-total">400,000 max</span>
+        <span class="caret">▶</span>
+      </div>
+      <div class="event-body">
+        <div class="grid2">
+          <div>
+            <table class="races">
+              <tr><th>Track</th><th class="mono">Laps</th><th>Dir.</th></tr>
+              <tr><td>Autumn Ring Mini</td><td class="mono">5</td><td>Reverse</td></tr>
+              <tr><td>Grand Valley – East</td><td class="mono">5</td><td>Reverse</td></tr>
+              <tr><td>Clubman Stage Route 5</td><td class="mono">5</td><td>Reverse</td></tr>
+              <tr><td>Deep Forest Raceway</td><td class="mono">5</td><td>Reverse</td></tr>
+              <tr><td>Special Stage Route 11</td><td class="mono">5</td><td>Reverse</td></tr>
+            </table>
+            <div class="restrict">Bone-stock cars only — <b>no tuning of any kind.</b> Buying any upgrade, even a permanent one like weight reduction, disqualifies your car.</div>
+          </div>
+          <div>
+            <ul class="prize-list">
+              <li><span>Pole position bonus</span><span>10,000</span></li>
+              <li><span>1st place (×5 races)</span><span>50,000</span></li>
+              <li><span>Championship win</span><span>100,000 + car</span></li>
+              <li class="total"><span>Max possible</span><span>400,000</span></li>
+            </ul>
+          </div>
+        </div>
+        <div class="best-car">
+          <span class="bc-label">BEST CAR</span>
+          <p>A stock Dodge Viper GTS or RT/10 — huge stock power with zero tuning needed to be competitive. Since nothing can be modified, this event is a pure driving-skill check: five reverse-direction tracks in a row with no margin for a botched setup, because there is no setup.</p>
+        </div>
+        <div class="note">Widely considered the toughest championship in the game — arguably the biggest single payday too, at up to 400,000 Cr.</div>
+      </div>
+    </div>
+
+    <div class="event" data-id="tunedcar">
+      <div class="event-head">
+        <div class="chk">✓</div>
+        <div class="titles"><h3>Tuned Car (Hard-Tuned) Speed Contest</h3><p class="quote">"This is where hard-tuned cars battle it out. Which car will claim the world number one spot?"</p></div>
+        <span class="license-badge lic-IA">INTL A-LICENSE</span>
+        <span class="champ-total">400,000 max</span>
+        <span class="caret">▶</span>
+      </div>
+      <div class="event-body">
+        <div class="grid2">
+          <div>
+            <table class="races">
+              <tr><th>Track</th><th class="mono">Laps</th><th>Dir.</th></tr>
+              <tr><td>High Speed Ring</td><td class="mono">5</td><td>Reverse</td></tr>
+              <tr><td>Grand Valley Speedway</td><td class="mono">5</td><td>Reverse</td></tr>
+              <tr><td>Clubman Stage Route 5</td><td class="mono">5</td><td>Reverse</td></tr>
+              <tr><td>Autumn Ring (full)</td><td class="mono">5</td><td>Reverse</td></tr>
+              <tr><td>Special Stage Route 11</td><td class="mono">5</td><td>Reverse</td></tr>
+            </table>
+            <div class="restrict">Production cars only — no Race Modification, and no Special Models. Tune freely otherwise.</div>
+          </div>
+          <div>
+            <ul class="prize-list">
+              <li><span>Pole position bonus</span><span>10,000</span></li>
+              <li><span>1st place (×5 races)</span><span>50,000</span></li>
+              <li><span>Championship win</span><span>100,000 + car</span></li>
+              <li class="total"><span>Max possible</span><span>400,000</span></li>
+            </ul>
+          </div>
+        </div>
+        <div class="best-car">
+          <span class="bc-label">BEST CAR</span>
+          <p>A fully-staged (but not Race-Modified) Nissan Skyline GT-R or Toyota Supra RZ — max every engine stage, weight reduction, and suspension part the "hard tune" allows. All five tracks run in reverse, so make sure you've actually practiced them backwards, not just from memory of the forward layout.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="event" data-id="gv300">
+      <div class="event-head">
+        <div class="chk">✓</div>
+        <div class="titles"><h3>Grand Valley 300 km</h3><p class="quote">"Race through Grand Valley Speedway, a course with the best view in Gran Turismo racing."</p></div>
+        <span class="license-badge lic-IA">INTL A-LICENSE</span>
+        <span class="champ-total">endurance</span>
+        <span class="caret">▶</span>
+      </div>
+      <div class="event-body">
+        <div class="grid2">
+          <div>
+            <table class="races">
+              <tr><th>Track</th><th class="mono">Laps</th><th>Length</th></tr>
+              <tr><td>Grand Valley Speedway</td><td class="mono">60</td><td>~2 hrs</td></tr>
+            </table>
+            <div class="restrict none">No car type restrictions. Pit strategy is mandatory — soft racing tires alone won't survive the full distance.</div>
+          </div>
+          <div>
+            <ul class="prize-list">
+              <li><span>Pole position bonus</span><span>20,000</span></li>
+              <li><span>Race win</span><span>large — set aside real time</span></li>
+            </ul>
+          </div>
+        </div>
+        <div class="best-car">
+          <span class="bc-label">BEST CAR</span>
+          <p>A Race-Modified GT-class car with hard or medium racing tires and a fuel-conscious setup — a tuned Toyota Supra RM or a genuine Group C car like the TWR Jaguar XJ220 handles the full 60 laps well. Set a fuel map and tire choice that gets you through a stint without a splash-and-dash every 5 laps.</p>
+        </div>
+        <div class="note">First of three endurance races. Block out close to two hours of real time before you start — there's no good place to pause mid-stint.</div>
+      </div>
+    </div>
+
+    <div class="event" data-id="ssr11-1">
+      <div class="event-head">
+        <div class="chk">✓</div>
+        <div class="titles"><h3>SS Route 11 All-Night Endurance I</h3><p class="quote">"A midsummer night festival held on SS Route 11, a specially built urban circuit."</p></div>
+        <span class="license-badge lic-IA">INTL A-LICENSE</span>
+        <span class="champ-total">endurance</span>
+        <span class="caret">▶</span>
+      </div>
+      <div class="event-body">
+        <div class="grid2">
+          <div>
+            <table class="races">
+              <tr><th>Track</th><th class="mono">Laps</th><th>Length</th></tr>
+              <tr><td>Special Stage Route 11</td><td class="mono">30</td><td>~1 hr</td></tr>
+            </table>
+            <div class="restrict none">No car type restrictions.</div>
+          </div>
+          <div>
+            <ul class="prize-list">
+              <li><span>Pole position bonus</span><span>20,000</span></li>
+              <li><span>Race win</span><span>large</span></li>
+            </ul>
+          </div>
+        </div>
+        <div class="best-car">
+          <span class="bc-label">BEST CAR</span>
+          <p>Same philosophy as Grand Valley 300km — a Race-Modified GT car tuned for consistency over one-lap pace. Watch the slow chicane under the start/finish overpass; missing your braking point there wrecks an otherwise clean lap.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="event" data-id="ssr11-2">
+      <div class="event-head">
+        <div class="chk">✓</div>
+        <div class="titles"><h3>SS Route 11 All-Night Endurance II</h3><p class="quote">"A midsummer night festival held on SS Route 11, a specially built urban circuit."</p></div>
+        <span class="license-badge lic-IA">INTL A-LICENSE</span>
+        <span class="champ-total">endurance</span>
+        <span class="caret">▶</span>
+      </div>
+      <div class="event-body">
+        <div class="grid2">
+          <div>
+            <table class="races">
+              <tr><th>Track</th><th class="mono">Laps</th><th>Length</th></tr>
+              <tr><td>Special Stage Route 11</td><td class="mono">30</td><td>Reverse, ~1 hr</td></tr>
+            </table>
+            <div class="restrict">No Race-Modified cars. Otherwise tune freely.</div>
+          </div>
+          <div>
+            <ul class="prize-list">
+              <li><span>Pole position bonus</span><span>20,000</span></li>
+              <li><span>Race win</span><span>large</span></li>
+            </ul>
+          </div>
+        </div>
+        <div class="best-car">
+          <span class="bc-label">BEST CAR</span>
+          <p>A fully-staged (non-RM) Skyline GT-R or Supra — the RM ban means production-car tuning skill matters more than which special model you own. Reverse direction moves the technical sections earlier in the lap, so don't rely on muscle memory from the forward race.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="note">After clearing every GT League and Special Event above, two unmarked bonus races unlock with no prize money on the line — just the fastest racing the game has to offer, one car at a time. Consider them the epilogue.</div>
+  </section>
+
+  <!-- ============ LICENSES ============ -->
+  <section class="league" id="licenses">
+    <div class="league-title">Licenses</div>
+    <div class="league-sub">Three tiers, each with 8 pass/fail driving tests. Clear all 8 to unlock the license; get gold on all 8 in the same license to also win a prize car. Each attempt burns one in-game day.</div>
+
+    <table class="lic-table">
+      <tr><th>License</th><th>Unlocks</th><th>All-gold prize car</th></tr>
+      <tr><td>B-License</td><td>Sunday Cup, FF/FR/4WD/Lightweight Special Events</td><td>Dodge Concept Car (can't be sold — no listed price)</td></tr>
+      <tr><td>A-License</td><td>Clubman Cup, GT Cup, manufacturer derbies, Megaspeed, Normal Car Contest</td><td>TRD 3000GT</td></tr>
+      <tr><td>International A-License</td><td>GT World Cup, Tuned Car Contest, all three endurance races</td><td>Nismo 400R</td></tr>
+    </table>
+
+    <div class="note">B-License gold times run from roughly 23.6s to 1:19.5 depending on the test — test B-8 (the Trial Mountain tunnel section on a Skyline GT-R) is the one most players fail first. Budget several attempts for it; there's no penalty beyond time spent.</div>
+  </section>
+
+</main>
+
+<footer>
+  Compiled for career-mode completionists. Figures reflect the original PS1 release (NTSC-U/PAL); exact numbers can vary slightly by region.
+  <br>
+  <button class="reset-btn" id="resetBtn">Reset all progress</button>
+</footer>
+
+<script>
+(function(){
+  const STORAGE_KEY = 'gt1_cheatsheet_progress_v1';
+
+  function loadProgress(){
+    try{ return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; }
+    catch(e){ return {}; }
+  }
+  function saveProgress(p){
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(p));
+  }
+
+  const events = document.querySelectorAll('.event');
+  let progress = loadProgress();
+
+  function parseChampBonus(el){
+    const raw = el.querySelector('.champ-total').textContent.trim();
+    const num = raw.replace(/[^0-9]/g,'');
+    return num ? parseInt(num,10) : 0;
+  }
+
+  function updateTotal(){
+    let total = 0;
+    events.forEach(ev=>{
+      const id = ev.dataset.id;
+      if(progress[id]){ total += parseChampBonus(ev); }
+    });
+    document.getElementById('creditsTotal').textContent = total.toLocaleString();
+  }
+
+  events.forEach(ev=>{
+    const id = ev.dataset.id;
+    const head = ev.querySelector('.event-head');
+    const chk = ev.querySelector('.chk');
+
+    if(progress[id]){ ev.classList.add('done'); }
+
+    head.addEventListener('click', (e)=>{
+      if(e.target === chk){
+        progress[id] = !progress[id];
+        ev.classList.toggle('done', !!progress[id]);
+        saveProgress(progress);
+        updateTotal();
+        e.stopPropagation();
+        return;
+      }
+      ev.classList.toggle('open');
+    });
+  });
+
+  updateTotal();
+
+  document.getElementById('resetBtn').addEventListener('click', ()=>{
+    if(confirm('Clear all checked-off events and reset the credits total?')){
+      progress = {};
+      saveProgress(progress);
+      events.forEach(ev=>ev.classList.remove('done'));
+      updateTotal();
+    }
+  });
+
+  // tab switching
+  const tabs = document.querySelectorAll('nav.tabs button');
+  const leagues = document.querySelectorAll('section.league');
+  tabs.forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      tabs.forEach(b=>b.classList.remove('active'));
+      leagues.forEach(l=>l.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById(btn.dataset.target).classList.add('active');
+    });
+  });
+})();
+</script>
+
+</body>
+</html>
