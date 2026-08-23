@@ -5,7 +5,12 @@
       "id": "example1",
       "title": "Take out the trash",
       "category": "chore",
-      "recurrence": { "type": "weekly", "daysOfWeek": [2] },
+      "recurrence": {
+        "type": "weekly",
+        "daysOfWeek": [
+          2
+        ]
+      },
       "time": "20:00",
       "duration": 15,
       "notes": "Bins go out Tuesday night",
@@ -17,7 +22,27 @@
       "id": "example2",
       "title": "Pay rent",
       "category": "finance",
-      "recurrence": { "type": "monthly", "dayOfMonth": 1 },
+      "recurrence": {
+        "type": "monthly",
+        "dayOfMonth": 1
+      },
+      "time": null,
+      "duration": 30,
+      "notes": "",
+      "startDate": null,
+      "endDate": null,
+      "active": true
+    },
+    {
+      "id": "2a3d1e30",
+      "title": "Actual update",
+      "category": "finance",
+      "recurrence": {
+        "type": "weekly",
+        "daysOfWeek": [
+          5
+        ]
+      },
       "time": null,
       "duration": 30,
       "notes": "",
