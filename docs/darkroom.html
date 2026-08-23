@@ -445,6 +445,7 @@
         <button class="mode-tab" id="modeThermalBtn" data-mode="thermal">Thermal</button>
         <button class="mode-tab" id="modeSketchBtn" data-mode="sketch">Sketch</button>
         <button class="mode-tab" id="modeSortBtn" data-mode="pixelsort">Pixel Sort</button>
+        <button class="mode-tab" id="modePopartBtn" data-mode="popart">Pop Art</button>
       </div>
 
       <div id="filmControls">
@@ -697,6 +698,52 @@
         <p class="note">Renders on release — sorting is pixel-by-pixel and can take a beat on bigger images.</p>
       </div>
 
+      <div id="popartControls" class="hidden">
+        <h2>Warhol Grid</h2>
+
+        <div class="control">
+          <label>Grid</label>
+          <select id="popartGrid">
+            <option value="2">2 × 2</option>
+            <option value="3">3 × 3</option>
+          </select>
+        </div>
+
+        <div class="control">
+          <label>Palette Set</label>
+          <select id="popartPalette">
+            <option value="warhol">Pop Warhol</option>
+            <option value="tropical">Tropical Punch</option>
+            <option value="acid">Acid Wash</option>
+            <option value="ink">Ink Duotone</option>
+          </select>
+        </div>
+
+        <div class="control">
+          <label>Posterize <span class="val" id="popartLevelsVal">4</span></label>
+          <input type="range" id="popartLevels" min="2" max="8" value="4">
+        </div>
+
+        <div class="control">
+          <label>Contrast <span class="val" id="popartContrastVal">30%</span></label>
+          <input type="range" id="popartContrastAmt" min="0" max="100" value="30">
+        </div>
+
+        <div class="control">
+          <label>Divider Width <span class="val" id="popartBorderVal">1%</span></label>
+          <input type="range" id="popartBorderAmt" min="0" max="6" value="1">
+        </div>
+
+        <div class="control">
+          <label>Divider Color</label>
+          <select id="popartBorderColor">
+            <option value="white">White</option>
+            <option value="black">Black</option>
+          </select>
+        </div>
+        <p class="note">Same frame repeated in a grid, each panel posterized with its own color pass — the Warhol screenprint look.</p>
+      </div>
+
       <button class="download-btn" id="downloadBtn" disabled>Export photo</button>
       <div class="status" id="exportStatus"></div>
     </div>
@@ -884,9 +931,21 @@ const sortInvert = document.getElementById('sortInvert');
 const sortThreshVal = document.getElementById('sortThreshVal');
 const sortDensityVal = document.getElementById('sortDensityVal');
 
+const modePopartBtn = document.getElementById('modePopartBtn');
+const popartControls = document.getElementById('popartControls');
+const popartGrid = document.getElementById('popartGrid');
+const popartPalette = document.getElementById('popartPalette');
+const popartLevels = document.getElementById('popartLevels');
+const popartLevelsVal = document.getElementById('popartLevelsVal');
+const popartContrastAmt = document.getElementById('popartContrastAmt');
+const popartContrastVal = document.getElementById('popartContrastVal');
+const popartBorderAmt = document.getElementById('popartBorderAmt');
+const popartBorderVal = document.getElementById('popartBorderVal');
+const popartBorderColor = document.getElementById('popartBorderColor');
+
 const MODE_LABELS = {
   film: null, oil: 'Oil Paint', ascii: 'ASCII', vhs: 'VHS', snapshot: 'Snapshot',
-  neon: 'Neon', thermal: 'Thermal', sketch: 'Sketch', pixelsort: 'Pixel Sort'
+  neon: 'Neon', thermal: 'Thermal', sketch: 'Sketch', pixelsort: 'Pixel Sort', popart: 'Pop Art'
 };
 let mode = 'film';
 
@@ -909,6 +968,7 @@ function setMode(next){
   modeThermalBtn.classList.toggle('active', mode === 'thermal');
   modeSketchBtn.classList.toggle('active', mode === 'sketch');
   modeSortBtn.classList.toggle('active', mode === 'pixelsort');
+  modePopartBtn.classList.toggle('active', mode === 'popart');
   filmControls.classList.toggle('hidden', mode !== 'film');
   oilControls.classList.toggle('hidden', mode !== 'oil');
   asciiControls.classList.toggle('hidden', mode !== 'ascii');
@@ -918,6 +978,7 @@ function setMode(next){
   thermalControls.classList.toggle('hidden', mode !== 'thermal');
   sketchControls.classList.toggle('hidden', mode !== 'sketch');
   sortControls.classList.toggle('hidden', mode !== 'pixelsort');
+  popartControls.classList.toggle('hidden', mode !== 'popart');
   afterLabel.textContent = currentLabel();
   stockTag.textContent = currentLabel();
   if (sourceImage){
@@ -934,6 +995,7 @@ modeNeonBtn.addEventListener('click', () => setMode('neon'));
 modeThermalBtn.addEventListener('click', () => setMode('thermal'));
 modeSketchBtn.addEventListener('click', () => setMode('sketch'));
 modeSortBtn.addEventListener('click', () => setMode('pixelsort'));
+modePopartBtn.addEventListener('click', () => setMode('popart'));
 
 for (const s of document.querySelectorAll('.sprockets')){
   for (let i = 0; i < 14; i++){
@@ -946,10 +1008,12 @@ let sourceImage = null;   // HTMLImageElement
 let sourceCanvas = null;  // downscaled canvas holding original pixels, sized per mode
 const FILM_PREVIEW_MAX = 1400; // longest edge for live film preview
 const OIL_PREVIEW_MAX = 620;   // oil paint is O(w*h*radius^2) — keep this small for responsiveness
+const POPART_PREVIEW_MAX = 480; // per-panel cap — the grid multiplies this by 2x2 or 3x3
 const EXPORT_MAX = 4000;       // cap export size to keep things responsive
 
 function currentPreviewMax(){
   if (mode === 'oil' || mode === 'pixelsort') return OIL_PREVIEW_MAX; // both are heavier per-pixel passes
+  if (mode === 'popart') return POPART_PREVIEW_MAX; // output canvas is a multiple of this
   return FILM_PREVIEW_MAX;
 }
 
@@ -1483,6 +1547,81 @@ function applyThermalMap(imgData, stops, contrastPct){
   }
   return imgData;
 }
+// ---------- Pop Art grid (Warhol-style repeated panels) ----------
+// Each palette set has one gradient per grid cell, cycled if the grid has more
+// cells than colors. Gradients reuse the [pos, [r,g,b]] stop format + samplePaletteStops
+// already used for thermal vision.
+const POPART_PALETTES = {
+  warhol: [
+    [[0,[20,8,40]],  [0.5,[230,0,110]],  [1,[255,225,40]]],
+    [[0,[0,35,45]],  [0.5,[0,175,160]],  [1,[255,235,60]]],
+    [[0,[35,0,55]],  [0.5,[150,40,220]], [1,[255,140,45]]],
+    [[0,[8,10,55]],  [0.5,[60,80,230]],  [1,[255,55,140]]]
+  ],
+  tropical: [
+    [[0,[10,35,30]], [0.5,[0,170,120]],  [1,[255,240,80]]],
+    [[0,[45,5,10]],  [0.5,[235,60,30]],  [1,[255,210,60]]],
+    [[0,[5,15,45]],  [0.5,[30,150,200]], [1,[220,255,240]]],
+    [[0,[40,0,35]],  [0.5,[230,20,120]], [1,[255,180,60]]]
+  ],
+  acid: [
+    [[0,[5,25,5]],   [0.5,[70,220,40]],  [1,[240,255,80]]],
+    [[0,[30,0,40]],  [0.5,[210,0,200]],  [1,[255,240,50]]],
+    [[0,[0,20,35]],  [0.5,[0,200,210]],  [1,[255,255,0]]],
+    [[0,[35,10,0]],  [0.5,[255,90,0]],   [1,[255,255,150]]]
+  ],
+  ink: [
+    [[0,[10,10,10]], [1,[235,25,60]]],
+    [[0,[10,10,10]], [1,[240,150,20]]],
+    [[0,[10,10,10]], [1,[20,140,235]]],
+    [[0,[10,10,10]], [1,[235,230,220]]]
+  ]
+};
+
+function applyPosterTone(imgData, stops, levels, contrastPct){
+  const d = imgData.data;
+  const contrastAmt = (contrastPct / 100) * 1.2;
+  const bands = Math.max(2, levels);
+  for (let i = 0; i < d.length; i += 4){
+    let lum = (0.299*d[i] + 0.587*d[i+1] + 0.114*d[i+2]) / 255;
+    lum = Math.max(0, Math.min(1, 0.5 + (lum - 0.5) * (1 + contrastAmt)));
+    lum = Math.round(lum * (bands - 1)) / (bands - 1); // posterize into flat screenprint bands
+    const [r, g, b] = samplePaletteStops(stops, lum);
+    d[i] = r; d[i+1] = g; d[i+2] = b;
+  }
+  return imgData;
+}
+
+function renderPopArt(srcCanvas, cols, paletteKey, levels, contrastPct, borderPx, borderColor){
+  const w = srcCanvas.width, h = srcCanvas.height;
+  const set = POPART_PALETTES[paletteKey];
+  const cellCanvas = document.createElement('canvas');
+  cellCanvas.width = w; cellCanvas.height = h;
+  const cellCtx = cellCanvas.getContext('2d');
+
+  const out = document.createElement('canvas');
+  out.width = cols * w + borderPx * (cols + 1);
+  out.height = cols * h + borderPx * (cols + 1);
+  const octx = out.getContext('2d');
+  octx.fillStyle = borderColor;
+  octx.fillRect(0, 0, out.width, out.height);
+
+  let idx = 0;
+  for (let ry = 0; ry < cols; ry++){
+    for (let rx = 0; rx < cols; rx++){
+      cellCtx.drawImage(srcCanvas, 0, 0);
+      const imgData = cellCtx.getImageData(0, 0, w, h);
+      applyPosterTone(imgData, set[idx % set.length], levels, contrastPct);
+      cellCtx.putImageData(imgData, 0, 0);
+      const x = borderPx + rx * (w + borderPx);
+      const y = borderPx + ry * (h + borderPx);
+      octx.drawImage(cellCanvas, x, y);
+      idx++;
+    }
+  }
+  return out;
+}
+
 function pixelateCanvas(ctx, w, h, blockPx){
   if (blockPx <= 1) return;
   const smallW = Math.max(1, Math.round(w / blockPx));
@@ -1635,6 +1774,7 @@ function renderPreview(){
     mode === 'ascii' ? 'compiling…' :
     mode === 'sketch' ? 'sketching…' :
     mode === 'pixelsort' ? 'sorting…' :
+    mode === 'popart' ? 'screen printing…' :
     'processing…';
   processStatus.classList.add('busy');
 
@@ -1643,6 +1783,15 @@ function renderPreview(){
       const outCanvas = renderAscii(sourceCanvas, parseInt(asciiRes.value), asciiCharset.value, asciiStyle.value);
       // Before/after canvases must share exact pixel dimensions to stay aligned
       // under the comparison slider, so resize both and stretch-fit the original.
+      afterCanvas.width = outCanvas.width; afterCanvas.height = outCanvas.height;
+      beforeCanvas.width = outCanvas.width; beforeCanvas.height = outCanvas.height;
+      afterCanvas.getContext('2d').drawImage(outCanvas, 0, 0);
+      beforeCanvas.getContext('2d').drawImage(sourceImage, 0, 0, outCanvas.width, outCanvas.height);
+    } else if (mode === 'popart'){
+      const cols = parseInt(popartGrid.value);
+      const borderPx = Math.round((parseInt(popartBorderAmt.value) / 100) * sourceCanvas.width);
+      const outCanvas = renderPopArt(sourceCanvas, cols, popartPalette.value, parseInt(popartLevels.value), parseInt(popartContrastAmt.value), borderPx, popartBorderColor.value);
+      // Same before/after dimension-matching approach as ASCII mode above.
       afterCanvas.width = outCanvas.width; afterCanvas.height = outCanvas.height;
       beforeCanvas.width = outCanvas.width; beforeCanvas.height = outCanvas.height;
       afterCanvas.getContext('2d').drawImage(outCanvas, 0, 0);
@@ -1776,6 +1925,13 @@ wireOilSlider(sortDensityAmt, sortDensityVal, '%');
 sortDirection.addEventListener('change', renderPreview);
 sortInvert.addEventListener('change', renderPreview);
 
+wireSlider(popartLevels, popartLevelsVal, '');
+wireSlider(popartContrastAmt, popartContrastVal);
+wireSlider(popartBorderAmt, popartBorderVal);
+popartGrid.addEventListener('change', renderPreview);
+popartPalette.addEventListener('change', renderPreview);
+popartBorderColor.addEventListener('change', renderPreview);
+
 // ---------- Before/after slider ----------
 let dragging = false;
 function setSplit(clientX){
@@ -1804,7 +1960,7 @@ downloadBtn.addEventListener('click', () => {
   requestAnimationFrame(() => {
     let w = sourceImage.naturalWidth, h = sourceImage.naturalHeight;
     // Oil paint and pixel-sort both scale poorly with resolution; cap them lower than the others.
-    const exportMax = (mode === 'oil' || mode === 'pixelsort') ? 2200 : EXPORT_MAX;
+    const exportMax = (mode === 'oil' || mode === 'pixelsort') ? 2200 : (mode === 'popart' ? 1600 : EXPORT_MAX);
     const scale = Math.min(1, exportMax / Math.max(w, h));
     w = Math.round(w * scale); h = Math.round(h * scale);
 
@@ -1876,6 +2032,11 @@ downloadBtn.addEventListener('click', () => {
       applyPixelSort(imgData, w, h, parseInt(sortThreshAmt.value), parseInt(sortDensityAmt.value), sortDirection.value, sortInvert.checked);
       fctx.putImageData(imgData, 0, 0);
       filename = 'pixel-sort.jpg';
+    } else if (mode === 'popart'){
+      const cols = parseInt(popartGrid.value);
+      const borderPx = Math.round((parseInt(popartBorderAmt.value) / 100) * w);
+      finalCanvas = renderPopArt(full, cols, popartPalette.value, parseInt(popartLevels.value), parseInt(popartContrastAmt.value), borderPx, popartBorderColor.value);
+      filename = 'pop-art.jpg';
     }
 
     finalCanvas.toBlob(blob => {
