@@ -3,288 +3,565 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>The Workbench</title>
+<title>My Web Apps</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg: #EDE6D6;
-    --hole: #C9BFA8;
-    --ink: #23201B;
-    --games: #FF5A36;
-    --craft: #2BB3A3;
-    --media: #7C5CFF;
-    --utility: #E8A400;
-    --card: #FFFDF8;
+    --games: #ff3b3b;
+    --craft: #22c55e;
+    --media: #a855f7;
+    --utility: #f5b300;
+    --face: #c0c0c0;
+    --face-dark: #808080;
+    --face-darker: #404040;
+    --face-light: #ffffff;
+    --titlebar: linear-gradient(90deg, #000080, #1084d0);
   }
 
   * { box-sizing: border-box; }
 
-  body {
+  html, body {
+    height: 100%;
     margin: 0;
-    background-color: var(--bg);
-    background-image: radial-gradient(var(--hole) 2.5px, transparent 2.5px);
-    background-size: 28px 28px;
-    color: var(--ink);
-    font-family: 'Inter', sans-serif;
+  }
+
+  body {
+    font-family: Tahoma, Geneva, sans-serif;
+    background-color: #008080;
+    background-image:
+      repeating-linear-gradient(45deg, rgba(255,255,255,0.03) 0 2px, transparent 2px 24px);
     min-height: 100vh;
-    padding: 48px 20px 80px;
+    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
   }
 
-  header {
-    max-width: 900px;
-    margin: 0 auto 56px;
-    text-align: center;
+  /* ---------- Desktop icons ---------- */
+  .desktop-icons {
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+    width: 90px;
   }
 
-  .eyebrow {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 13px;
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-    color: var(--ink);
-    opacity: 0.55;
-    margin-bottom: 10px;
+  .desktop-icon {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    cursor: default;
   }
 
-  h1 {
-    font-family: 'Space Grotesk', sans-serif;
-    font-weight: 700;
-    font-size: clamp(2.4rem, 6vw, 4rem);
-    margin: 0 0 12px;
-    line-height: 1;
+  .desktop-icon .glyph {
+    width: 38px;
+    height: 32px;
+    background: var(--face);
+    border: 2px outset var(--face-light);
+    position: relative;
   }
 
-  header p {
+  .desktop-icon .glyph.bin::before {
+    content: '';
+    position: absolute;
+    inset: 6px 8px 3px;
+    background: repeating-linear-gradient(90deg, var(--face-darker) 0 2px, var(--face) 2px 5px);
+  }
+
+  .desktop-icon .glyph.pc {
+    background: #005a9e;
+    border-color: #7fc7ff #003a6b #003a6b #7fc7ff;
+  }
+  .desktop-icon .glyph.pc::before {
+    content:'';
+    position:absolute;
+    inset: 5px;
+    background: #001830;
+  }
+
+  .desktop-icon span {
+    font-family: 'VT323', monospace;
     font-size: 15px;
-    opacity: 0.65;
-    max-width: 480px;
-    margin: 0 auto;
+    color: #fff;
+    text-shadow: 1px 1px 1px rgba(0,0,0,0.8);
   }
 
+  /* ---------- Main window ---------- */
   main {
-    max-width: 1000px;
-    margin: 0 auto;
+    flex: 1;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 30px 16px 90px;
   }
 
-  .section {
-    margin-bottom: 46px;
+  .window {
+    width: 100%;
+    max-width: 760px;
+    background: var(--face);
+    border: 2px solid var(--face-light);
+    border-right-color: var(--face-darker);
+    border-bottom-color: var(--face-darker);
+    box-shadow: 3px 3px 0 rgba(0,0,0,0.4);
   }
 
-  .section-label {
+  .titlebar {
+    background: var(--titlebar);
+    color: #fff;
     display: flex;
     align-items: center;
-    gap: 12px;
-    font-family: 'Space Grotesk', sans-serif;
-    font-weight: 700;
+    justify-content: space-between;
+    padding: 4px 5px 4px 8px;
+    font-weight: bold;
     font-size: 14px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    margin-bottom: 18px;
   }
 
-  .section-label .dot {
-    width: 12px;
+  .titlebar .title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .titlebar .title::before {
+    content: '';
+    width: 14px;
     height: 12px;
-    border-radius: 50%;
+    background: #f5b300;
+    display: inline-block;
+    border: 1px solid #000;
+  }
+
+  .titlebar .btns { display: flex; gap: 3px; }
+  .titlebar .btns span {
+    width: 18px;
+    height: 16px;
+    background: var(--face);
+    border: 1px outset var(--face-light);
+    color: #000;
+    font-size: 11px;
+    line-height: 14px;
+    text-align: center;
+    font-family: monospace;
+  }
+
+  .menubar {
+    display: flex;
+    gap: 16px;
+    padding: 3px 10px;
+    font-size: 13px;
+    border-bottom: 1px solid var(--face-dark);
+  }
+  .menubar span:hover { background: #000080; color: #fff; }
+
+  .addressbar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 8px;
+    font-size: 12px;
+    border-bottom: 1px solid var(--face-dark);
+  }
+  .addressbar label { opacity: 0.8; }
+  .addressbar .path {
+    flex: 1;
+    background: #fff;
+    border: 1px inset var(--face-dark);
+    padding: 3px 6px;
+    font-family: 'VT323', monospace;
+    font-size: 15px;
+  }
+
+  .content {
+    background: #fff;
+    border: 1px inset var(--face-dark);
+    margin: 8px;
+    padding: 14px;
+    max-height: 62vh;
+    overflow-y: auto;
+  }
+
+  .group {
+    margin-bottom: 20px;
+  }
+
+  .group-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: bold;
+    color: #000080;
+    padding: 3px 4px;
+    background: #dcdcf5;
+    margin-bottom: 10px;
+    border-bottom: 1px solid #b0b0d8;
+  }
+
+  .group-header .swatch {
+    width: 10px;
+    height: 10px;
+    border: 1px solid #000;
+  }
+
+  .icon-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+    gap: 4px;
+  }
+
+  .icon-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    text-decoration: none;
+    padding: 8px 4px;
+    border: 1px dotted transparent;
+  }
+
+  .icon-item:hover {
+    border-color: #808080;
+    background: #eef;
+  }
+
+  .icon-item:active .label {
+    background: #000080;
+    color: #fff;
+  }
+
+  .floppy {
+    width: 40px;
+    height: 40px;
+    background: #2b2b2b;
+    clip-path: polygon(18% 0, 100% 0, 100% 100%, 0 100%, 0 18%);
+    position: relative;
+    margin-bottom: 6px;
     flex-shrink: 0;
   }
-
-  .section-label .line {
-    flex: 1;
-    height: 2px;
-    background: currentColor;
-    opacity: 0.15;
-  }
-
-  .grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 18px;
-  }
-
-  .tag {
-    position: relative;
-    background: var(--card);
-    border-radius: 10px;
-    padding: 26px 18px 18px;
-    text-decoration: none;
-    color: var(--ink);
-    display: block;
-    box-shadow: 0 3px 0 rgba(35,32,27,0.08), 0 8px 18px rgba(35,32,27,0.06);
-    transform: rotate(var(--tilt, 0deg));
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-    border-top: 4px solid var(--accent, var(--ink));
-  }
-
-  .tag:nth-child(2n) { --tilt: 1.1deg; }
-  .tag:nth-child(3n) { --tilt: -1.3deg; }
-  .tag:nth-child(5n) { --tilt: 0.6deg; }
-
-  .tag:hover {
-    transform: rotate(0deg) translateY(-4px);
-    box-shadow: 0 6px 0 rgba(35,32,27,0.1), 0 14px 26px rgba(35,32,27,0.12);
-  }
-
-  .peg {
+  .floppy::before {
+    content: '';
     position: absolute;
-    top: -7px;
-    left: 18px;
-    width: 14px;
-    height: 14px;
-    border-radius: 50%;
-    background: var(--bg);
-    border: 3px solid var(--hole);
+    top: 4px; left: 7px; right: 7px; height: 11px;
+    background: #c8c8c8;
+  }
+  .floppy::after {
+    content: '';
+    position: absolute;
+    top: 6px; left: 24px; width: 7px; height: 7px;
+    background: #2b2b2b;
+  }
+  .floppy .tab {
+    position: absolute;
+    left: 5px; right: 5px; bottom: 5px; height: 15px;
+    border: 1px solid rgba(0,0,0,0.4);
   }
 
-  .tag h3 {
-    font-family: 'Space Grotesk', sans-serif;
-    font-size: 17px;
-    margin: 0 0 6px;
-  }
-
-  .tag p {
+  .icon-item span.filename {
+    font-family: 'VT323', monospace;
     font-size: 13px;
-    opacity: 0.7;
-    margin: 0 0 14px;
-    line-height: 1.4;
+    color: #808080;
+    line-height: 1;
+    margin-bottom: 2px;
   }
 
-  .tag .file {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px;
-    opacity: 0.5;
+  .icon-item span.label {
+    font-family: 'VT323', monospace;
+    font-size: 16px;
+    color: #000;
+    line-height: 1.15;
+    padding: 1px 3px;
   }
 
-  .games .section-label, .games .dot { color: var(--games); background: var(--games); }
-  .craft .section-label, .craft .dot { color: var(--craft); background: var(--craft); }
-  .media .section-label, .media .dot { color: var(--media); background: var(--media); }
-  .utility .section-label, .utility .dot { color: var(--utility); background: var(--utility); }
-
-  .games .tag { --accent: var(--games); }
-  .craft .tag { --accent: var(--craft); }
-  .media .tag { --accent: var(--media); }
-  .utility .tag { --accent: var(--utility); }
-
-  footer {
-    max-width: 900px;
-    margin: 60px auto 0;
-    text-align: center;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 12px;
-    opacity: 0.45;
+  /* ---------- Taskbar ---------- */
+  .taskbar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 40px;
+    background: var(--face);
+    border-top: 2px solid var(--face-light);
+    display: flex;
+    align-items: center;
+    padding: 3px 6px;
+    gap: 6px;
+    z-index: 20;
   }
 
-  @media (prefers-reduced-motion: reduce) {
-    .tag { transition: none; }
+  #startBtn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 30px;
+    padding: 0 10px;
+    background: var(--face);
+    border: 2px outset var(--face-light);
+    font-weight: bold;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  #startBtn.active {
+    border: 2px inset var(--face-light);
+  }
+  #startBtn .logo {
+    width: 16px;
+    height: 16px;
+    background: conic-gradient(var(--games) 0 90deg, var(--craft) 90deg 180deg, var(--media) 180deg 270deg, var(--utility) 270deg 360deg);
+    border: 1px solid #000;
+  }
+
+  .taskbar .open-app {
+    height: 30px;
+    padding: 0 12px;
+    background: var(--face);
+    border: 2px inset var(--face-light);
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .taskbar .spacer { flex: 1; }
+
+  .clock {
+    background: var(--face);
+    border: 1px inset var(--face-dark);
+    padding: 5px 10px;
+    font-family: 'VT323', monospace;
+    font-size: 16px;
+  }
+
+  /* ---------- Start menu ---------- */
+  .start-menu {
+    position: fixed;
+    bottom: 40px;
+    left: 4px;
+    width: 260px;
+    background: var(--face);
+    border: 2px outset var(--face-light);
+    box-shadow: 3px 3px 0 rgba(0,0,0,0.4);
+    display: none;
+    z-index: 30;
+    max-height: 70vh;
+    overflow-y: auto;
+  }
+  .start-menu.open { display: block; }
+
+  .start-menu .banner {
+    background: linear-gradient(180deg, #000080, #1084d0);
+    color: #fff;
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    font-family: 'VT323', monospace;
+    font-size: 22px;
+    letter-spacing: 2px;
+    padding: 10px 4px;
+    float: left;
+    height: 100%;
+    min-height: 220px;
+  }
+
+  .start-menu ul {
+    list-style: none;
+    margin: 0;
+    padding: 4px 0 4px 42px;
+  }
+
+  .start-menu li a {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    text-decoration: none;
+    color: #000;
+    font-size: 13px;
+  }
+  .start-menu li a:hover {
+    background: #000080;
+    color: #fff;
+  }
+  .start-menu li a .dot {
+    width: 9px;
+    height: 9px;
+    flex-shrink: 0;
+    border: 1px solid #000;
+  }
+
+  .start-menu .divider {
+    border-top: 1px solid var(--face-dark);
+    border-bottom: 1px solid var(--face-light);
+    margin: 4px 10px;
   }
 </style>
 </head>
 <body>
 
-<header>
-  <div class="eyebrow">index.html</div>
-  <h1>The Workbench</h1>
-  <p>Every tool, tracker, and time-waster, hung up in one place.</p>
-</header>
+<div class="desktop-icons">
+  <div class="desktop-icon">
+    <div class="glyph pc"></div>
+    <span>My Computer</span>
+  </div>
+  <div class="desktop-icon">
+    <div class="glyph bin"></div>
+    <span>Recycle Bin</span>
+  </div>
+</div>
 
 <main>
+  <div class="window">
+    <div class="titlebar">
+      <div class="title">My Web Apps</div>
+      <div class="btns"><span>_</span><span>&#9633;</span><span>X</span></div>
+    </div>
+    <div class="menubar">
+      <span>File</span><span>Edit</span><span>View</span><span>Help</span>
+    </div>
+    <div class="addressbar">
+      <label>Address</label>
+      <div class="path">C:\Users\Tiago\WebApps\</div>
+    </div>
 
-  <div class="section games">
-    <div class="section-label"><span class="dot"></span>Games &amp; Loops<span class="line"></span></div>
-    <div class="grid">
-      <a class="tag" href="beamng-tracker.html">
-        <span class="peg"></span>
-        <h3>BeamNG Tracker</h3>
-        <p>Career mode log for the car-flipping loop.</p>
-        <span class="file">beamng-tracker.html</span>
-      </a>
-      <a class="tag" href="scrapyard-flip.html">
-        <span class="peg"></span>
-        <h3>Scrapyard Flip</h3>
-        <p>Idle junkyard flipping game with parts, haggling, and barn finds.</p>
-        <span class="file">scrapyard-flip.html</span>
-      </a>
-      <a class="tag" href="gt1-cheatsheet.html">
-        <span class="peg"></span>
-        <h3>GT1 Cheat Sheet</h3>
-        <p>Career mode reference &mdash; League events, Special Events, and Licenses.</p>
-        <span class="file">gt1-cheatsheet.html</span>
-      </a>
+    <div class="content">
+
+      <div class="group">
+        <div class="group-header"><span class="swatch" style="background:var(--games)"></span>Games &amp; Loops</div>
+        <div class="icon-grid">
+          <a class="icon-item" href="beamng-tracker.html">
+            <div class="floppy"><div class="tab" style="background:var(--games)"></div></div>
+            <span class="filename">beamng-tracker.html</span>
+            <span class="label">BeamNG Tracker</span>
+          </a>
+          <a class="icon-item" href="scrapyard-flip.html">
+            <div class="floppy"><div class="tab" style="background:var(--games)"></div></div>
+            <span class="filename">scrapyard-flip.html</span>
+            <span class="label">Scrapyard Flip</span>
+          </a>
+          <a class="icon-item" href="gt1-cheatsheet.html">
+            <div class="floppy"><div class="tab" style="background:var(--games)"></div></div>
+            <span class="filename">gt1-cheatsheet.html</span>
+            <span class="label">GT1 Cheat Sheet</span>
+          </a>
+        </div>
+      </div>
+
+      <div class="group">
+        <div class="group-header"><span class="swatch" style="background:var(--craft)"></span>Craft &amp; Stitch</div>
+        <div class="icon-grid">
+          <a class="icon-item" href="croche.html">
+            <div class="floppy"><div class="tab" style="background:var(--craft)"></div></div>
+            <span class="filename">croche.html</span>
+            <span class="label">Croch&ecirc;</span>
+          </a>
+          <a class="icon-item" href="cross-stitch.html">
+            <div class="floppy"><div class="tab" style="background:var(--craft)"></div></div>
+            <span class="filename">cross-stitch.html</span>
+            <span class="label">Cross-Stitch</span>
+          </a>
+        </div>
+      </div>
+
+      <div class="group">
+        <div class="group-header"><span class="swatch" style="background:var(--media)"></span>Media &amp; Sound</div>
+        <div class="icon-grid">
+          <a class="icon-item" href="clip-cutter.html">
+            <div class="floppy"><div class="tab" style="background:var(--media)"></div></div>
+            <span class="filename">clip-cutter.html</span>
+            <span class="label">Clip Cutter</span>
+          </a>
+          <a class="icon-item" href="darkroom.html">
+            <div class="floppy"><div class="tab" style="background:var(--media)"></div></div>
+            <span class="filename">darkroom.html</span>
+            <span class="label">Darkroom</span>
+          </a>
+          <a class="icon-item" href="soundscape.html">
+            <div class="floppy"><div class="tab" style="background:var(--media)"></div></div>
+            <span class="filename">soundscape.html</span>
+            <span class="label">Soundscape</span>
+          </a>
+        </div>
+      </div>
+
+      <div class="group">
+        <div class="group-header"><span class="swatch" style="background:var(--utility)"></span>Everyday Utility</div>
+        <div class="icon-grid">
+          <a class="icon-item" href="stock_io.html">
+            <div class="floppy"><div class="tab" style="background:var(--utility)"></div></div>
+            <span class="filename">stock_io.html</span>
+            <span class="label">Stock IO</span>
+          </a>
+          <a class="icon-item" href="stock_io-autofill.html">
+            <div class="floppy"><div class="tab" style="background:var(--utility)"></div></div>
+            <span class="filename">stock_io-autofill.html</span>
+            <span class="label">Stock IO Autofill</span>
+          </a>
+          <a class="icon-item" href="countdown.html">
+            <div class="floppy"><div class="tab" style="background:var(--utility)"></div></div>
+            <span class="filename">countdown.html</span>
+            <span class="label">Countdown</span>
+          </a>
+        </div>
+      </div>
+
     </div>
   </div>
-
-  <div class="section craft">
-    <div class="section-label"><span class="dot"></span>Craft &amp; Stitch<span class="line"></span></div>
-    <div class="grid">
-      <a class="tag" href="croche.html">
-        <span class="peg"></span>
-        <h3>Croch&ecirc;</h3>
-        <p>Crochet project and pattern tracker.</p>
-        <span class="file">croche.html</span>
-      </a>
-      <a class="tag" href="cross-stitch.html">
-        <span class="peg"></span>
-        <h3>Cross-Stitch</h3>
-        <p>Pattern and progress tracker for cross-stitch projects.</p>
-        <span class="file">cross-stitch.html</span>
-      </a>
-    </div>
-  </div>
-
-  <div class="section media">
-    <div class="section-label"><span class="dot"></span>Media &amp; Sound<span class="line"></span></div>
-    <div class="grid">
-      <a class="tag" href="clip-cutter.html">
-        <span class="peg"></span>
-        <h3>Clip Cutter</h3>
-        <p>Trim raw footage into clips ready to upload.</p>
-        <span class="file">clip-cutter.html</span>
-      </a>
-      <a class="tag" href="darkroom.html">
-        <span class="peg"></span>
-        <h3>Darkroom</h3>
-        <p>Photo editing tool.</p>
-        <span class="file">darkroom.html</span>
-      </a>
-      <a class="tag" href="soundscape.html">
-        <span class="peg"></span>
-        <h3>Soundscape</h3>
-        <p>Synthesized ambient sound mixer.</p>
-        <span class="file">soundscape.html</span>
-      </a>
-    </div>
-  </div>
-
-  <div class="section utility">
-    <div class="section-label"><span class="dot"></span>Everyday Utility<span class="line"></span></div>
-    <div class="grid">
-      <a class="tag" href="stock_io.html">
-        <span class="peg"></span>
-        <h3>Stock IO</h3>
-        <p>Stock and inventory management.</p>
-        <span class="file">stock_io.html</span>
-      </a>
-      <a class="tag" href="stock_io-autofill.html">
-        <span class="peg"></span>
-        <h3>Stock IO &mdash; Autofill</h3>
-        <p>Same tracker, with learned autofill for parts.</p>
-        <span class="file">stock_io-autofill.html</span>
-      </a>
-      <a class="tag" href="countdown.html">
-        <span class="peg"></span>
-        <h3>Countdown</h3>
-        <p>Days-until tracker for upcoming shows and releases.</p>
-        <span class="file">countdown.html</span>
-      </a>
-    </div>
-  </div>
-
 </main>
 
-<footer>
-  bookmark this page &mdash; everything else hangs off it
-</footer>
+<div class="start-menu" id="startMenu">
+  <div class="banner">WEB APPS 95</div>
+  <ul>
+    <li><a href="beamng-tracker.html"><span class="dot" style="background:var(--games)"></span>BeamNG Tracker</a></li>
+    <li><a href="scrapyard-flip.html"><span class="dot" style="background:var(--games)"></span>Scrapyard Flip</a></li>
+    <li><a href="gt1-cheatsheet.html"><span class="dot" style="background:var(--games)"></span>GT1 Cheat Sheet</a></li>
+    <li class="divider"></li>
+    <li><a href="croche.html"><span class="dot" style="background:var(--craft)"></span>Croch&ecirc;</a></li>
+    <li><a href="cross-stitch.html"><span class="dot" style="background:var(--craft)"></span>Cross-Stitch</a></li>
+    <li class="divider"></li>
+    <li><a href="clip-cutter.html"><span class="dot" style="background:var(--media)"></span>Clip Cutter</a></li>
+    <li><a href="darkroom.html"><span class="dot" style="background:var(--media)"></span>Darkroom</a></li>
+    <li><a href="soundscape.html"><span class="dot" style="background:var(--media)"></span>Soundscape</a></li>
+    <li class="divider"></li>
+    <li><a href="stock_io.html"><span class="dot" style="background:var(--utility)"></span>Stock IO</a></li>
+    <li><a href="stock_io-autofill.html"><span class="dot" style="background:var(--utility)"></span>Stock IO Autofill</a></li>
+    <li><a href="countdown.html"><span class="dot" style="background:var(--utility)"></span>Countdown</a></li>
+  </ul>
+</div>
+
+<div class="taskbar">
+  <button id="startBtn"><span class="logo"></span>Start</button>
+  <div class="open-app">My Web Apps</div>
+  <div class="spacer"></div>
+  <div class="clock" id="clock">--:--</div>
+</div>
+
+<script>
+  const startBtn = document.getElementById('startBtn');
+  const startMenu = document.getElementById('startMenu');
+
+  startBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    startMenu.classList.toggle('open');
+    startBtn.classList.toggle('active');
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!startMenu.contains(e.target) && e.target !== startBtn) {
+      startMenu.classList.remove('open');
+      startBtn.classList.remove('active');
+    }
+  });
+
+  function updateClock() {
+    const now = new Date();
+    let h = now.getHours();
+    const m = now.getMinutes().toString().padStart(2, '0');
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12;
+    document.getElementById('clock').textContent = `${h}:${m} ${ampm}`;
+  }
+  updateClock();
+  setInterval(updateClock, 1000 * 15);
+</script>
 
 </body>
 </html>
