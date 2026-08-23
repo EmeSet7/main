@@ -201,7 +201,7 @@
     border-top:1px solid var(--edge);
     flex-wrap:wrap;
   }
-  .step-group{display:flex; gap:5px;}
+  .step-group{display:flex; gap:5px; flex-wrap:wrap; justify-content:center;}
   .step-group button{min-width:38px; padding:5px 8px;}
   .fps-field{
     display:flex;
@@ -392,9 +392,11 @@
       </div>
       <div id="frameControls">
         <div class="step-group">
-          <button class="small" data-step="-1000">-1000</button>
           <button class="small" data-step="-100">-100</button>
+          <button class="small" data-step="-25">-25</button>
           <button class="small" data-step="-10">-10</button>
+          <button class="small" data-step="-5">-5</button>
+          <button class="small" data-step="-2">-2</button>
           <button class="small" data-step="-1">-1</button>
         </div>
         <div class="fps-field">
@@ -403,9 +405,11 @@
         </div>
         <div class="step-group">
           <button class="small" data-step="1">+1</button>
+          <button class="small" data-step="2">+2</button>
+          <button class="small" data-step="5">+5</button>
           <button class="small" data-step="10">+10</button>
+          <button class="small" data-step="25">+25</button>
           <button class="small" data-step="100">+100</button>
-          <button class="small" data-step="1000">+1000</button>
         </div>
       </div>
       <div class="sprockets"></div>
