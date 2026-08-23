@@ -1,0 +1,29 @@
+{
+  "timezone": "Europe/Lisbon",
+  "rules": [
+    {
+      "id": "example1",
+      "title": "Take out the trash",
+      "category": "chore",
+      "recurrence": { "type": "weekly", "daysOfWeek": [2] },
+      "time": "20:00",
+      "duration": 15,
+      "notes": "Bins go out Tuesday night",
+      "startDate": null,
+      "endDate": null,
+      "active": true
+    },
+    {
+      "id": "example2",
+      "title": "Pay rent",
+      "category": "finance",
+      "recurrence": { "type": "monthly", "dayOfMonth": 1 },
+      "time": null,
+      "duration": 30,
+      "notes": "",
+      "startDate": null,
+      "endDate": null,
+      "active": true
+    }
+  ]
+}

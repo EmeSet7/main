@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Task Rules</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #15171a;
+    --panel: #1e2124;
+    --panel-2: #262a2e;
+    --line: #34383c;
+    --text: #ece7e1;
+    --text-dim: #93979a;
+    --rust: #e2572b;
+    --rust-dim: #8a3a20;
+    --tape: #f2b705;
+    --profit: #6fae7f;
+    --loss: #c9584f;
+    --mint: #8fe0a0;
+    --gold: #e8c14a;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background: radial-gradient(ellipse at top, #1b1e21 0%, var(--bg) 60%);
+    color:var(--text);
+    font-family:'Inter', sans-serif;
+    padding: 20px 14px 80px;
+  }
+  .wrap{ max-width:640px; margin:0 auto; }
+  h1{
+    font-family:'Bebas Neue', sans-serif;
+    font-size: 34px;
+    letter-spacing: 1px;
+    margin: 4px 0 2px;
+  }
+  h1 span{ color:var(--rust); }
+  .sub{ color:var(--text-dim); font-size:12px; margin-bottom:18px; }
+
+  .panel{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:16px;
+    margin-bottom:16px;
+  }
+  .panel-title{
+    font-family:'Bebas Neue', sans-serif;
+    letter-spacing:1px;
+    font-size:18px;
+    color:var(--tape);
+    margin:0 0 12px;
+  }
+
+  label{
+    display:block;
+    font-size:11px;
+    letter-spacing:0.5px;
+    text-transform:uppercase;
+    color:var(--text-dim);
+    margin:10px 0 5px;
+  }
+  input[type=text], input[type=number], input[type=date], input[type=time], select, textarea{
+    width:100%;
+    background:var(--panel-2);
+    border:1px solid var(--line);
+    color:var(--text);
+    border-radius:7px;
+    padding:9px 10px;
+    font-family:'Inter', sans-serif;
+    font-size:14px;
+  }
+  textarea{ resize:vertical; min-height:50px; }
+  .row{ display:flex; gap:10px; }
+  .row > *{ flex:1; }
+
+  .chip-row{ display:flex; flex-wrap:wrap; gap:6px; }
+  .chip{
+    padding:7px 12px;
+    border-radius:20px;
+    border:1px solid var(--line);
+    background:var(--panel-2);
+    color:var(--text-dim);
+    font-size:12px;
+    cursor:pointer;
+    user-select:none;
+  }
+  .chip.active{ border-color:var(--rust); color:var(--text); background:rgba(226,87,43,0.18); }
+
+  .daypicker{ display:flex; gap:5px; }
+  .day{
+    flex:1;
+    text-align:center;
+    padding:9px 0;
+    border-radius:7px;
+    border:1px solid var(--line);
+    background:var(--panel-2);
+    color:var(--text-dim);
+    font-size:12px;
+    cursor:pointer;
+    user-select:none;
+  }
+  .day.active{ border-color:var(--gold); color:#191110; background:var(--gold); font-weight:600; }
+
+  .cat-swatch{
+    display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:6px;
+  }
+
+  select{
+    -webkit-appearance:none; appearance:none;
+    background-image: linear-gradient(45deg, transparent 50%, var(--text-dim) 50%), linear-gradient(135deg, var(--text-dim) 50%, transparent 50%);
+    background-position: calc(100% - 16px) center, calc(100% - 11px) center;
+    background-size: 5px 5px, 5px 5px;
+    background-repeat: no-repeat;
+  }
+
+  .field-hide{ display:none; }
+
+  button{
+    font-family:'Inter', sans-serif;
+    font-weight:600;
+    border:none;
+    border-radius:8px;
+    padding:11px 14px;
+    font-size:13px;
+    cursor:pointer;
+  }
+  .btn-primary{ background:var(--rust); color:#191110; width:100%; margin-top:14px; }
+  .btn-primary:active{ background:var(--rust-dim); color:var(--text); }
+  .btn-ghost{ background:var(--panel-2); color:var(--text); border:1px solid var(--line); }
+  .btn-row{ display:flex; gap:8px; margin-top:14px; }
+  .btn-row button{ flex:1; }
+  .btn-small{ padding:6px 10px; font-size:11px; border-radius:6px; }
+
+  .rule-card{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-left:3px solid var(--rust);
+    border-radius:0 10px 10px 0;
+    padding:12px 14px;
+    margin-bottom:10px;
+  }
+  .rule-card.inactive{ opacity:0.45; border-left-color:var(--line); }
+  .rule-top{ display:flex; justify-content:space-between; align-items:flex-start; gap:8px; }
+  .rule-title{ font-weight:600; font-size:14.5px; }
+  .rule-meta{ font-size:12px; color:var(--text-dim); margin-top:3px; font-family:'JetBrains Mono', monospace; }
+  .rule-notes{ font-size:12px; color:var(--text-dim); margin-top:5px; }
+  .rule-actions{ display:flex; gap:6px; flex-shrink:0; }
+  .rule-actions button{ background:var(--panel-2); color:var(--text-dim); }
+  .rule-actions button:active{ background:var(--rust-dim); color:var(--text); }
+
+  .empty{ text-align:center; color:var(--text-dim); font-size:13px; padding:20px 0; }
+
+  .json-box{
+    width:100%; min-height:110px;
+    background:var(--panel-2);
+    border:1px solid var(--line);
+    color:var(--mint);
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px;
+    border-radius:7px;
+    padding:10px;
+  }
+  .toast{
+    position:fixed; bottom:18px; left:50%; transform:translateX(-50%);
+    background:var(--tape); color:#191110; font-weight:600; font-size:13px;
+    padding:9px 16px; border-radius:20px; opacity:0; pointer-events:none;
+    transition:opacity 0.25s;
+  }
+  .toast.show{ opacity:1; }
+
+  .count-badge{
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px; color:var(--text-dim);
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Task <span>Rules</span></h1>
+  <div class="sub">define recurring tasks &middot; export rules.json for the repo</div>
+
+  <div class="panel">
+    <div class="panel-title" id="formTitle">New Rule</div>
+
+    <label>Title</label>
+    <input type="text" id="f-title" placeholder="Take out the trash">
+
+    <label>Category</label>
+    <div class="chip-row" id="f-category"></div>
+
+    <label>Repeats</label>
+    <select id="f-type">
+      <option value="daily">Daily</option>
+      <option value="weekly" selected>Weekly</option>
+      <option value="monthly">Monthly</option>
+      <option value="once">Once (single date)</option>
+    </select>
+
+    <div id="field-weekly">
+      <label>Days of week</label>
+      <div class="daypicker" id="f-days">
+        <div class="day" data-d="1">M</div>
+        <div class="day" data-d="2">T</div>
+        <div class="day" data-d="3">W</div>
+        <div class="day" data-d="4">T</div>
+        <div class="day" data-d="5">F</div>
+        <div class="day" data-d="6">S</div>
+        <div class="day" data-d="0">S</div>
+      </div>
+    </div>
+
+    <div id="field-daily" class="field-hide">
+      <label>Every N days</label>
+      <input type="number" id="f-interval-daily" min="1" value="1">
+    </div>
+
+    <div id="field-monthly" class="field-hide">
+      <label>Day of month</label>
+      <select id="f-dom">
+        <option value="last">Last day of month</option>
+      </select>
+    </div>
+
+    <div id="field-once" class="field-hide">
+      <label>Date</label>
+      <input type="date" id="f-once-date">
+    </div>
+
+    <div class="row">
+      <div>
+        <label>Time (optional)</label>
+        <input type="time" id="f-time">
+      </div>
+      <div>
+        <label>Duration (min)</label>
+        <input type="number" id="f-duration" min="5" step="5" value="30">
+      </div>
+    </div>
+
+    <label>Notes / location (optional)</label>
+    <textarea id="f-notes" placeholder="Bins go out Tuesday night&#10;Recycling only on green weeks"></textarea>
+
+    <div class="row">
+      <div>
+        <label>Start date (optional)</label>
+        <input type="date" id="f-start">
+      </div>
+      <div>
+        <label>End date (optional)</label>
+        <input type="date" id="f-end">
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn-primary" id="saveBtn" style="margin-top:0;">Save Rule</button>
+      <button class="btn-ghost" id="cancelBtn" style="display:none;">Cancel</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">Rules <span class="count-badge" id="ruleCount"></span></div>
+    <div id="ruleList"></div>
+    <div class="empty" id="emptyMsg" style="display:none;">No rules yet. Add one above.</div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">Export / Import</div>
+    <div class="btn-row" style="margin-top:0;">
+      <button class="btn-ghost" id="downloadBtn">Download rules.json</button>
+      <button class="btn-ghost" id="copyBtn">Copy to clipboard</button>
+    </div>
+    <label style="margin-top:14px;">Import (paste JSON or load file)</label>
+    <textarea class="json-box" id="importBox" placeholder="Paste rules.json contents here..."></textarea>
+    <div class="btn-row">
+      <button class="btn-ghost" id="loadFileBtn">Choose file</button>
+      <button class="btn-primary" id="importBtn" style="margin-top:0;">Import & replace</button>
+    </div>
+    <input type="file" id="fileInput" accept="application/json" style="display:none;">
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const CATS = [
+  {id:'chore', label:'Chore', color:'#e2572b'},
+  {id:'work', label:'Work', color:'#6fae7f'},
+  {id:'health', label:'Health', color:'#8fe0a0'},
+  {id:'finance', label:'Finance', color:'#e8c14a'},
+  {id:'personal', label:'Personal', color:'#93979a'},
+];
+const DAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+let rules = JSON.parse(localStorage.getItem('taskRules') || '[]');
+let editingId = null;
+let selectedCat = 'chore';
+let selectedDays = new Set();
+
+function save(){
+  localStorage.setItem('taskRules', JSON.stringify(rules));
+  render();
+}
+
+function uid(){
+  return (crypto.randomUUID ? crypto.randomUUID() : 'r'+Date.now()+Math.random().toString(16).slice(2)).slice(0,8);
+}
+
+function renderCatChips(){
+  const el = document.getElementById('f-category');
+  el.innerHTML = CATS.map(c => `<div class="chip ${c.id===selectedCat?'active':''}" data-cat="${c.id}">
+    <span class="cat-swatch" style="background:${c.color}"></span>${c.label}</div>`).join('');
+  el.querySelectorAll('.chip').forEach(chip => {
+    chip.onclick = () => { selectedCat = chip.dataset.cat; renderCatChips(); };
+  });
+}
+
+function renderDayPicker(){
+  document.querySelectorAll('#f-days .day').forEach(d => {
+    d.classList.toggle('active', selectedDays.has(Number(d.dataset.d)));
+    d.onclick = () => {
+      const v = Number(d.dataset.d);
+      selectedDays.has(v) ? selectedDays.delete(v) : selectedDays.add(v);
+      renderDayPicker();
+    };
+  });
+}
+
+function populateDOM(){
+  const sel = document.getElementById('f-dom');
+  sel.innerHTML = '<option value="last">Last day of month</option>' +
+    Array.from({length:31}, (_,i) => `<option value="${i+1}">${i+1}</option>`).join('');
+}
+
+document.getElementById('f-type').addEventListener('change', updateTypeFields);
+function updateTypeFields(){
+  const t = document.getElementById('f-type').value;
+  document.getElementById('field-weekly').className = t==='weekly' ? '' : 'field-hide';
+  document.getElementById('field-daily').className = t==='daily' ? '' : 'field-hide';
+  document.getElementById('field-monthly').className = t==='monthly' ? '' : 'field-hide';
+  document.getElementById('field-once').className = t==='once' ? '' : 'field-hide';
+}
+
+function recurrenceSummary(r){
+  const rec = r.recurrence;
+  if(rec.type === 'weekly'){
+    const days = (rec.daysOfWeek||[]).slice().sort((a,b)=> (a===0?7:a)-(b===0?7:b)).map(d=>DAY_NAMES[d]);
+    return 'Every ' + (days.length ? days.join(', ') : '—');
+  }
+  if(rec.type === 'daily'){
+    return rec.interval > 1 ? `Every ${rec.interval} days` : 'Every day';
+  }
+  if(rec.type === 'monthly'){
+    return rec.dayOfMonth === 'last' ? 'Last day of month' : `Day ${rec.dayOfMonth} of month`;
+  }
+  if(rec.type === 'once'){
+    return rec.date;
+  }
+  return '';
+}
+
+function resetForm(){
+  editingId = null;
+  document.getElementById('formTitle').textContent = 'New Rule';
+  document.getElementById('f-title').value = '';
+  document.getElementById('f-type').value = 'weekly';
+  selectedCat = 'chore';
+  selectedDays = new Set();
+  document.getElementById('f-interval-daily').value = 1;
+  document.getElementById('f-dom').value = '1';
+  document.getElementById('f-once-date').value = '';
+  document.getElementById('f-time').value = '';
+  document.getElementById('f-duration').value = 30;
+  document.getElementById('f-notes').value = '';
+  document.getElementById('f-start').value = '';
+  document.getElementById('f-end').value = '';
+  document.getElementById('cancelBtn').style.display = 'none';
+  document.getElementById('saveBtn').textContent = 'Save Rule';
+  renderCatChips();
+  renderDayPicker();
+  updateTypeFields();
+}
+
+function editRule(id){
+  const r = rules.find(x => x.id === id);
+  if(!r) return;
+  editingId = id;
+  document.getElementById('formTitle').textContent = 'Edit Rule';
+  document.getElementById('f-title').value = r.title;
+  document.getElementById('f-type').value = r.recurrence.type;
+  selectedCat = r.category;
+  selectedDays = new Set(r.recurrence.daysOfWeek || []);
+  document.getElementById('f-interval-daily').value = r.recurrence.interval || 1;
+  document.getElementById('f-dom').value = r.recurrence.dayOfMonth || '1';
+  document.getElementById('f-once-date').value = r.recurrence.date || '';
+  document.getElementById('f-time').value = r.time || '';
+  document.getElementById('f-duration').value = r.duration || 30;
+  document.getElementById('f-notes').value = r.notes || '';
+  document.getElementById('f-start').value = r.startDate || '';
+  document.getElementById('f-end').value = r.endDate || '';
+  document.getElementById('cancelBtn').style.display = 'block';
+  document.getElementById('saveBtn').textContent = 'Update Rule';
+  renderCatChips();
+  renderDayPicker();
+  updateTypeFields();
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+function deleteRule(id){
+  if(!confirm('Delete this rule?')) return;
+  rules = rules.filter(x => x.id !== id);
+  save();
+}
+
+function toggleActive(id){
+  const r = rules.find(x => x.id === id);
+  if(r){ r.active = !r.active; save(); }
+}
+
+document.getElementById('saveBtn').onclick = () => {
+  const title = document.getElementById('f-title').value.trim();
+  if(!title){ toast('Title required'); return; }
+  const type = document.getElementById('f-type').value;
+  let recurrence = { type };
+  if(type === 'weekly'){
+    if(selectedDays.size === 0){ toast('Pick at least one day'); return; }
+    recurrence.daysOfWeek = Array.from(selectedDays);
+  } else if(type === 'daily'){
+    recurrence.interval = Number(document.getElementById('f-interval-daily').value) || 1;
+  } else if(type === 'monthly'){
+    const dom = document.getElementById('f-dom').value;
+    recurrence.dayOfMonth = dom === 'last' ? 'last' : Number(dom);
+  } else if(type === 'once'){
+    const d = document.getElementById('f-once-date').value;
+    if(!d){ toast('Pick a date'); return; }
+    recurrence.date = d;
+  }
+
+  const rule = {
+    id: editingId || uid(),
+    title,
+    category: selectedCat,
+    recurrence,
+    time: document.getElementById('f-time').value || null,
+    duration: Number(document.getElementById('f-duration').value) || 30,
+    notes: document.getElementById('f-notes').value.trim(),
+    startDate: document.getElementById('f-start').value || null,
+    endDate: document.getElementById('f-end').value || null,
+    active: true,
+  };
+
+  if(editingId){
+    const idx = rules.findIndex(x => x.id === editingId);
+    rule.active = rules[idx].active;
+    rules[idx] = rule;
+    toast('Rule updated');
+  } else {
+    rules.push(rule);
+    toast('Rule added');
+  }
+  save();
+  resetForm();
+};
+
+document.getElementById('cancelBtn').onclick = resetForm;
+
+function render(){
+  const list = document.getElementById('ruleList');
+  const empty = document.getElementById('emptyMsg');
+  document.getElementById('ruleCount').textContent = rules.length ? `(${rules.length})` : '';
+  if(rules.length === 0){
+    list.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+  list.innerHTML = rules.map(r => {
+    const cat = CATS.find(c => c.id === r.category) || CATS[0];
+    const timeStr = r.time ? ` &middot; ${r.time}` : ' &middot; all-day';
+    const rangeStr = (r.startDate || r.endDate) ? ` &middot; ${r.startDate||'…'} → ${r.endDate||'…'}` : '';
+    return `<div class="rule-card ${r.active ? '' : 'inactive'}">
+      <div class="rule-top">
+        <div>
+          <div class="rule-title"><span class="cat-swatch" style="background:${cat.color}"></span>${escapeHtml(r.title)}</div>
+          <div class="rule-meta">${recurrenceSummary(r)}${timeStr}${rangeStr}</div>
+          ${r.notes ? `<div class="rule-notes">${escapeHtml(r.notes)}</div>` : ''}
+        </div>
+        <div class="rule-actions">
+          <button class="btn-small" onclick="toggleActive('${r.id}')">${r.active ? 'On' : 'Off'}</button>
+          <button class="btn-small" onclick="editRule('${r.id}')">Edit</button>
+          <button class="btn-small" onclick="deleteRule('${r.id}')">Del</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function escapeHtml(s){
+  return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 1600);
+}
+
+document.getElementById('downloadBtn').onclick = () => {
+  const data = { timezone: 'Europe/Lisbon', rules };
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'rules.json';
+  a.click();
+};
+
+document.getElementById('copyBtn').onclick = async () => {
+  const data = { timezone: 'Europe/Lisbon', rules };
+  try{
+    await navigator.clipboard.writeText(JSON.stringify(data, null, 2));
+    toast('Copied to clipboard');
+  }catch(e){
+    toast('Copy failed — use Download instead');
+  }
+};
+
+document.getElementById('loadFileBtn').onclick = () => document.getElementById('fileInput').click();
+document.getElementById('fileInput').onchange = (e) => {
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = () => { document.getElementById('importBox').value = reader.result; };
+  reader.readAsText(file);
+};
+
+document.getElementById('importBtn').onclick = () => {
+  const raw = document.getElementById('importBox').value.trim();
+  if(!raw){ toast('Nothing to import'); return; }
+  try{
+    const data = JSON.parse(raw);
+    const incoming = Array.isArray(data) ? data : data.rules;
+    if(!Array.isArray(incoming)) throw new Error('bad shape');
+    if(!confirm(`Replace current ${rules.length} rules with ${incoming.length} imported rules?`)) return;
+    rules = incoming;
+    save();
+    resetForm();
+    toast('Imported');
+  }catch(e){
+    toast('Invalid JSON');
+  }
+};
+
+populateDOM();
+resetForm();
+render();
+</script>
+</body>
+</html>
