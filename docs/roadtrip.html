@@ -1,0 +1,1351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Roadtrip // Trip Computer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;800&family=VT323&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --void:#07080a;
+    --dash:#12150f;
+    --dash-2:#191d15;
+    --line:#2c3327;
+    --line-lit:#3d4736;
+    --phosphor:#8dffa0;
+    --phosphor-dim:#4a8a56;
+    --amber:#ffb03c;
+    --red:#ff4f3f;
+    --paper:#d8c69c;
+    --paper-ink:#2a2418;
+    --text:#d8e0d2;
+    --text-dim:#77816f;
+  }
+  *{box-sizing:border-box;}
+  html,body{ margin:0; }
+  body{
+    background:var(--void);
+    color:var(--text);
+    font-family:'Share Tech Mono', monospace;
+    min-height:100vh;
+    padding-bottom:60px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  body::before{
+    content:"";
+    position:fixed; inset:0;
+    background-image: repeating-linear-gradient(0deg, rgba(255,255,255,0.015) 0px, rgba(255,255,255,0.015) 1px, transparent 1px, transparent 3px);
+    pointer-events:none; z-index:5; mix-blend-mode:overlay;
+  }
+
+  /* ---------- WINDSHIELD SCENE ---------- */
+  .windshield{ position:relative; height:128px; overflow:hidden; }
+  .sky{ position:absolute; inset:0; transition:background 0.6s; }
+  .sky.day{ background:linear-gradient(#7fa8cf 0%, #cbb98a 100%); }
+  .sky.night{ background:linear-gradient(#0a0e1c 0%, #1a2236 100%); }
+  .orb{ position:absolute; width:26px; height:26px; border-radius:50%; top:18px; right:40px; transition:all 0.6s; }
+  .orb.day{ background:#fff2c4; box-shadow:0 0 24px 8px rgba(255,242,196,0.6); }
+  .orb.night{ background:#dfe6f2; box-shadow:0 0 16px 4px rgba(223,230,242,0.35); right:auto; left:40px; }
+  .stars{ position:absolute; inset:0; opacity:0; transition:opacity 0.6s; }
+  .stars.on{ opacity:1; }
+  .star{ position:absolute; width:2px; height:2px; background:#dfe6f2; border-radius:50%; }
+  .road{
+    position:absolute; left:50%; bottom:-10px; width:340px; height:110px; transform:translateX(-50%);
+    background:linear-gradient(180deg,#2a2c2e 0%, #1a1b1c 100%);
+    clip-path: polygon(42% 0%, 58% 0%, 100% 100%, 0% 100%);
+  }
+  .road::before{
+    content:""; position:absolute; left:50%; top:0; bottom:0; width:6px; transform:translateX(-50%);
+    background-image: repeating-linear-gradient(180deg, var(--paper) 0px, var(--paper) 14px, transparent 14px, transparent 28px);
+    animation: dashmove 0.5s linear infinite;
+    opacity:0.85;
+  }
+  @keyframes dashmove{ from{ background-position-y:0; } to{ background-position-y:28px; } }
+  .horizon-label{
+    position:absolute; bottom:8px; left:50%; transform:translateX(-50%);
+    font-family:'Orbitron', sans-serif; font-size:10px; letter-spacing:0.3em; color:rgba(216,224,210,0.55);
+    text-transform:uppercase; z-index:2;
+  }
+
+  .wrap{ padding:0 12px; position:relative; z-index:1; max-width:520px; margin:0 auto; }
+
+  /* ---------- DASH PANEL ---------- */
+  .dash{
+    margin-top:-14px; position:relative; z-index:2;
+    background:linear-gradient(180deg, var(--dash) 0%, #0d0f0b 100%);
+    border:1px solid var(--line); border-radius:16px 16px 10px 10px;
+    padding:14px 12px 10px;
+    box-shadow: 0 1px 0 rgba(255,255,255,0.03) inset, 0 10px 30px rgba(0,0,0,0.5);
+  }
+  .brandrow{ display:flex; justify-content:space-between; align-items:center; padding:0 2px 10px; }
+  .brand{ font-family:'Orbitron', sans-serif; font-weight:800; font-size:15px; letter-spacing:0.12em; color:var(--phosphor); }
+  .brand span{ color:var(--text-dim); font-weight:500; }
+  .bestline{ font-family:'Share Tech Mono', monospace; font-size:10px; color:var(--text-dim); text-align:right; }
+  .bestline b{ color:var(--amber); }
+  .rivet-row{ display:flex; gap:4px; }
+  .rivet{ width:5px; height:5px; border-radius:50%; background:var(--line-lit); }
+
+  .gauges{ display:flex; align-items:flex-end; justify-content:space-between; gap:6px; }
+  .gauge-wrap{ text-align:center; width:118px; }
+  .gauge-label{ font-family:'Orbitron', sans-serif; font-size:10px; letter-spacing:0.15em; color:var(--text-dim); text-transform:uppercase; margin-top:2px; }
+  .gauge-value{ font-family:'VT323', monospace; font-size:22px; color:var(--phosphor); line-height:1; margin-top:-4px; }
+
+  .lcd{
+    flex:1; background:#0a1008; border:1px solid var(--line-lit); border-radius:8px;
+    padding:8px 4px; text-align:center; align-self:center;
+    box-shadow: inset 0 0 12px rgba(141,255,160,0.08);
+  }
+  .lcd-time{ font-family:'VT323', monospace; font-size:32px; color:var(--phosphor); line-height:1; letter-spacing:0.04em; text-shadow:0 0 8px rgba(141,255,160,0.5); }
+  .lcd-sub{ font-family:'Orbitron', sans-serif; font-size:9px; color:var(--phosphor-dim); letter-spacing:0.2em; margin-top:2px; }
+  .lcd-odo{ font-family:'VT323', monospace; font-size:20px; color:var(--phosphor); margin-top:6px; border-top:1px dashed var(--line-lit); padding-top:6px; }
+  .lcd-odo b{ font-size:24px; }
+
+  /* warning lights */
+  .warnrow{ display:grid; grid-template-columns:repeat(5,1fr); gap:6px; margin-top:14px; }
+  .warn{ text-align:center; }
+  .warn .lamp{ width:26px; height:26px; border-radius:50%; margin:0 auto; border:1px solid var(--line); background:#161a12; }
+  .warn .lamp.g{ background:radial-gradient(circle, #294a2c 0%, #182317 100%); box-shadow:0 0 6px rgba(141,255,160,0.15); }
+  .warn .lamp.a{ background:radial-gradient(circle, var(--amber) 0%, #7a5316 100%); box-shadow:0 0 12px rgba(255,176,60,0.6); }
+  .warn .lamp.r{ background:radial-gradient(circle, var(--red) 0%, #6b1710 100%); box-shadow:0 0 14px rgba(255,79,63,0.75); animation:pulse 1s infinite; }
+  @keyframes pulse{ 0%,100%{ opacity:1;} 50%{ opacity:0.55;} }
+  .warn .wlabel{ font-family:'Orbitron', sans-serif; font-size:8px; letter-spacing:0.08em; color:var(--text-dim); margin-top:4px; text-transform:uppercase; }
+
+  .terrainline{ margin-top:10px; text-align:center; font-size:11px; color:var(--text-dim); border-top:1px dashed var(--line); padding-top:8px; }
+  .terrainline b{ color:var(--phosphor); }
+
+  .paceRow{ display:flex; gap:6px; }
+  .paceRow button{ padding:12px 4px; font-size:13px; }
+  button.danger{ color:var(--amber); }
+  button.danger::before{ background:var(--red); box-shadow:0 0 5px var(--red); }
+
+  .rationRow{ display:flex; gap:6px; }
+  .rationbtn{ flex:1; padding:9px 4px; font-size:11px; opacity:0.55; }
+  .rationbtn.active{ opacity:1; border-color:var(--phosphor-dim); }
+  .rationbtn.active::before{ background:var(--phosphor); box-shadow:0 0 5px var(--phosphor); }
+
+  /* segmented bars used everywhere */
+  .segbar{ display:flex; gap:2px; }
+  .seg{ flex:1; height:9px; background:#181d14; border:1px solid var(--line); border-radius:1px; }
+  .seg.on{ box-shadow:0 0 5px var(--c, var(--phosphor)); background:var(--c, var(--phosphor)); border-color:transparent; }
+
+  /* ---------- SECTIONS ---------- */
+  .section{ margin-top:12px; background:linear-gradient(180deg, var(--dash) 0%, #0d0f0b 100%); border:1px solid var(--line); border-radius:12px; padding:12px 12px 10px; }
+  .section-label{ font-family:'Orbitron', sans-serif; font-size:10px; color:var(--text-dim); letter-spacing:0.18em; text-transform:uppercase; margin-bottom:10px; display:flex; justify-content:space-between; }
+  .section-label b{ color:var(--phosphor); }
+
+  .partline{ display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+  .partline .pname{ width:64px; font-size:11px; color:var(--text-dim); flex-shrink:0; }
+  .partline .pval{ width:34px; text-align:right; font-family:'VT323', monospace; font-size:16px; color:var(--text); flex-shrink:0; }
+
+  /* crew - CB roster cards */
+  .matecard{ background:var(--dash-2); border:1px solid var(--line); border-radius:10px; padding:10px 11px; margin-bottom:8px; position:relative; }
+  .matecard::before{ content:""; position:absolute; left:0; top:10px; bottom:10px; width:3px; background:var(--phosphor-dim); border-radius:2px; }
+  .matecard.dead{ opacity:0.35; }
+  .matecard.dead::before{ background:var(--red); }
+  .mate-top{ display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:4px; }
+  .mate-name{ font-family:'Orbitron', sans-serif; font-weight:700; font-size:15px; letter-spacing:0.04em; color:var(--text); }
+  .tag{ font-family:'Share Tech Mono', monospace; font-size:9px; padding:2px 7px; border-radius:3px; text-transform:uppercase; letter-spacing:0.06em; border:1px solid; }
+  .tag.drive{ color:var(--amber); border-color:rgba(255,176,60,0.4); background:rgba(255,176,60,0.08); }
+  .tag.sick{ color:#ff9b91; border-color:rgba(255,79,63,0.4); background:rgba(255,79,63,0.08); }
+  .tag.injured{ color:#ff6a4d; border-color:rgba(255,106,77,0.55); background:rgba(255,106,77,0.14); }
+  .tag.teach{ color:var(--phosphor); border-color:rgba(141,255,160,0.4); background:rgba(141,255,160,0.08); }
+  .tag.learn{ color:#8fb8ff; border-color:rgba(143,184,255,0.4); background:rgba(143,184,255,0.08); }
+  .microbtn{ font-family:'Orbitron', sans-serif; font-size:9px; padding:3px 8px; border-radius:4px; background:#181d14; color:var(--text-dim); border:1px solid var(--line); cursor:pointer; letter-spacing:0.06em; }
+  .microbtn:active{ background:#0d100b; }
+
+  .indicators{ display:grid; grid-template-columns:repeat(4,1fr); gap:7px; margin-top:9px; }
+  .indicators3{ grid-template-columns:repeat(3,1fr); }
+  .ind .lbl{ font-family:'Orbitron', sans-serif; font-size:8px; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:3px; }
+  .sharedfood-row{ display:flex; justify-content:space-between; font-family:'Orbitron', sans-serif; font-size:10px; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:5px; }
+  .sharedfood-row b{ font-family:'VT323', monospace; font-size:16px; color:var(--phosphor); letter-spacing:0; text-transform:none; }
+  .skills{ margin-top:8px; display:flex; flex-wrap:wrap; gap:5px; }
+  .skillchip{ font-size:10px; background:#0f120d; border:1px solid var(--line); border-radius:5px; padding:3px 7px; color:var(--text-dim); }
+  .skillchip b{ color:var(--phosphor); }
+
+  /* glovebox manifest / inventory */
+  .manifest{ background:var(--paper); border-radius:6px; padding:10px 12px; color:var(--paper-ink); }
+  .manifest-title{ font-family:'Orbitron', sans-serif; font-size:10px; letter-spacing:0.15em; text-transform:uppercase; border-bottom:1px dashed rgba(42,36,24,0.35); padding-bottom:6px; margin-bottom:8px; display:flex; justify-content:space-between; }
+  .mrow{ display:flex; justify-content:space-between; font-size:12px; padding:2px 0; border-bottom:1px dotted rgba(42,36,24,0.2); }
+  .mrow b{ font-family:'VT323', monospace; font-size:15px; }
+
+  /* action bar */
+  .actionbar{ display:flex; gap:8px; margin-top:12px; }
+  button{
+    font-family:'Orbitron', sans-serif; font-weight:700; letter-spacing:0.04em; font-size:14px;
+    background:var(--dash-2); color:var(--phosphor); border:1px solid var(--line-lit); border-radius:8px; padding:13px 10px;
+    flex:1; cursor:pointer; text-transform:uppercase; position:relative;
+    box-shadow: 0 3px 0 #050604, inset 0 0 10px rgba(141,255,160,0.05);
+  }
+  button::before{ content:""; width:7px; height:7px; border-radius:50%; background:var(--phosphor-dim); display:inline-block; margin-right:7px; box-shadow:0 0 5px var(--phosphor-dim); }
+  button:active{ transform:translateY(2px); box-shadow:0 1px 0 #050604; }
+  button.secondary{ color:var(--text); }
+  button.secondary::before{ background:var(--line-lit); box-shadow:none; }
+  button:disabled{ opacity:0.3; cursor:not-allowed; }
+
+  .menu-actions{ display:flex; flex-direction:column; gap:7px; margin-top:8px; }
+  .menu-actions button{ flex:none; width:100%; text-align:left; padding:11px 12px; font-size:13px; display:flex; justify-content:space-between; align-items:center;}
+  .menu-actions button small{ font-family:'Share Tech Mono', monospace; font-size:10px; color:var(--text-dim); text-transform:none; letter-spacing:0; margin-left:8px;}
+
+  /* scanner log */
+  .scanner{ background:#0a0d08; border:1px solid var(--line); border-radius:8px; padding:8px; max-height:170px; overflow-y:auto; display:flex; flex-direction:column-reverse; gap:5px; }
+  .scan-entry{ font-size:11px; padding:6px 8px; border-radius:4px; color:var(--text-dim); border-left:2px solid var(--line); }
+  .scan-entry.event{ border-left-color:var(--amber); color:var(--amber); }
+  .scan-entry.bad{ border-left-color:var(--red); color:#ff9b91; }
+  .scan-entry.good{ border-left-color:var(--phosphor); color:var(--phosphor); }
+  .scan-caret{ font-family:'VT323', monospace; color:var(--phosphor-dim); font-size:13px; }
+  .scan-caret::after{ content:"_"; animation:blink 1s step-end infinite; }
+  @keyframes blink{ 50%{ opacity:0; } }
+
+  .modal-overlay{ position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:50; display:flex; align-items:center; justify-content:center; padding:20px; }
+  .modal{ background:var(--dash); border:1px solid var(--line-lit); border-radius:14px; padding:20px; max-width:420px; width:100%; box-shadow:0 0 40px rgba(0,0,0,0.6); }
+  .modal h2{ font-family:'Orbitron', sans-serif; font-size:20px; margin:0 0 8px; color:var(--phosphor); letter-spacing:0.06em; }
+  .modal p{ font-size:13px; color:var(--text-dim); line-height:1.5; margin:0 0 14px;}
+  .modal .stat{ font-family:'VT323', monospace; font-size:16px; color:var(--text); margin-bottom:4px;}
+
+  select{ width:100%; background:#0a0d08; border:1px solid var(--line-lit); color:var(--text); border-radius:6px; padding:10px; font-family:'Share Tech Mono', monospace; font-size:13px; margin-bottom:8px;}
+  label.flabel{ font-family:'Orbitron', sans-serif; font-size:9px; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.1em; display:block; margin:8px 0 4px;}
+
+  .hidden{ display:none !important; }
+  .footer-note{ text-align:center; font-family:'Share Tech Mono', monospace; font-size:10px; color:var(--text-dim); margin-top:20px; opacity:0.5;}
+
+  /* ---------- DESKTOP LAYOUT ---------- */
+  /* Mobile styling above is untouched; this only kicks in on wider viewports. */
+  @media (min-width: 900px){
+    .windshield{ height:170px; }
+    .road{ width:460px; }
+    .wrap{
+      max-width: 1080px;
+      display: grid;
+      grid-template-columns: 420px 1fr;
+      column-gap: 18px;
+      grid-template-areas:
+        "dash dash"
+        "controls crew"
+        "log crew"
+        "diag manifest"
+        "footer footer";
+      align-items: start;
+    }
+    .dash{ grid-area: dash; }
+    #rollingControls{ grid-area: controls; }
+    #stopControls{ grid-area: controls; }
+    #logSection{ grid-area: log; }
+    #crewSection{ grid-area: crew; }
+    #diagSection{ grid-area: diag; }
+    #rationsSection{ grid-area: manifest; }
+    .footer-note{ grid-area: footer; }
+
+    .scanner{ max-height: 320px; }
+    .gauges{ justify-content: space-around; }
+    .indicators3{ grid-template-columns: repeat(3,1fr); }
+    #mateList{ display:grid; grid-template-columns: 1fr 1fr; gap:8px; }
+    .inv, .manifest .mrow{ font-size:12px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="windshield">
+  <div class="sky day" id="sky"></div>
+  <div class="stars" id="stars"></div>
+  <div class="orb day" id="orb"></div>
+  <div class="road"></div>
+  <div class="horizon-label" id="horizonLabel">HIGHWAY // UNKNOWN</div>
+</div>
+
+<div class="wrap">
+
+  <div class="dash">
+    <div class="brandrow">
+      <div class="brand">TRIP<span>-COMPUTER</span></div>
+      <div class="bestline" id="bestLine"></div>
+    </div>
+
+    <div class="gauges">
+      <div class="gauge-wrap" id="gaugeFuelWrap"></div>
+      <div class="lcd">
+        <div class="lcd-time" id="clockMain">D1 · 06:00</div>
+        <div class="lcd-sub" id="clockSub">DAYTIME</div>
+        <div class="lcd-odo"><b id="distTotal">0</b> KM</div>
+      </div>
+      <div class="gauge-wrap" id="gaugeCarWrap"></div>
+    </div>
+
+    <div class="warnrow" id="warnRow"></div>
+    <div class="terrainline" id="terrainLine"></div>
+  </div>
+
+  <div id="rollingControls">
+    <div class="paceRow">
+      <button onclick="driveOneHour('steady')">Steady</button>
+      <button onclick="driveOneHour('push')">Push It</button>
+      <button class="danger" onclick="driveOneHour('grueling')">Grueling</button>
+    </div>
+    <div class="actionbar" style="margin-top:8px;">
+      <button class="secondary" id="btnCamp">Make Camp</button>
+    </div>
+  </div>
+
+  <div id="stopControls" class="section hidden">
+    <div class="section-label"><span id="stopTitle">Camp</span><span id="stopSub"></span></div>
+    <div class="menu-actions" id="stopMenu"></div>
+  </div>
+
+  <div class="section" id="logSection">
+    <div class="section-label"><span>Scanner Feed</span><span class="scan-caret"></span></div>
+    <div class="scanner" id="logBox"></div>
+  </div>
+
+  <div class="section" id="diagSection">
+    <div class="section-label"><span>Diagnostics</span><b id="carStatus">RUNNING</b></div>
+    <div id="partLines"></div>
+  </div>
+
+  <div class="section" id="crewSection">
+    <div class="section-label"><span>Crew Roster</span><b id="crewCount">4 ALIVE</b></div>
+    <div id="sharedFood" style="margin-bottom:10px;"></div>
+    <div id="mateList"></div>
+    <button class="secondary" style="margin-top:4px;width:100%;" onclick="openTeachPicker()">Assign Teaching / Learning</button>
+    <button class="secondary" style="margin-top:6px;width:100%;" onclick="openManualPicker()" id="manualBtn">Read Skill Manual</button>
+  </div>
+
+  <div class="section" id="rationsSection">
+    <div class="section-label"><span>Rations</span></div>
+    <div style="font-size:11px;color:var(--text-dim);margin-bottom:8px;">Food always depletes over time — this sets how fast, and what you risk to slow it down.</div>
+    <div class="rationRow">
+      <button class="rationbtn secondary" data-r="full" onclick="setRation('full')">Full</button>
+      <button class="rationbtn secondary" data-r="reduced" onclick="setRation('reduced')">Reduced</button>
+      <button class="rationbtn secondary" data-r="bare" onclick="setRation('bare')">Bare Bones</button>
+    </div>
+    <div class="manifest" id="manifestBox" style="margin-top:10px;"></div>
+  </div>
+
+  <div class="footer-note">rough prototype · numbers unbalanced on purpose · playtest &amp; report back</div>
+</div>
+
+<div id="modalRoot"></div>
+
+<script>
+/* ============================== STATE ============================== */
+
+const PARTS = ['engine','tires','battery','radiator','brakes'];
+const PART_LABEL = {engine:'Engine', tires:'Tires', battery:'Battery', radiator:'Radiator', brakes:'Brakes'};
+const PART_SHORT = {engine:'ENG', tires:'TIRE', battery:'BATT', radiator:'RAD', brakes:'BRK'};
+const SKILLS = ['mechanic','forage','firstaid'];
+const SKILL_LABEL = {mechanic:'Mechanic', forage:'Forage', firstaid:'First Aid'};
+
+const NAMES = ['Rui','Nando','Bea','Mica'];
+
+const TERRAINS = {
+  plains:    { label:'Plains',    desc:'Flat and unremarkable. Easy driving.',        fuelMult:1.0,  tireMult:1.0, brakeMult:1.0 },
+  desert:    { label:'Desert',    desc:'Brutal on fuel, thin on supplies.',           fuelMult:1.35, tireMult:1.1, brakeMult:0.8 },
+  mountains: { label:'Mountains', desc:'Hard on tires and brakes both.',              fuelMult:1.1,  tireMult:1.3, brakeMult:1.6 },
+  forest:    { label:'Forest',    desc:'Good foraging, more wildlife trouble.',       fuelMult:0.95, tireMult:1.15,brakeMult:1.0 },
+  coastal:   { label:'Coastal',   desc:'Civilization nearby. Better prices, more stops.', fuelMult:0.9, tireMult:0.9, brakeMult:1.0 },
+};
+
+const PACES = {
+  steady:   { label:'Steady',   speedMult:1.0,  fuelMult:1.0, fatigueMult:1.0, eventMult:1.0, wearMin:0, wearMax:0 },
+  push:     { label:'Push It',  speedMult:1.25, fuelMult:1.35,fatigueMult:1.5, eventMult:1.15,wearMin:0, wearMax:3 },
+  grueling: { label:'Grueling', speedMult:1.45, fuelMult:1.7, fatigueMult:2.2, eventMult:1.3, wearMin:2, wearMax:6 },
+};
+
+function rand(min,max){ return Math.random()*(max-min)+min; }
+function ri(min,max){ return Math.floor(rand(min,max+1)); }
+function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
+function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+function pickWeighted(list){
+  const total = list.reduce((s,i)=>s+i.w,0);
+  let r = Math.random()*total;
+  for(const item of list){ if((r-=item.w)<=0) return item; }
+  return list[list.length-1];
+}
+
+function wearPart(part, amount){
+  const t = TERRAINS[S.terrain];
+  const mult = part==='tires' ? t.tireMult : part==='brakes' ? t.brakeMult : part==='radiator' ? t.fuelMult : 1;
+  S.parts[part] = clamp(S.parts[part] - amount*mult, 0, 100);
+}
+function gainCash(amount){ S.inv.cash = Math.round(S.inv.cash + amount); }
+function foodConsumption(){
+  const rationMult = {full:1, reduced:0.65, bare:0.4}[S.ration];
+  return aliveMates().length * 0.5 * rationMult;
+}
+function scarcityMult(){
+  // the world runs thinner the longer you survive — small compounding pressure against endless runs
+  return clamp(1 + (S.day-1)*0.009, 1, 1.45);
+}
+function maybeRotateTerrain(kmThisHour){
+  S.terrainKmLeft -= kmThisHour;
+  if(S.terrainKmLeft <= 0){
+    S.terrain = S.nextTerrain;
+    const keys = Object.keys(TERRAINS).filter(t=>t!==S.terrain);
+    S.nextTerrain = pick(keys);
+    S.terrainKmLeft = ri(120,220);
+    log(`Terrain shifts — entering ${TERRAINS[S.terrain].label}. ${TERRAINS[S.terrain].desc}`,'event');
+  }
+}
+
+function loadBest(){
+  try {
+    const raw = localStorage.getItem('roadtrip_best_v1');
+    return raw ? JSON.parse(raw) : {distance:0, day:0};
+  } catch(e){ return {distance:0, day:0}; }
+}
+function saveBestIfBetter(distance, day){
+  const best = loadBest();
+  if(distance > best.distance){
+    try { localStorage.setItem('roadtrip_best_v1', JSON.stringify({distance, day})); } catch(e){}
+    return true;
+  }
+  return false;
+}
+
+function makeMates(){
+  const mates = NAMES.map((n,i)=>({
+    id:i, name:n, alive:true, driving:false,
+    health:100, food:100, fatigue:0, morale:70, sick:0, injured:0,
+    skills:{mechanic:8, forage:8, firstaid:8},
+    teaching:null, learning:null
+  }));
+  SKILLS.forEach((sk,i)=>{ mates[i].skills[sk] = ri(55,80); });
+  mates.forEach((m,i)=>{
+    const other = SKILLS[(i+1)%SKILLS.length];
+    if(m.skills[other] < 40) m.skills[other] += ri(10,25);
+  });
+  mates[0].driving = true;
+  return mates;
+}
+
+function makeState(){
+  const parts = {};
+  PARTS.forEach(p=> parts[p] = 100);
+  const terrainKeys = Object.keys(TERRAINS);
+  return {
+    day:1, hour:6,
+    distance:0,
+    mates: makeMates(),
+    parts,
+    fuel: 100,
+    inv: { food: 90, spareTire: 1, engineKit: 1, batteryPack: 0, radiatorPart: 0, brakePads: 1, medkit: 1, cash: 60, fuelCan: 0, skillManual: 0, weapon: 0 },
+    mode: 'rolling',
+    atLocation: null,
+    locationVisits: 0,
+    ration: 'full',
+    terrain: 'plains',
+    nextTerrain: pick(terrainKeys.filter(t=>t!=='plains')),
+    terrainKmLeft: ri(120,220),
+    raidCount: 0,
+    log: [],
+    gameOver: null
+  };
+}
+
+let S = makeState();
+
+/* ============================== TIME / DAY-NIGHT ============================== */
+function isDay(){ return S.hour >= 6 && S.hour < 22; }
+function advanceHour(hours){
+  for(let i=0;i<hours;i++){ S.hour++; if(S.hour>=24){ S.hour=0; S.day++; } }
+}
+
+/* ============================== HELPERS ============================== */
+function log(msg, cls){ S.log.push({msg, cls: cls||''}); if(S.log.length>40) S.log.shift(); }
+function aliveMates(){ return S.mates.filter(m=>m.alive); }
+function drivingMate(){ return S.mates.find(m=>m.driving && m.alive); }
+function bestForSkill(skill, excludeDriving){
+  return aliveMates().filter(m=> !excludeDriving || !m.driving).sort((a,b)=> b.skills[skill]-a.skills[skill])[0];
+}
+function skillCheck(mate, skill){
+  if(!mate) return false;
+  const lvl = mate.skills[skill];
+  const chance = clamp(lvl/100, 0.05, 0.97);
+  return Math.random() < chance;
+}
+
+/* ============================== EVENTS ============================== */
+function grantRandomPart(){
+  const itemMap = {spareTire:'a spare tire', engineKit:'an engine kit', batteryPack:'a battery', radiatorPart:'a radiator part', brakePads:'brake pads'};
+  const keys = Object.keys(itemMap);
+  const key = pick(keys);
+  S.inv[key]++;
+  return itemMap[key];
+}
+
+function grantFuelCan(size){
+  S.inv.fuelCan++;
+  const base = size || ri(18,26);
+  return Math.max(6, Math.round(base / scarcityMult()));
+}
+
+// weighted scavenge outcome table, shaped by what location you're at.
+// decayMult shrinks numeric gains, visits inflates the "nothing" odds — both only apply to anchored locations (rest/ruins/garage), not roadside.
+function scavengeLoot(mate, locationType, decayMult, visits){
+  decayMult = decayMult===undefined ? 1 : decayMult;
+  visits = visits || 0;
+  const terrainFoodMult = S.terrain==='forest'?1.4 : S.terrain==='desert'?0.6 : 1;
+  const tables = {
+    roadside: [
+      {w:44, fn:(dm)=>{ const g=Math.round(ri(8,8+Math.round(mate.skills.forage/4))*terrainFoodMult*dm); S.inv.food+=g; return `+${g} food`; }},
+      {w:14, fn:(dm)=>{ const g=Math.round(ri(4,14)*dm); gainCash(g); return `+$${g} cash`; }},
+      {w:10, fn:()=>{ const size=grantFuelCan(); return `found a fuel can (~${size}%, stored)`; }},
+      {w:10, fn:()=>{ const got=grantRandomPart(); return `salvaged ${got}`; }},
+      {w:4, fn:()=>{ S.inv.medkit++; return `found a medkit`; }},
+      {w:4, fn:()=>{ S.inv.skillManual++; return `found a tattered skill manual`; }},
+      {w:14, nothing:true, fn:()=>{ return `nothing worth carrying`; }},
+    ],
+    rest: [
+      {w:32, fn:(dm)=>{ const g=Math.round(ri(10,20)*terrainFoodMult*dm); S.inv.food+=g; return `+${g} food from a dead vending machine`; }},
+      {w:16, fn:(dm)=>{ const g=Math.round(ri(6,16)*dm); gainCash(g); return `+$${g} in loose change`; }},
+      {w:14, fn:()=>{ S.inv.medkit++; return `found a first-aid kit in a bathroom cabinet`; }},
+      {w:8, fn:()=>{ const size=grantFuelCan(); return `siphoned a can from a car left in the lot, ~${size}%`; }},
+      {w:6, fn:()=>{ const got=grantRandomPart(); return `found ${got} in a maintenance closet`; }},
+      {w:4, fn:()=>{ S.inv.skillManual++; return `found a dog-eared manual left on a bench`; }},
+      {w:20, nothing:true, fn:()=>{ return `picked clean already, nothing left`; }},
+    ],
+    ruins: [
+      {w:20, fn:()=>{ const got=grantRandomPart(); return `salvaged ${got} from a stripped car`; }},
+      {w:14, fn:(dm)=>{ const g=Math.round(ri(6,16)*terrainFoodMult*dm); S.inv.food+=g; return `+${g} food from a sealed pantry`; }},
+      {w:12, fn:()=>{ S.inv.medkit++; return `found a medkit in a collapsed cabinet`; }},
+      {w:11, fn:()=>{ const size=grantFuelCan(); return `drained a can from a dead generator, ~${size}%`; }},
+      {w:9, fn:()=>{ S.inv.skillManual++; return `found a water-damaged skill manual`; }},
+      {w:9, fn:(dm)=>{ const g=Math.round(ri(10,24)*dm); gainCash(g); return `+$${g} from a stripped register`; }},
+      {w:7, fn:()=>{ S.inv.weapon++; return `found something to defend the car with`; }},
+      {w:18, nothing:true, fn:()=>{ return `nothing but dust and rot`; }},
+    ],
+    garage: [
+      {w:28, fn:()=>{ const got=grantRandomPart(); return `found ${got} in the back lot, unattended`; }},
+      {w:9, fn:()=>{ const size=grantFuelCan(); return `siphoned a can from a junker out back, ~${size}%`; }},
+      {w:7, fn:()=>{ S.inv.skillManual++; return `found a service manual on a shelf`; }},
+      {w:9, fn:(dm)=>{ const g=Math.round(ri(5,15)*dm); gainCash(g); return `+$${g} from a loose till`; }},
+      {w:5, fn:()=>{ S.inv.weapon++; return `found a tire iron worth keeping handy`; }},
+      {w:42, nothing:true, fn:()=>{ return `nothing free lying around — the good stuff's behind the counter`; }},
+    ],
+  };
+  const baseTable = tables[locationType] || tables.roadside;
+  const isAnchored = locationType!=='roadside' && !!tables[locationType];
+  const table = isAnchored
+    ? baseTable.map(e => e.nothing ? { ...e, w: e.w + visits*7 } : e)
+    : baseTable;
+  const picked = pickWeighted(table);
+  return picked.fn(decayMult);
+}
+
+const DAY_EVENTS = [
+  {w:8, run:()=>{ const loss = ri(3,9); wearPart('tires',loss); log(`Rough gravel stretch chews up the tires.`,'bad'); }},
+  {w:6, run:()=>{ const loss = ri(1,3); S.fuel = clamp(S.fuel - loss*TERRAINS[S.terrain].fuelMult, 0, 100); wearPart('radiator', ri(1,4)); log(`Heat haze on the asphalt. Engine runs hot, radiator strained.`,'bad'); }},
+  {w:7, run:()=>{ const m = pick(aliveMates()); const gain = ri(3,10); S.inv.food += gain; log(`${m.name} spots berries roadside. +${gain} food.`,'good'); }},
+  {w:9, run:()=>{ const m = pick(aliveMates()); const size = grantFuelCan(); log(`${m.name} spots an abandoned jerry can in the ditch. Stashed it, ~${size}% worth.`,'good'); }},
+  {w:5, run:()=>{ const m = pick(aliveMates()); m.morale = clamp(m.morale+ri(3,8),0,100); log(`${m.name} finds something to laugh about. Morale up.`,'good'); }},
+  {w:4, run:()=>{ const g = ri(5,20); gainCash(g); log(`Loose change and a decent hubcap found on the shoulder. +$${g}.`,'good'); }},
+  {w:4, run:()=>{ wearPart('brakes', ri(4,10)); log(`Long downhill stretch, riding the brakes hard.`,'bad'); }},
+  {w:3, run:()=>{ discoverLocation('rest'); }},
+  {w:2, run:()=>{ discoverLocation('garage'); }},
+  {w:3, run:()=>{ discoverLocation('ruins'); }},
+  {w:4, run:()=>{ const m = pick(aliveMates()); m.morale = clamp(m.morale-ri(3,8),0,100); log(`${m.name} snaps over the radio station, again. Morale down.`,'bad'); }},
+  {w:4, run:()=>{ triggerStandEvent(); }},
+  {w:3, run:()=>{ const m = pick(aliveMates()); m.morale = clamp(m.morale+ri(5,12),0,100); log(`A proper viewpoint over the valley. Worth the stop. ${m.name}'s spirits lift.`,'good'); }},
+  {w:4, run:()=>{ const got = grantRandomPart(); log(`Picked through a wreck on the shoulder, salvaged ${got}.`,'good'); }},
+  {w:3, run:()=>{ const g = ri(8,18); gainCash(g); log(`A hitchhiker pays for a short lift, then heads their own way. +$${g}.`,'good'); }},
+  {w:4, run:()=>{ S.fuel = clamp(S.fuel-ri(1,3)*TERRAINS[S.terrain].fuelMult,0,100); wearPart('tires', ri(2,5)); log(`A dust storm eats visibility and grit gets into everything. Fuel and tires take a hit.`,'bad'); }},
+  {w:3, run:()=>{ wearPart('tires', ri(1,4)); const m = pick(aliveMates()); m.morale = clamp(m.morale-ri(2,5),0,100); log(`A pack of dogs chases the car for a stretch. Everyone's rattled.`,'bad'); }},
+  {w:2, run:()=>{ S.parts.engine = clamp(S.parts.engine-ri(2,6),0,100); log(`The engine hiccups for a moment, then settles. Worth keeping an eye on.`,'bad'); }},
+  {w:2, run:()=>{ wearPart('tires', ri(1,4)); log(`Something already flattened in the road. Minor damage rolling over it.`,'bad'); }},
+  {w:3, run:()=>{ const d = drivingMate(); if(d) d.fatigue = clamp(d.fatigue-ri(2,5),0,100); log(`A long flat straight stretch. Easy driving for a while.`,'good'); }},
+  {w:3, run:()=>{ const nd = aliveMates().find(m=>m.sick<=0); if(nd){ nd.sick = ri(6,14); log(`${nd.name} isn't feeling right. Something's going around.`,'bad'); } }},
+  {w:2, run:()=>{ triggerTollEvent(); }},
+  {w:2, run:()=>{ triggerHazardEvent(0.6); }},
+  {w:2, run:()=>{ triggerWreckSiphon(0.65); }},
+  {w:2, run:()=>{ triggerRaiderEvent(false); }},
+];
+
+const NIGHT_EVENTS = [
+  {w:7, run:()=>{ wearPart('tires', ri(4,12)); log(`Something sharp in the dark — pothole or roadkill, hard to tell. Tires take a hit.`,'bad'); }},
+  {w:6, run:()=>{ const m = drivingMate(); if(m){ m.fatigue = clamp(m.fatigue+ri(4,9),0,100); } log(`Driving blind past midnight. Fatigue creeps up.`,'bad'); }},
+  {w:5, run:()=>{ const m = pick(aliveMates()); m.health = clamp(m.health-ri(2,6),0,100); log(`Cold snap through a gap in the window. ${m.name} shivers through the night.`,'bad'); }},
+  {w:7, run:()=>{ const m = pick(aliveMates()); const size = grantFuelCan(ri(12,20)); log(`${m.name} siphons fuel from a wreck on the shoulder into a can. ~${size}%, stored.`,'good'); }},
+  {w:4, run:()=>{ discoverLocation('rest'); }},
+  {w:2, run:()=>{ discoverLocation('garage'); }},
+  {w:3, run:()=>{ discoverLocation('ruins'); }},
+  {w:3, run:()=>{ S.fuel = clamp(S.fuel-ri(1,3)*TERRAINS[S.terrain].fuelMult,0,100); log(`Cold engine takes forever to warm up, burns extra fuel getting there.`,'bad'); }},
+  {w:4, run:()=>{ const d = drivingMate(); if(d) d.fatigue = clamp(d.fatigue+ri(2,5),0,100); log(`Something with eyes catches the headlights and vanishes. Nerves fried a little.`,'bad'); }},
+  {w:3, run:()=>{ wearPart('brakes', ri(2,6)); log(`Fog rolls in thick. Heavy braking through the worst of it.`,'bad'); }},
+  {w:4, run:()=>{ const m = pick(aliveMates()); m.morale = clamp(m.morale+ri(4,9),0,100); log(`A dead-quiet stretch, full sky of stars overhead. ${m.name} needed that.`,'good'); }},
+  {w:3, run:()=>{ const nd = aliveMates().filter(x=>!x.driving); if(nd.length){ const m = pick(nd); m.fatigue = clamp(m.fatigue+ri(3,7),0,100); log(`${m.name} can't get comfortable enough to really rest.`,'bad'); } }},
+  {w:3, run:()=>{ const m = pick(aliveMates()); m.morale = clamp(m.morale-ri(2,5),0,100); log(`Coyotes somewhere out past the treeline. Unsettling, nothing more.`,'bad'); }},
+  {w:3, run:()=>{ const got = grantRandomPart(); log(`Headlights catch an abandoned car. Salvaged ${got} from it.`,'good'); }},
+  {w:2, run:()=>{ S.parts.engine = clamp(S.parts.engine-ri(2,6),0,100); log(`The engine cuts out for a second, then catches again. Unnerving.`,'bad'); }},
+  {w:2, run:()=>{ const m = pick(aliveMates()); m.morale = clamp(m.morale-ri(1,4),0,100); log(`A gas station sign glowing in the distance — closed by the time you'd reach it.`,'bad'); }},
+  {w:2, run:()=>{ const nd = aliveMates().find(m=>m.sick<=0); if(nd){ nd.sick = ri(6,14); log(`${nd.name} isn't feeling right. Something's going around.`,'bad'); } }},
+  {w:2, run:()=>{ triggerHazardEvent(0.4); }},
+  {w:2, run:()=>{ triggerWreckSiphon(0.45); }},
+  {w:3, run:()=>{ triggerRaiderEvent(true); }},
+];
+
+function discoverLocation(type){
+  if(S.atLocation) return;
+  S.atLocation = type;
+  S.locationVisits = 0;
+  if(type==='rest') log(`A rest area appears ahead. You could stop here.`,'event');
+  else if(type==='garage') log(`Lights on the horizon — looks like a garage. Prices will be criminal.`,'event');
+  else log(`An abandoned building sits back off the road, cars rusting in the lot. Worth a look.`,'event');
+}
+
+function triggerStandEvent(){
+  const cost = ri(4,10);
+  const gain = ri(8,18);
+  showModal(`
+    <h2>ROADSIDE STAND</h2>
+    <p>Someone's set up selling food cheap, no questions asked. Buy some, or keep moving and keep the cash.</p>
+    <div class="actionbar" style="margin-top:14px;">
+      <button class="secondary" id="standPass">Keep Moving</button>
+      <button id="standBuy">Buy · $${cost} for +${gain} food</button>
+    </div>
+  `);
+  document.getElementById('standPass').onclick = ()=>{ log(`Passed on the stand, kept the cash.`,''); closeModal(); render(); };
+  document.getElementById('standBuy').onclick = ()=>{
+    if(S.inv.cash>=cost){ S.inv.cash-=cost; S.inv.food+=gain; log(`Bought food at the stand. -$${cost}, +${gain} food.`,'good'); }
+    else { log(`Not enough cash on hand.`,'bad'); }
+    closeModal(); render();
+  };
+}
+
+function triggerWreckSiphon(successChance){
+  showModal(`
+    <h2>DEAD CAR ON THE SHOULDER</h2>
+    <p>Tank might still have something in it. Worth the time to check, or leave it be and keep moving.</p>
+    <div class="actionbar" style="margin-top:14px;">
+      <button class="secondary" id="siphonPass">Leave It</button>
+      <button id="siphonTry">Check The Tank · 1hr</button>
+    </div>
+  `);
+  document.getElementById('siphonPass').onclick = ()=>{ closeModal(); render(); };
+  document.getElementById('siphonTry').onclick = ()=>{
+    advanceHour(1);
+    if(Math.random() < successChance){ const size = grantFuelCan(ri(15,30)); log(`Tank had some left. Siphoned a can, ~${size}%, stored.`,'good'); }
+    else { log(`Tank was bone dry. Wasted an hour for nothing.`,'bad'); }
+    closeModal(); render();
+  };
+}
+
+function triggerRaiderEvent(nightMode){
+  S.raidCount++;
+  const hasWeapon = S.inv.weapon > 0;
+  showModal(`
+    <h2>${nightMode ? 'AMBUSH IN THE DARK' : 'ROAD BLOCKED AHEAD'}</h2>
+    <p>A group blocks the way, eyeing the car and what's in it. ${hasWeapon ? "At least you're armed." : "Nothing to fight with but nerve."}</p>
+    <div class="menu-actions" style="margin-top:14px;">
+      <button id="raidFight"><span>Fight</span><small>${hasWeapon ? 'Armed — better odds' : 'Unarmed — risky'}</small></button>
+      <button class="secondary" id="raidPay"><span>Hand Over Supplies</span><small>Lose cash + food, walk away clean</small></button>
+      <button class="secondary" id="raidFlee"><span>Floor It</span><small>Risk the car to avoid them entirely</small></button>
+    </div>
+  `);
+  document.getElementById('raidFight').onclick = ()=>{
+    const winChance = hasWeapon ? 0.7 : 0.4;
+    if(Math.random() < winChance){
+      if(hasWeapon) S.inv.weapon--;
+      const lootCash = ri(10,30); gainCash(lootCash);
+      log(`Fought them off. Grabbed $${lootCash} off them on the way out.`,'good');
+    } else {
+      if(hasWeapon) S.inv.weapon--;
+      const hurt = pick(aliveMates());
+      if(Math.random() < 0.12){
+        hurt.alive = false;
+        log(`${hurt.name} didn't make it out of that fight.`,'bad');
+        if(hurt.driving){ const next = aliveMates()[0]; if(next) next.driving = true; }
+      } else {
+        hurt.injured = clamp(hurt.injured + ri(10,22), 0, 40);
+        hurt.health = clamp(hurt.health-ri(15,32),0,100);
+        log(`Fight went bad. ${hurt.name} took a real hit.`,'bad');
+      }
+    }
+    closeModal(); render();
+  };
+  document.getElementById('raidPay').onclick = ()=>{
+    const cashLoss = Math.min(S.inv.cash, ri(15,40));
+    const foodLoss = Math.min(S.inv.food, ri(10,25));
+    S.inv.cash -= cashLoss; S.inv.food -= foodLoss;
+    log(`Handed over $${cashLoss} and ${foodLoss} food to get through clean.`,'bad');
+    closeModal(); render();
+  };
+  document.getElementById('raidFlee').onclick = ()=>{
+    if(Math.random() < 0.5){ log(`Punched it and got clear.`,'good'); }
+    else {
+      wearPart('tires', ri(6,16)); wearPart('engine', ri(3,10));
+      log(`Took some damage getting away, but got away.`,'bad');
+    }
+    closeModal(); render();
+  };
+}
+
+function triggerTollEvent(){
+  const cost = ri(8,22);
+  showModal(`
+    <h2>TOLL ROAD</h2>
+    <p>A toll booth blocks the way. Pay up, or backtrack for a free detour that costs time and a bit of fuel.</p>
+    <div class="actionbar" style="margin-top:14px;">
+      <button class="secondary" id="tollDetour">Detour · -3hr, -6% fuel</button>
+      <button id="tollPay">Pay $${cost}</button>
+    </div>
+  `);
+  document.getElementById('tollPay').onclick = ()=>{
+    if(S.inv.cash>=cost){ S.inv.cash-=cost; log(`Paid the toll. -$${cost}.`,'bad'); }
+    else { log(`Couldn't afford the toll, forced to detour anyway.`,'bad'); advanceHour(3); S.fuel=clamp(S.fuel-6,0,100); }
+    closeModal(); render();
+  };
+  document.getElementById('tollDetour').onclick = ()=>{
+    advanceHour(3); S.fuel = clamp(S.fuel-6,0,100);
+    log(`Backtracked around the toll. Lost time and fuel but kept the cash.`,'bad');
+    closeModal(); render();
+  };
+}
+
+function triggerHazardEvent(successChance){
+  showModal(`
+    <h2>WASHED-OUT CROSSING</h2>
+    <p>The road ahead dips through water, depth unclear. Push through, or backtrack for the long way round.</p>
+    <div class="actionbar" style="margin-top:14px;">
+      <button class="secondary" id="hazDetour">Detour · -2hr, -4% fuel</button>
+      <button id="hazRisk">Push Through</button>
+    </div>
+  `);
+  document.getElementById('hazRisk').onclick = ()=>{
+    if(Math.random() < successChance){ log(`Made it through clean.`,'good'); }
+    else { wearPart('tires', ri(8,20)); wearPart('brakes', ri(4,12)); log(`Water was deeper than it looked. Tires and brakes took a beating.`,'bad'); }
+    closeModal(); render();
+  };
+  document.getElementById('hazDetour').onclick = ()=>{
+    advanceHour(2); S.fuel = clamp(S.fuel-4,0,100);
+    log(`Took the long way around the crossing.`,'bad');
+    closeModal(); render();
+  };
+}
+
+function rollEvent(eventMult){
+  const pool = isDay() ? DAY_EVENTS : NIGHT_EVENTS;
+  const roll = Math.random();
+  if(roll < 0.55*(eventMult||1)){ const ev = pickWeighted(pool); ev.run(); }
+}
+
+/* ============================== CORE TICK ============================== */
+function driveOneHour(pace){
+  pace = pace || 'steady';
+  if(S.mode==='gameover') return;
+  const driver = drivingMate();
+  if(!driver){ checkGameOver(); return; }
+  const P = PACES[pace];
+
+  const soloDriver = aliveMates().length===1;
+
+  let speedMod = 1;
+  if(soloDriver){
+    if(driver.fatigue > 50) speedMod *= 0.5;
+    else if(driver.fatigue > 25) speedMod *= 0.8;
+  } else {
+    if(driver.fatigue > 70) speedMod *= 0.6;
+    else if(driver.fatigue > 40) speedMod *= 0.85;
+  }
+  if(driver.teaching) speedMod *= 0.5;
+  if(S.parts.brakes < 30) speedMod *= 0.7;
+  if(isDay() && S.parts.radiator < 25) speedMod *= 0.75;
+  speedMod *= P.speedMult;
+
+  const baseSpeed = 55;
+  const kmThisHour = Math.round(baseSpeed * speedMod);
+  S.distance += kmThisHour;
+  maybeRotateTerrain(kmThisHour);
+
+  S.fuel = clamp(S.fuel - rand(2,3.5) * P.fuelMult * TERRAINS[S.terrain].fuelMult * scarcityMult(), 0, 100);
+  S.inv.food = Math.max(0, S.inv.food - foodConsumption());
+  driver.fatigue = clamp(driver.fatigue + (soloDriver ? ri(4,8) : ri(2,5)) * P.fatigueMult, 0, 100);
+  aliveMates().forEach(m=>{ if(!m.driving) m.fatigue = clamp(m.fatigue-1,0,100); });
+
+  if(P.wearMax > 0){
+    const stressPart = pick(['tires','brakes','engine']);
+    wearPart(stressPart, ri(P.wearMin, P.wearMax));
+  }
+
+  if(S.inv.food<=0){
+    aliveMates().forEach(m=>{
+      const rate = 2 + Math.round((1-m.skills.firstaid/200)*2);
+      m.health = clamp(m.health-rate,0,100);
+    });
+    log(`No food left. The crew is starving.`,'bad');
+  } else if(S.ration==='bare' && Math.random()<0.12){
+    const m = pick(aliveMates()); m.health = clamp(m.health-1,0,100);
+    log(`Bare rations are catching up with ${m.name}.`,'bad');
+  } else if(S.ration==='reduced' && Math.random()<0.06){
+    const m = pick(aliveMates()); m.morale = clamp(m.morale-1,0,100);
+  }
+
+  aliveMates().forEach(m=>{
+    if(m.sick > 0){
+      m.health = clamp(m.health - ri(1,3), 0, 100);
+      m.sick--;
+      if(m.sick<=0) log(`${m.name} has recovered.`,'good');
+    }
+    if(m.injured > 0){
+      m.health = clamp(m.health - ri(2,6), 0, 100);
+      if(Math.random() < 0.05){
+        const dmg = ri(15,32);
+        m.health = clamp(m.health-dmg,0,100);
+        log(`${m.name}'s injury takes a bad turn.`,'bad');
+      }
+      m.injured--;
+      if(m.injured<=0) log(`${m.name}'s injury has healed up.`,'good');
+    }
+  });
+
+  applyTeaching(1);
+  aliveMates().forEach(m=>{ if(m.health<30) m.morale = clamp(m.morale-1,0,100); });
+
+  checkMateDeaths();
+
+  advanceHour(1);
+  rollEvent(P.eventMult);
+  checkGameOver();
+  render();
+}
+
+function checkMateDeaths(){
+  aliveMates().forEach(m=>{
+    if(m.health<=0 && m.alive){
+      m.alive = false;
+      log(`${m.name} didn't make it.`,'bad');
+      if(m.driving){ const next = aliveMates()[0]; if(next) next.driving = true; }
+    }
+  });
+}
+
+function applyTeaching(hours){
+  aliveMates().forEach(teacher=>{
+    if(teacher.teaching){
+      const student = S.mates.find(m=>m.id===teacher.teaching.studentId && m.alive);
+      const skill = teacher.teaching.skill;
+      if(!student){ teacher.teaching=null; return; }
+      const rate = 2 * hours;
+      const cap = teacher.skills[skill];
+      student.skills[skill] = clamp(student.skills[skill] + rate, 0, cap);
+      if(student.skills[skill] >= cap){
+        log(`${student.name} has learned all ${SKILL_LABEL[skill]} ${teacher.name} can teach.`,'good');
+        teacher.teaching = null;
+        student.learning = null;
+      }
+    }
+  });
+}
+
+/* ============================== GAME OVER CHECKS ============================== */
+function checkGameOver(){
+  if(S.fuel<=0 && S.inv.fuelCan>0){
+    S.inv.fuelCan--;
+    S.fuel = Math.max(6, Math.round(ri(18,26) / scarcityMult()));
+    log(`Tank ran dry — poured in a spare can just in time.`,'good');
+  }
+  let reason = null;
+  if(S.parts.tires<=0 && S.inv.spareTire<=0) reason = 'Tire blew and there was no spare left.';
+  else if(S.parts.engine<=0 && S.inv.engineKit<=0) reason = 'The engine seized for good, no parts left to fix it.';
+  else if(S.fuel<=0) reason = 'Ran bone dry, no fuel left anywhere in reach.';
+  else if(aliveMates().length===0) reason = 'The whole crew is gone.';
+  if(reason){ S.mode='gameover'; S.gameOver = reason; }
+}
+
+/* ============================== CAMP / STOP ACTIONS ============================== */
+function enterCamp(){ S.mode = 'stopped'; render(); }
+function leaveCamp(){ S.mode = 'rolling'; S.atLocation = null; S.locationVisits = 0; render(); }
+
+// staying put isn't safe — a parked car is a target too, just a different flavor of risk than driving
+const CAMP_EVENTS = [
+  {w:5, run:(night)=>{ triggerRaiderEvent(night); }},
+  {w:6, run:()=>{ const loss = Math.min(S.inv.food, ri(5,15)); S.inv.food -= loss; log(`Something gets into the supplies while you're distracted. -${loss} food.`,'bad'); }},
+  {w:4, run:()=>{ const loss = Math.min(S.inv.cash, ri(5,20)); S.inv.cash -= loss; log(`Someone's light-fingered while you're not looking. -$${loss}.`,'bad'); }},
+  {w:3, run:()=>{ const m = pick(aliveMates()); m.morale = clamp(m.morale-ri(2,6),0,100); log(`Sitting still this long is wearing on ${m.name}.`,'bad'); }},
+  {w:5, run:()=>{ /* quiet, nothing happens */ }},
+  {w:3, run:()=>{ const g = ri(4,12); gainCash(g); log(`A passing traveler trades a little cash for conversation. +$${g}.`,'good'); }},
+];
+
+function campRiskMult(){
+  return { garage:0.5, rest:1, ruins:1.3 }[S.atLocation] ?? 1.2;
+}
+
+function rollCampRisk(hours){
+  const chance = 0.10 * campRiskMult();
+  for(let i=0;i<hours;i++){
+    if(Math.random() < chance){
+      pickWeighted(CAMP_EVENTS).run(!isDay());
+    }
+  }
+  checkMateDeaths();
+  checkGameOver();
+}
+
+function actScavenge(){
+  const locType = S.atLocation || 'roadside';
+  const isAnchored = !!S.atLocation;
+  const visits = isAnchored ? S.locationVisits : 0;
+  const decayMult = isAnchored ? Math.max(0.15, 1 - visits*0.35) : 1;
+  const m = bestForSkill('forage', true) || bestForSkill('forage', false);
+  const hours = locType==='ruins' ? ri(1,2) : 1;
+  advanceHour(hours);
+  S.inv.food = Math.max(0,S.inv.food-foodConsumption()*hours);
+
+  if(locType==='ruins' && Math.random()<0.12){
+    const hurt = pick(aliveMates());
+    hurt.health = clamp(hurt.health-ri(5,14),0,100);
+    log(`A floor gives way while searching the ruins. ${hurt.name} gets banged up.`,'bad');
+    if(isAnchored) S.locationVisits++;
+    rollCampRisk(hours);
+    render(); return;
+  }
+
+  const r1 = scavengeLoot(m, locType, decayMult, visits);
+  const wantsSecond = locType==='ruins' || (locType==='garage' && Math.random()<0.3);
+  const r2 = (wantsSecond && Math.random()<0.5) ? scavengeLoot(m, locType, decayMult, visits) : null;
+  m.morale = clamp(m.morale+3,0,100);
+  const siteLabel = {roadside:'the roadside', rest:'the rest area', ruins:'the ruins', garage:"the garage's back lot"}[locType];
+  const staleNote = isAnchored && visits>=2 ? ' — slim pickings by now' : '';
+  log(`${m.name} scavenges ${siteLabel}${staleNote} — ${r1}${r2?`, and ${r2}`:''}.`,'good');
+  if(isAnchored) S.locationVisits++;
+  rollCampRisk(hours);
+  render();
+}
+
+function openManualPicker(){
+  if(S.inv.skillManual<=0){ log(`No skill manuals on hand.`,'bad'); return; }
+  const mates = aliveMates();
+  const mOpts = mates.map(m=>`<option value="${m.id}">${m.name}</option>`).join('');
+  const skOpts = SKILLS.map(s=>`<option value="${s}">${SKILL_LABEL[s]}</option>`).join('');
+  showModal(`
+    <h2>READ SKILL MANUAL</h2>
+    <p>Study a manual to boost a skill instantly. Consumes the manual. You have ${S.inv.skillManual}.</p>
+    <label class="flabel">Mate</label>
+    <select id="mkMate">${mOpts}</select>
+    <label class="flabel">Skill</label>
+    <select id="mkSkill">${skOpts}</select>
+    <div class="actionbar" style="margin-top:14px;">
+      <button class="secondary" id="mkCancel">Cancel</button>
+      <button id="mkConfirm">Study It</button>
+    </div>
+  `);
+  document.getElementById('mkCancel').onclick = closeModal;
+  document.getElementById('mkConfirm').onclick = ()=>{
+    const mid = Number(document.getElementById('mkMate').value);
+    const skill = document.getElementById('mkSkill').value;
+    const m = S.mates.find(x=>x.id===mid);
+    const gain = ri(15,30);
+    m.skills[skill] = clamp(m.skills[skill]+gain,0,100);
+    S.inv.skillManual--;
+    log(`${m.name} studies the manual — ${SKILL_LABEL[skill]} up ${gain}%.`,'good');
+    closeModal(); render();
+  };
+}
+
+function actUseFuelCan(){
+  if(S.inv.fuelCan<=0){ log(`No fuel cans on hand.`,'bad'); return; }
+  S.inv.fuelCan--;
+  const gain = Math.max(6, Math.round(ri(18,26) / scarcityMult()));
+  S.fuel = clamp(S.fuel+gain,0,100);
+  log(`Poured a fuel can into the tank. +${gain}% fuel.`,'good');
+  render();
+}
+
+function actRepair(part){
+  const itemKey = {engine:'engineKit', tires:'spareTire', battery:'batteryPack', radiator:'radiatorPart', brakes:'brakePads'}[part];
+  if(S.inv[itemKey] <= 0){ log(`No parts on hand to repair the ${PART_LABEL[part]}.`,'bad'); return; }
+  const m = bestForSkill('mechanic', true) || bestForSkill('mechanic', false);
+  const ok = skillCheck(m,'mechanic');
+  advanceHour(1);
+  S.inv.food = Math.max(0,S.inv.food-foodConsumption());
+  S.inv[itemKey]--;
+  if(ok){ S.parts[part] = clamp(S.parts[part] + ri(55,85), 0, 100); log(`${m.name} gets the ${PART_LABEL[part]} properly sorted.`,'good'); }
+  else { S.parts[part] = clamp(S.parts[part] + ri(15,30), 0, 100); log(`${m.name} struggles with the ${PART_LABEL[part]}, only a partial fix.`,'bad'); }
+  rollCampRisk(1);
+  render();
+}
+
+function actFieldPatch(){
+  const part = PARTS.slice().sort((a,b)=>S.parts[a]-S.parts[b])[0];
+  const m = bestForSkill('mechanic', true) || bestForSkill('mechanic', false);
+  const ok = skillCheck(m,'mechanic');
+  advanceHour(1);
+  S.inv.food = Math.max(0,S.inv.food-foodConsumption());
+  if(ok){ S.parts[part] = clamp(S.parts[part]+ri(12,26),0,100); log(`${m.name} jury-rigs a quick fix on the ${PART_LABEL[part]}. No parts used, might not hold.`,'good'); }
+  else { S.parts[part] = clamp(S.parts[part]-ri(2,9),0,100); log(`${m.name}'s quick fix on the ${PART_LABEL[part]} backfires, makes it worse.`,'bad'); }
+  rollCampRisk(1);
+  render();
+}
+
+function actRest(){
+  advanceHour(2);
+  S.inv.food = Math.max(0, S.inv.food-foodConsumption()*2);
+  aliveMates().forEach(m=>{ m.fatigue = clamp(m.fatigue-40,0,100); if(m.sick>0) m.sick = Math.max(0,m.sick-3); if(m.injured>0) m.injured = Math.max(0,m.injured-3); });
+  if(Math.random()<0.15){
+    S.parts.battery = clamp(S.parts.battery-ri(10,25),0,100);
+    log(`Someone didn't shut a door properly. Battery's drained a bit.`,'bad');
+  } else { log(`The crew rests. Fatigue eases.`,'good'); }
+  rollCampRisk(2);
+  render();
+}
+
+function actMedkit(){
+  if(S.inv.medkit<=0){ log(`No medkits left.`,'bad'); return; }
+  const m = aliveMates().sort((a,b)=>a.health-b.health)[0];
+  S.inv.medkit--;
+  m.health = clamp(m.health+ri(35,55),0,100);
+  if(m.sick>0 || m.injured>0){ m.sick=0; m.injured=0; log(`${m.name} patched up — sickness and injuries cleared.`,'good'); }
+  else log(`${m.name} patched up with the medkit.`,'good');
+  render();
+}
+
+function actFeedHeal(){
+  if(S.inv.food < 15){ log(`Not enough food spare to eat for recovery.`,'bad'); return; }
+  const m = aliveMates().sort((a,b)=>a.health-b.health)[0];
+  S.inv.food -= 15;
+  m.health = clamp(m.health+ri(10,18),0,100);
+  log(`${m.name} eats extra to recover. Costs food, slow gain.`,'good');
+  render();
+}
+
+function setRation(r){ S.ration = r; log(`Rations set to ${r}.`,''); render(); }
+
+function actGarageBuy(what){
+  const prices = {fuel:2.2, spareTire:45, engineKit:60, batteryPack:35, radiatorPart:30, brakePads:25};
+  if(what==='fuel'){
+    const need = 100-S.fuel;
+    const cost = Math.round(need*prices.fuel);
+    if(S.inv.cash < cost){ log(`Can't afford a full tank.`,'bad'); return; }
+    S.inv.cash -= cost; S.fuel = 100;
+    log(`Filled the tank at criminal prices. -$${cost}`,'bad');
+  } else {
+    const cost = prices[what];
+    if(S.inv.cash < cost){ log(`Can't afford it.`,'bad'); return; }
+    S.inv.cash -= cost; S.inv[what]++;
+    log(`Bought a ${what} at the garage for $${cost}, robbery but necessary.`,'bad');
+  }
+  render();
+}
+
+function openSellPicker(){
+  const prices = {spareTire:45, engineKit:60, batteryPack:35, radiatorPart:30, brakePads:25};
+  const owned = Object.keys(prices).filter(k=>S.inv[k]>0);
+  if(!owned.length){ log(`Nothing spare to sell.`,'bad'); return; }
+  const labelMap = {spareTire:'Spare Tire', engineKit:'Engine Kit', batteryPack:'Battery Pack', radiatorPart:'Radiator Part', brakePads:'Brake Pads'};
+  const opts = owned.map(k=>`<option value="${k}">${labelMap[k]} (have ${S.inv[k]}) — $${Math.round(prices[k]/2)}</option>`).join('');
+  showModal(`
+    <h2>SELL SPARE PARTS</h2>
+    <p>Garage buys used parts for half what they sell for.</p>
+    <select id="sellPick">${opts}</select>
+    <div class="actionbar" style="margin-top:14px;">
+      <button class="secondary" id="sellCancel">Cancel</button>
+      <button id="sellConfirm">Sell</button>
+    </div>
+  `);
+  document.getElementById('sellCancel').onclick = closeModal;
+  document.getElementById('sellConfirm').onclick = ()=>{
+    const key = document.getElementById('sellPick').value;
+    const price = Math.round(prices[key]/2);
+    S.inv[key]--; gainCash(price);
+    log(`Sold a spare ${labelMap[key]} for $${price}.`,'good');
+    closeModal(); render();
+  };
+}
+
+function openTeachPicker(){
+  const teachers = aliveMates().filter(m=>!m.learning);
+  const students = aliveMates().filter(m=>!m.driving && !m.teaching);
+  if(teachers.length<2 && students.length===0){ log(`Nobody available to teach or learn right now.`,'bad'); return; }
+  showModal(teachModalHTML(teachers,students));
+  wireTeachModal();
+}
+
+function teachModalHTML(teachers,students){
+  const tOpts = teachers.map(m=>`<option value="${m.id}">${m.name}</option>`).join('');
+  const sOpts = students.map(m=>`<option value="${m.id}">${m.name}</option>`).join('');
+  const skOpts = SKILLS.map(s=>`<option value="${s}">${SKILL_LABEL[s]}</option>`).join('');
+  return `
+    <h2>TEACH / LEARN</h2>
+    <p>Driving mate can teach (50% speed penalty) but not learn. Pick a teacher, a student, and a skill.</p>
+    <label class="flabel">Teacher</label>
+    <select id="pkTeacher">${tOpts}</select>
+    <label class="flabel">Student</label>
+    <select id="pkStudent">${sOpts}</select>
+    <label class="flabel">Skill</label>
+    <select id="pkSkill">${skOpts}</select>
+    <div class="actionbar" style="margin-top:14px;">
+      <button class="secondary" id="pkCancel">Cancel</button>
+      <button id="pkConfirm">Start</button>
+    </div>
+  `;
+}
+
+function wireTeachModal(){
+  document.getElementById('pkCancel').onclick = closeModal;
+  document.getElementById('pkConfirm').onclick = ()=>{
+    const tId = Number(document.getElementById('pkTeacher').value);
+    const sId = Number(document.getElementById('pkStudent').value);
+    const skill = document.getElementById('pkSkill').value;
+    if(tId===sId){ closeModal(); return; }
+    const teacher = S.mates.find(m=>m.id===tId);
+    const student = S.mates.find(m=>m.id===sId);
+    teacher.teaching = {studentId:sId, skill};
+    student.learning = {teacherId:tId, skill};
+    log(`${teacher.name} starts teaching ${SKILL_LABEL[skill]} to ${student.name}.`,'event');
+    closeModal();
+    render();
+  };
+}
+
+function stopTeaching(mateId){
+  const m = S.mates.find(x=>x.id===mateId);
+  if(m.teaching){
+    const student = S.mates.find(x=>x.id===m.teaching.studentId);
+    if(student) student.learning = null;
+    m.teaching = null;
+    log(`${m.name} stops teaching.`,'');
+    render();
+  }
+}
+
+function switchDriver(mateId){
+  const cur = drivingMate();
+  if(cur) cur.driving = false;
+  const next = S.mates.find(m=>m.id===mateId);
+  next.driving = true;
+  next.learning = null;
+  log(`${next.name} takes the wheel.`,'');
+  render();
+}
+
+/* ============================== MODAL ============================== */
+function showModal(html){ document.getElementById('modalRoot').innerHTML = `<div class="modal-overlay"><div class="modal">${html}</div></div>`; }
+function closeModal(){ document.getElementById('modalRoot').innerHTML=''; }
+
+function showGameOver(){
+  const isNewBest = saveBestIfBetter(S.distance, S.day);
+  const best = loadBest();
+  const lostCount = S.mates.filter(m=>!m.alive).length;
+  const badges = [];
+  if(lostCount===0) badges.push('Full Crew Survived');
+  else badges.push(`${lostCount} Crew Lost`);
+  if(S.raidCount>0) badges.push(`${S.raidCount} Encounter${S.raidCount>1?'s':''} Survived`);
+  if(isNewBest) badges.push('NEW BEST RUN');
+
+  const html = `
+    <h2>GAME OVER</h2>
+    <p>${S.gameOver}</p>
+    <div class="stat">Distance travelled: <b>${S.distance} km</b></div>
+    <div class="stat">Survived: <b>Day ${S.day}, ${String(S.hour).padStart(2,'0')}:00</b></div>
+    <div class="stat" style="color:var(--text-dim);">Best run ever: ${best.distance} km, Day ${best.day}</div>
+    <div style="margin:10px 0;display:flex;flex-wrap:wrap;gap:6px;">
+      ${badges.map(b=>`<span class="tag ${b.includes('NEW BEST')?'drive':b.includes('Lost')?'injured':'teach'}">${b}</span>`).join('')}
+    </div>
+    <div class="actionbar" style="margin-top:14px;">
+      <button id="restartBtn">Try Again</button>
+    </div>
+  `;
+  document.getElementById('modalRoot').innerHTML = `<div class="modal-overlay"><div class="modal">${html}</div></div>`;
+  document.getElementById('restartBtn').onclick = ()=>{ S = makeState(); closeModal(); render(); };
+}
+
+/* ============================== GAUGE / SEGBAR RENDERING ============================== */
+function polarToCartesian(cx,cy,r,angleDeg){
+  const rad = (angleDeg-90) * Math.PI/180;
+  return { x: cx + r*Math.cos(rad), y: cy + r*Math.sin(rad) };
+}
+function describeArc(cx,cy,r,startAngle,endAngle){
+  const start = polarToCartesian(cx,cy,r,startAngle);
+  const end = polarToCartesian(cx,cy,r,endAngle);
+  const largeArc = (endAngle-startAngle) > 180 ? 1 : 0;
+  return `M ${start.x} ${start.y} A ${r} ${r} 0 ${largeArc} 1 ${end.x} ${end.y}`;
+}
+function valToAngle(v){ return -90 + (clamp(v,0,100)/100)*180; }
+
+function colorFor(v){ return v>60 ? 'var(--phosphor)' : v>30 ? 'var(--amber)' : 'var(--red)'; }
+
+function gaugeSVG(value, label){
+  const cx=59, cy=58, r=46;
+  const a1 = -90, a2 = valToAngle(30), a3 = valToAngle(60), a4 = 90;
+  const needleAngle = valToAngle(value);
+  return `
+  <svg width="118" height="72" viewBox="0 0 118 72">
+    <path d="${describeArc(cx,cy,r,a1,a3<a1?a1:a3)}" stroke="#3a1613" stroke-width="7" fill="none" stroke-linecap="round" opacity="0.5"/>
+    <path d="${describeArc(cx,cy,r,-90,valToAngle(30))}" stroke="#ff4f3f" stroke-width="7" fill="none" stroke-linecap="round"/>
+    <path d="${describeArc(cx,cy,r,valToAngle(30),valToAngle(60))}" stroke="#ffb03c" stroke-width="7" fill="none" stroke-linecap="round"/>
+    <path d="${describeArc(cx,cy,r,valToAngle(60),90)}" stroke="#8dffa0" stroke-width="7" fill="none" stroke-linecap="round" opacity="0.85"/>
+    <g transform="rotate(${needleAngle} ${cx} ${cy})">
+      <line x1="${cx}" y1="${cy}" x2="${cx}" y2="${cy-38}" stroke="#eef5ea" stroke-width="2.2" stroke-linecap="round"/>
+    </g>
+    <circle cx="${cx}" cy="${cy}" r="5" fill="#eef5ea" stroke="#0a0d08" stroke-width="1.5"/>
+  </svg>
+  <div class="gauge-value">${Math.round(value)}</div>
+  <div class="gauge-label">${label}</div>
+  `;
+}
+
+function segBar(value, size){
+  size = size || 10;
+  let html = '<div class="segbar">';
+  const c = colorFor(value);
+  const filled = Math.round((value/100)*size);
+  for(let i=0;i<size;i++){
+    html += `<i class="seg ${i<filled?'on':''}" style="--c:${c}"></i>`;
+  }
+  html += '</div>';
+  return html;
+}
+
+function lampClass(value){ return value>60?'g':value>30?'a':'r'; }
+
+/* ============================== RENDER ============================== */
+function render(){
+  const day = isDay();
+  document.getElementById('sky').className = 'sky ' + (day?'day':'night');
+  document.getElementById('orb').className = 'orb ' + (day?'day':'night');
+  document.getElementById('stars').className = 'stars ' + (day?'':'on');
+  if(document.getElementById('stars').children.length===0){
+    let starsHtml='';
+    for(let i=0;i<18;i++){ starsHtml += `<div class="star" style="left:${ri(0,100)}%;top:${ri(0,70)}%;"></div>`; }
+    document.getElementById('stars').innerHTML = starsHtml;
+  }
+  document.getElementById('horizonLabel').textContent = `DAY ${S.day} · ${TERRAINS[S.terrain].label.toUpperCase()}`;
+  const best = loadBest();
+  document.getElementById('bestLine').innerHTML = best.distance>0 ? `BEST: <b>${best.distance}km</b> · D${best.day}` : '';
+
+  document.getElementById('clockMain').textContent = `D${S.day} · ${String(S.hour).padStart(2,'0')}:00`;
+  document.getElementById('clockSub').textContent = day ? 'DAYTIME' : 'NIGHT';
+  document.getElementById('distTotal').textContent = S.distance;
+
+  document.getElementById('terrainLine').innerHTML = `<b>${TERRAINS[S.terrain].label}</b> now · next <b>${TERRAINS[S.nextTerrain].label}</b> in ~${Math.max(0,Math.round(S.terrainKmLeft))}km`;
+
+  document.getElementById('gaugeFuelWrap').innerHTML = gaugeSVG(S.fuel, 'FUEL');
+  const carAvg = PARTS.reduce((s,p)=>s+S.parts[p],0)/PARTS.length;
+  document.getElementById('gaugeCarWrap').innerHTML = gaugeSVG(carAvg, 'CONDITION');
+
+  document.getElementById('warnRow').innerHTML = PARTS.map(p=>`
+    <div class="warn"><div class="lamp ${lampClass(S.parts[p])}"></div><div class="wlabel">${PART_SHORT[p]}</div></div>
+  `).join('');
+
+  document.getElementById('partLines').innerHTML = PARTS.map(p=>`
+    <div class="partline">
+      <div class="pname">${PART_LABEL[p]}</div>
+      ${segBar(S.parts[p],14)}
+      <div class="pval">${Math.round(S.parts[p])}%</div>
+    </div>
+  `).join('') + `
+    <div class="partline">
+      <div class="pname">Fuel Tank</div>
+      ${segBar(S.fuel,14)}
+      <div class="pval">${Math.round(S.fuel)}%</div>
+    </div>
+  `;
+  document.getElementById('carStatus').textContent = S.mode==='gameover' ? 'DEAD' : 'RUNNING';
+
+  const foodMax = 120;
+  const foodPct = clamp((S.inv.food/foodMax)*100,0,100);
+  document.getElementById('sharedFood').innerHTML = `
+    <div class="sharedfood-row">
+      <span>Shared Food Supply</span><b>${Math.round(S.inv.food)}</b>
+    </div>
+    ${segBar(foodPct,20)}
+  `;
+
+  const ml = document.getElementById('mateList');
+  ml.innerHTML = S.mates.map(m=>{
+    const tags = [];
+    if(m.driving) tags.push('<span class="tag drive">Driving</span>');
+    if(m.sick>0) tags.push('<span class="tag sick">Sick</span>');
+    if(m.injured>0) tags.push('<span class="tag injured">Injured</span>');
+    if(m.teaching) tags.push(`<span class="tag teach">Teaching ${SKILL_LABEL[m.teaching.skill]}</span>`);
+    if(m.learning) tags.push(`<span class="tag learn">Learning ${SKILL_LABEL[m.learning.skill]}</span>`);
+    const skillChips = SKILLS.map(sk=>`<div class="skillchip">${SKILL_LABEL[sk]} <b>${Math.round(m.skills[sk])}%</b></div>`).join('');
+    const switchBtn = (!m.driving && m.alive) ? `<button class="microbtn" onclick="switchDriver(${m.id})">Drive</button>` : '';
+    const stopTeachBtn = m.teaching ? `<button class="microbtn" onclick="stopTeaching(${m.id})">Stop</button>` : '';
+    return `
+      <div class="matecard ${m.alive?'':'dead'}">
+        <div class="mate-top">
+          <div class="mate-name">${m.name} ${m.alive?'':'✝'}</div>
+          <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">${tags.join('')}${switchBtn}${stopTeachBtn}</div>
+        </div>
+        <div class="indicators indicators3">
+          <div class="ind"><div class="lbl">Health</div>${segBar(m.health,8)}</div>
+          <div class="ind"><div class="lbl">Fatigue</div>${segBar(100-m.fatigue,8)}</div>
+          <div class="ind"><div class="lbl">Morale</div>${segBar(m.morale,8)}</div>
+        </div>
+        <div class="skills">${skillChips}</div>
+      </div>
+    `;
+  }).join('');
+  document.getElementById('crewCount').textContent = `${aliveMates().length} ALIVE`;
+
+  const invItems = [
+    ['food','FOOD (SHARED)'],['cash','CASH'],['fuelCan','FUEL CANS'],['skillManual','SKILL MANUALS'],['weapon','WEAPONS'],['spareTire','SPARE TIRES'],
+    ['engineKit','ENGINE KITS'],['batteryPack','BATTERY PACKS'],['radiatorPart','RADIATOR PARTS'],
+    ['brakePads','BRAKE PADS'],['medkit','MEDKITS']
+  ];
+  document.getElementById('manifestBox').innerHTML = `
+    <div class="manifest-title"><span>Glovebox Manifest</span><span>#${String(S.day).padStart(3,'0')}</span></div>
+    ${invItems.map(([k,l])=>`<div class="mrow"><span>${l}</span><b>${k==='cash'?'$':''}${Math.round(S.inv[k])}</b></div>`).join('')}
+  `;
+
+  document.querySelectorAll('.rationbtn').forEach(b=>{
+    b.classList.toggle('active', b.dataset.r === S.ration);
+  });
+
+  document.getElementById('logBox').innerHTML = S.log.slice(-20).map(e=>`<div class="scan-entry ${e.cls}">${e.msg}</div>`).join('');
+
+  const rolling = document.getElementById('rollingControls');
+  const stopped = document.getElementById('stopControls');
+  if(S.mode==='rolling'){
+    rolling.classList.remove('hidden');
+    stopped.classList.add('hidden');
+    document.getElementById('btnCamp').textContent = S.atLocation==='garage' ? 'Stop At Garage' : (S.atLocation==='rest' ? 'Stop At Rest Area' : (S.atLocation==='ruins' ? 'Stop At Ruins' : 'Make Camp'));
+  } else if(S.mode==='stopped'){
+    rolling.classList.add('hidden');
+    stopped.classList.remove('hidden');
+    renderStopMenu();
+  }
+
+  if(S.mode==='gameover'){ showGameOver(); }
+}
+
+function renderStopMenu(){
+  const title = S.atLocation==='garage' ? 'Garage' : (S.atLocation==='rest' ? 'Rest Area' : (S.atLocation==='ruins' ? 'Ruins' : 'Camp'));
+  document.getElementById('stopTitle').textContent = title;
+  document.getElementById('stopSub').textContent = `D${S.day} · ${String(S.hour).padStart(2,'0')}:00`;
+
+  let html = '';
+  const scavSub = {roadside:'Best mate searches nearby — 1hr', rest:'Pick through the rest stop — 1hr', ruins:'Bigger search, minor risk — 1-2hr', garage:'Check the unattended lot — 1hr'}[S.atLocation||'roadside'];
+  html += actBtn('actScavenge()','Scavenge', scavSub, 'secondary');
+  html += actBtn('actFieldPatch()','Field Patch Weakest Part','Free & quick, risk of backfire — 1hr','secondary');
+  PARTS.forEach(p=>{ html += actBtn(`actRepair('${p}')`, `Full Repair: ${PART_LABEL[p]}`, `Uses a spare part + mechanic skill — 1hr`, 'secondary'); });
+  html += actBtn('actUseFuelCan()','Pour Fuel Can Into Tank', `${S.inv.fuelCan} can(s) on hand`,'secondary');
+  html += actBtn('actRest()','Rest / Sleep','Restores fatigue for the crew — 2hrs, costs food','secondary');
+  html += actBtn('actMedkit()','Use Medkit','Instantly heals worst-off mate — item','secondary');
+  html += actBtn('actFeedHeal()','Eat To Recover','Trade 15 food for slow health gain','secondary');
+
+  if(S.atLocation==='garage'){
+    html += actBtn(`actGarageBuy('fuel')`,'Fill Fuel Tank', 'Criminally priced, but full','secondary');
+    html += actBtn(`actGarageBuy('spareTire')`,'Buy Spare Tire','$45','secondary');
+    html += actBtn(`actGarageBuy('engineKit')`,'Buy Engine Kit','$60','secondary');
+    html += actBtn(`actGarageBuy('batteryPack')`,'Buy Battery','$35','secondary');
+    html += actBtn(`actGarageBuy('radiatorPart')`,'Buy Radiator Part','$30','secondary');
+    html += actBtn(`actGarageBuy('brakePads')`,'Buy Brake Pads','$25','secondary');
+    html += actBtn('openSellPicker()','Sell Spare Parts','Half price, but cash now','secondary');
+  }
+
+  html += actBtn('leaveCamp()','Back On The Road','Leave and keep driving','');
+  document.getElementById('stopMenu').innerHTML = html;
+}
+
+function actBtn(fn,label,sub,cls){
+  return `<button class="${cls}" onclick="${fn}"><span>${label}</span><small>${sub}</small></button>`;
+}
+
+/* ============================== WIRE UP ============================== */
+document.getElementById('btnCamp').onclick = enterCamp;
+
+render();
+</script>
+</body>
+</html>
