@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>DEEP DIG</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --dirt:#6b4a2e; --stone:#5c5c62; --hardrock:#2a2a35; --obsidian:#1a0f2e;
+    --bedrock:#151119; --abyss:#0d0a1a;
+    --ore-c:#c9a26b; --ore-u:#5fb8d1; --ore-r:#e0475a; --ore-g:#c17dff; --ore-l:#fef6d8;
+    --gas:#7cf29a; --o2:#7fd8e8; --amber:#e8a33d; --warn:#e2453c; --ink:#ede3d3; --dim:#8a8378;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent; user-select:none;}
+  html,body{height:100%; margin:0; overflow:hidden; background:#0d0a1a; color:var(--ink);
+    font-family:'Space Mono', monospace;}
+  h1,h2,.display{font-family:'Anton', sans-serif; text-transform:uppercase; letter-spacing:1px;}
+  canvas{display:block; width:100%; height:100%;}
+
+  .overlay{position:fixed; inset:0; display:flex; align-items:center; justify-content:center;
+    background:rgba(10,8,17,.94); flex-direction:column; gap:14px; padding:24px; text-align:center; z-index:100;}
+  .overlay.hidden{display:none;}
+  .overlay h1{font-size:clamp(28px,8vw,44px); color:var(--amber); margin:0;
+    text-shadow:0 0 20px rgba(232,163,61,.3);}
+  .overlay p{color:var(--dim); max-width:340px; line-height:1.6; margin:0; font-size:13px;}
+  .btn{font-family:'Anton'; text-transform:uppercase; letter-spacing:1px; font-size:15px;
+    background:var(--amber); color:#26170a; border:none; padding:14px 34px; border-radius:2px;
+    box-shadow:0 3px 0 #a3721f; cursor:pointer;}
+  .btn:active{transform:translateY(2px); box-shadow:0 1px 0 #a3721f;}
+
+  /* SHOP */
+  #shop{align-items:stretch; max-width:420px; margin:0 auto; width:100%; max-height:88vh; overflow-y:auto;
+    padding:2px 2px 4px;}
+  #shop-currency{font-family:'Anton'; font-size:26px; color:var(--o2);}
+  #shop-record{font-size:11px; color:var(--gas); min-height:14px; letter-spacing:.5px;}
+  .upgrade-row{display:flex; align-items:center; justify-content:space-between; gap:10px;
+    background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); border-radius:4px;
+    padding:11px 14px; width:100%; margin-bottom:8px;}
+  .upgrade-info{text-align:left;}
+  .upgrade-info .name{font-family:'Anton'; font-size:13px; letter-spacing:.5px;}
+  .upgrade-info .lvl{font-size:10.5px; color:var(--dim);}
+  .upgrade-buy{font-family:'Space Mono'; font-size:12px; background:rgba(232,163,61,.15);
+    color:var(--amber); border:1px solid var(--amber); padding:8px 12px; border-radius:3px; white-space:nowrap;}
+  .upgrade-buy:disabled{opacity:.35; border-color:var(--dim); color:var(--dim);}
+  #shop-stats{font-size:12px; color:var(--dim);}
+  #guide-toggle{background:none; border:1px solid var(--dim); color:var(--dim); font-family:'Space Mono';
+    font-size:11px; padding:8px 12px; border-radius:3px; margin:4px 0 2px;}
+  #guide{display:none; text-align:left; border:1px solid rgba(255,255,255,.08); border-radius:4px;
+    padding:10px 12px; margin-bottom:8px; background:rgba(255,255,255,.03);}
+  #guide.show{display:block;}
+  #guide h2{font-size:11px; margin:0 0 8px; color:var(--amber); letter-spacing:1px;}
+  .guide-item{display:flex; align-items:center; gap:8px; font-size:11.5px; padding:3px 0;}
+  .guide-swatch{width:11px; height:11px; border-radius:2px; flex-shrink:0;}
+  .guide-item .gname{width:64px; flex-shrink:0;}
+  .guide-item .gval{color:var(--dim); margin-left:auto;}
+  #guide .gnote{font-size:10.5px; color:var(--dim); margin-top:8px; line-height:1.5; border-top:1px solid rgba(255,255,255,.08); padding-top:8px;}
+
+  /* HUD */
+  #hud{position:fixed; inset:0; pointer-events:none; z-index:20; padding:14px; display:flex;
+    flex-direction:column; justify-content:space-between;}
+  #hud-top{display:flex; justify-content:space-between; gap:10px;}
+  .panel{background:rgba(10,8,17,.65); border:1px solid rgba(232,163,61,.25); border-radius:3px; padding:8px 12px;}
+  #o2-wrap{width:120px;}
+  #o2-label{font-size:10px; letter-spacing:1px; color:var(--dim); display:flex; justify-content:space-between;}
+  #o2-bar{height:8px; background:#1c1912; border-radius:2px; margin-top:4px; overflow:hidden;}
+  #o2-fill{height:100%; width:100%; background:var(--o2); transition:width .2s, background .3s;}
+  #cargo-wrap{text-align:right;}
+  #cargo-label{font-size:10px; letter-spacing:1px; color:var(--dim);}
+  #cargo-value{font-size:19px; color:var(--amber); font-family:'Anton';}
+  #depth-badge{font-family:'Anton'; font-size:13px; color:var(--ink); text-align:center;}
+  #depth-badge span{color:var(--o2);}
+
+  #dpad{position:fixed; left:18px; bottom:18px; width:150px; height:150px; z-index:30; pointer-events:auto;}
+  #dpad button{position:absolute; width:50px; height:50px; background:rgba(232,163,61,.18);
+    border:1px solid rgba(232,163,61,.4); border-radius:6px; color:var(--amber); font-size:18px;}
+  #dpad button:active{background:rgba(232,163,61,.4);}
+  #dp-up{left:50px; top:0;} #dp-down{left:50px; top:100px;}
+  #dp-left{left:0; top:50px;} #dp-right{left:100px; top:50px;}
+  #hint{position:fixed; right:14px; bottom:18px; font-size:10px; color:#5a544a; z-index:20; text-align:right; line-height:1.5;}
+</style>
+</head>
+<body>
+
+<canvas id="c"></canvas>
+
+<div id="hud" style="display:none">
+  <div id="hud-top">
+    <div id="o2-wrap" class="panel">
+      <div id="o2-label"><span>OXYGEN</span><span id="o2-pct">100%</span></div>
+      <div id="o2-bar"><div id="o2-fill"></div></div>
+    </div>
+    <div id="depth-badge" class="panel">DEPTH<br><span id="depth-val">0m</span></div>
+    <div id="cargo-wrap" class="panel">
+      <div id="cargo-label">CARGO</div>
+      <div id="cargo-value">₪0</div>
+      <div id="cargo-weight" style="font-size:11px">0/0</div>
+    </div>
+  </div>
+</div>
+
+<div id="dpad" style="display:none">
+  <button id="dp-up">▲</button><button id="dp-down">▼</button>
+  <button id="dp-left">◀</button><button id="dp-right">▶</button>
+</div>
+<div id="hint" style="display:none">WASD / ARROWS TO DIG & MOVE<br>SURFACE (ROW 0) TO SELL<br>WIDE TUNNELS CAN COLLAPSE</div>
+
+<div id="start-overlay" class="overlay">
+  <h1>Deep Dig</h1>
+  <p>The shaft goes down as far as you're willing to go. Dig through dirt, stone, hard rock, and — if your drill's good enough — obsidian. Some tiles vent gas when broken. Open too wide a gallery without leaving pillars and the ceiling won't hold. Oxygen runs out. Get back to the surface to sell your haul and upgrade before you go again.</p>
+  <button class="btn" id="start-btn">Start Digging</button>
+</div>
+
+<div id="shop-overlay" class="overlay hidden">
+  <div id="shop">
+    <h1 id="shop-title">Surface</h1>
+    <div id="shop-currency">₪0</div>
+    <div id="shop-record"></div>
+    <div id="shop-stats"></div>
+    <div class="upgrade-row">
+      <div class="upgrade-info"><div class="name">Drill</div><div class="lvl" id="drill-lvl"></div></div>
+      <button class="upgrade-buy" id="buy-drill"></button>
+    </div>
+    <div class="upgrade-row">
+      <div class="upgrade-info"><div class="name">Oxygen Tank</div><div class="lvl" id="o2-lvl"></div></div>
+      <button class="upgrade-buy" id="buy-o2"></button>
+    </div>
+    <div class="upgrade-row">
+      <div class="upgrade-info"><div class="name">Cargo Rack</div><div class="lvl" id="cargo-lvl"></div></div>
+      <button class="upgrade-buy" id="buy-cargo"></button>
+    </div>
+    <div class="upgrade-row">
+      <div class="upgrade-info"><div class="name">Boots</div><div class="lvl" id="boots-lvl"></div></div>
+      <button class="upgrade-buy" id="buy-boots"></button>
+    </div>
+    <button id="guide-toggle">Field Guide ▾</button>
+    <div id="guide">
+      <h2>Ore Values</h2>
+      <div class="guide-item"><span class="guide-swatch" style="background:#c9a26b"></span><span class="gname">Copper</span><span class="gval">₪3–8</span></div>
+      <div class="guide-item"><span class="guide-swatch" style="background:#5fb8d1"></span><span class="gname">Quartz</span><span class="gval">₪12–25</span></div>
+      <div class="guide-item"><span class="guide-swatch" style="background:#e0475a"></span><span class="gname">Garnet</span><span class="gval">₪30–60</span></div>
+      <div class="guide-item"><span class="guide-swatch" style="background:#c17dff"></span><span class="gname">Prism</span><span class="gval">₪80–150</span></div>
+      <div class="guide-item"><span class="guide-swatch" style="background:#fef6d8"></span><span class="gname">Legendary</span><span class="gval">₪200–400</span></div>
+      <div class="gnote">Rarer tiers show up deeper. Legendary only appears near obsidian, 75m+.<br><br>
+      <b style="color:var(--ink)">Drill requirements</b> — Dirt/Stone: any drill. Hard Rock: tier 2+. Obsidian: tier 4+.<br><br>
+      <b style="color:var(--ink)">Gas pockets</b> vent when broken — get away fast or your oxygen drains hard for a few seconds.<br><br>
+      <b style="color:var(--ink)">Cave-ins</b> — dig a gap three tiles wide with no pillar between and the ceiling above cracks, then falls a second or two later. Watch for trickling dust as a warning.</div>
+    </div>
+    <button class="btn" id="descend-btn" style="margin-top:2px">Descend</button>
+  </div>
+</div>
+
+<div id="fail-overlay" class="overlay hidden">
+  <h1 style="color:var(--warn)">Out Of Air</h1>
+  <p id="fail-text"></p>
+  <button class="btn" id="fail-continue">Back To Surface</button>
+</div>
+
+<script>
+(() => {
+"use strict";
+const canvas = document.getElementById("c"), ctx = canvas.getContext("2d");
+function resize(){ canvas.width = innerWidth*devicePixelRatio; canvas.height = innerHeight*devicePixelRatio;
+  canvas.style.width = innerWidth+"px"; canvas.style.height = innerHeight+"px";
+  ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0); }
+resize(); addEventListener("resize", resize);
+
+/* ---------- PRNG ---------- */
+function mulberry32(seed){ return function(){ let t = seed += 0x6D2B79F5;
+  t = Math.imul(t ^ t>>>15, t | 1); t ^= t + Math.imul(t ^ t>>>7, t | 61);
+  return ((t ^ t>>>14) >>> 0) / 4294967296; }; }
+
+/* ---------- constants ---------- */
+const CELL = 32, COLS = 17, MIDCOL = 8;
+const ORE = [
+  {name:"copper",    hex:"#c9a26b", vw:[3,8],     wt:1},
+  {name:"quartz",    hex:"#5fb8d1", vw:[12,25],   wt:2},
+  {name:"garnet",    hex:"#e0475a", vw:[30,60],   wt:3},
+  {name:"prism",     hex:"#c17dff", vw:[80,150],  wt:4},
+  {name:"legendary", hex:"#fef6d8", vw:[200,400], wt:5},
+];
+function oreWeights(depth){
+  if (depth<10) return [.90,.09,.01,0,0];
+  if (depth<25) return [.55,.33,.11,.01,0];
+  if (depth<50) return [.30,.40,.24,.06,0];
+  if (depth<75) return [.15,.35,.35,.14,.01];
+  return [.08,.22,.35,.25,.10];
+}
+function pickOre(r, depth){
+  const w = oreWeights(depth); const roll = r();
+  let acc=0; for (let i=0;i<w.length;i++){ acc+=w[i]; if (roll<acc) return i; } return 0;
+}
+function hardnessAt(row, r){
+  if (row<=8){ return r()<0.90 ? "dirt" : "stone"; }
+  if (row<=24){ const v=r(); return v<0.50?"dirt":v<0.95?"stone":"hardrock"; }
+  if (row<=50){ const v=r(); return v<0.20?"dirt":v<0.75?"stone":"hardrock"; }
+  if (row<=75){ const v=r(); return v<0.10?"dirt":v<0.55?"stone":"hardrock"; }
+  const v=r(); return v<0.05?"dirt":v<0.35?"stone":v<0.80?"hardrock":"obsidian";
+}
+const DIG_BASE = {dirt:0.18, stone:0.5, hardrock:1.1, obsidian:1.8, rubble:0.15};
+const SOFT_MULT  = {1:1.0, 2:0.85, 3:0.7, 4:0.55, 5:0.42};
+const HARD_MULT  = {2:1.0, 3:0.75, 4:0.6, 5:0.45};
+const OBS_MULT   = {4:1.0, 5:0.65};
+function drillMultiplier(tier, hardness){
+  if (hardness==="rubble") return 1;
+  if (hardness==="hardrock") return HARD_MULT[tier] !== undefined ? HARD_MULT[tier] : Infinity;
+  if (hardness==="obsidian") return OBS_MULT[tier] !== undefined ? OBS_MULT[tier] : Infinity;
+  return SOFT_MULT[tier];
+}
+function hazardChanceAt(row){ return Math.min(0.02 + row*0.0006, 0.11); }
+
+/* ---------- world ---------- */
+let runSeed = 1;
+const tiles = new Map();
+function tkey(row,col){ return row+","+col; }
+function getTile(row,col){
+  const k = tkey(row,col);
+  if (tiles.has(k)) return tiles.get(k);
+  let t;
+  if (row<=0) t = {hardness:"empty", ore:null, hazard:null, dug:true};
+  else if (col<=0 || col>=COLS-1) t = {hardness:"bedrock", ore:null, hazard:null, dug:false};
+  else {
+    const seedBase = runSeed;
+    const hr = mulberry32(((row*734287) ^ (col*198491317) ^ seedBase) >>> 0);
+    const hardness = hardnessAt(row, hr);
+    let ore = null, hazard = null;
+    const orR = mulberry32(((row*918273) ^ (col*55511) ^ seedBase) >>> 0);
+    if (orR() < 0.08){ const tier = pickOre(orR, row); const o = ORE[tier];
+      ore = {tier, value: Math.round(o.vw[0]+orR()*(o.vw[1]-o.vw[0])), weight:o.wt}; }
+    else if (hardness !== "dirt" && orR() < hazardChanceAt(row)){ hazard = "gas"; }
+    t = {hardness, ore, hazard, dug:false};
+  }
+  tiles.set(k,t); return t;
+}
+
+/* ---------- audio ---------- */
+let actx=null, master=null;
+function ensureAudio(){
+  if (actx) return; actx = new (window.AudioContext||window.webkitAudioContext)();
+  master = actx.createGain(); master.gain.value=.5; master.connect(actx.destination);
+}
+function blip(freq=600,dur=.08,type="square",vol=.1){
+  if (!actx) return; const o=actx.createOscillator(); o.type=type; o.frequency.value=freq;
+  const g=actx.createGain(); g.gain.value=vol; o.connect(g); g.connect(master);
+  g.gain.setValueAtTime(vol, actx.currentTime); g.gain.exponentialRampToValueAtTime(.001, actx.currentTime+dur);
+  o.start(); o.stop(actx.currentTime+dur+.02);
+}
+function digThud(hardness){
+  const f = hardness==="dirt"?180:hardness==="stone"?120:hardness==="hardrock"?80:hardness==="rubble"?260:55;
+  blip(f, .08, "square", .09);
+}
+function creakSound(){ blip(300,.18,"triangle",.06); }
+function oreChime(tier){ blip([500,700,950,1300,1700][tier], .12, "triangle", .12); }
+function gasHiss(){ blip(220,.3,"sawtooth",.12); blip(340,.2,"sawtooth",.08); }
+
+/* ---------- save / meta ---------- */
+const SAVE_KEY = "deep-dig-save";
+let meta = {currency:0, drillTier:1, o2Level:1, cargoLevel:1, bootsLevel:1, bestDepth:0};
+try { Object.assign(meta, JSON.parse(localStorage.getItem(SAVE_KEY)||"{}")); } catch(e){}
+function save(){ localStorage.setItem(SAVE_KEY, JSON.stringify(meta)); }
+function o2Capacity(){ return 60 + meta.o2Level*22; }
+function cargoCapacity(){ return 10 + meta.cargoLevel*6; }
+function moveSpeedMult(){ return 1 + (meta.bootsLevel-1)*0.22; }
+const COSTS = { drill:[0,90,220,450,850,1500], o2:l=>50*l, cargo:l=>45*l, boots:l=>35*l };
+
+/* ---------- state ---------- */
+let mode = "start"; // start | shop | diving | fail
+let player = {row:0, col:MIDCOL, rx:MIDCOL*CELL, ry:0, digging:null, moveT:1, fromR:0,fromC:MIDCOL,toR:0,toC:MIDCOL, hasDescended:false};
+let o2 = 100, cargoWeight = 0, cargoValue = 0;
+let camera = {x:MIDCOL*CELL, y:0};
+let particles = [], gasClouds = [], floatingTexts = [];
+let unstable = new Map(); // key "row,col" -> {timer,total,row,col,belowRow,belowCol}
+let heldDir = null, shakeTime = 0, justRecord = false;
+const GAS_RADIUS = 46, GAS_LIFE = 3.2, GAS_DRAIN = 15;
+
+/* cave-ins: if a ceiling tile above a fresh dig has open air on both sides, it becomes
+   unstable and collapses after a short delay unless the player leaves it a support pillar. */
+function checkInstability(row, col){
+  if (row<=1) return;
+  const ceil = getTile(row-1, col);
+  if (ceil.hardness==="empty" || ceil.hardness==="bedrock" || ceil.hardness==="rubble") return;
+  const key = (row-1)+","+col;
+  if (unstable.has(key)) return;
+  const left = getTile(row-1, col-1), right = getTile(row-1, col+1);
+  if (left.hardness==="empty" && right.hardness==="empty"){
+    const dur = 1.0 + Math.random()*0.7;
+    unstable.set(key, {timer:dur, total:dur, row:row-1, col, belowRow:row, belowCol:col});
+    creakSound();
+  }
+}
+function collapseTile(u){
+  const ceil = getTile(u.row, u.col);
+  ceil.dug = true; ceil.hardness = "empty";
+  shakeTime = Math.max(shakeTime, 0.22);
+  spawnParticles(u.col*CELL+CELL/2, u.row*CELL+CELL/2, "#5c5c62");
+  blip(70,.25,"sawtooth",.14);
+  const below = getTile(u.belowRow, u.belowCol);
+  if (player.row===u.belowRow && player.col===u.belowCol){
+    o2 = Math.max(0, o2-12);
+    shakeTime = Math.max(shakeTime, 0.3);
+    floatingTexts.push({x:u.belowCol*CELL+CELL/2, y:u.belowRow*CELL+CELL/2, text:"CAVE-IN! -12% O2", color:"#e2453c", life:1.2});
+    blip(120,.3,"sawtooth",.16);
+  } else if (below.hardness==="empty"){
+    below.hardness = "rubble"; below.dug = false;
+    spawnParticles(u.belowCol*CELL+CELL/2, u.belowRow*CELL+CELL/2, "#8a8378");
+  }
+}
+
+function newDive(){
+  runSeed = Math.floor(Math.random()*1e9);
+  tiles.clear(); particles = []; gasClouds = []; floatingTexts = []; unstable.clear();
+  player = {row:0, col:MIDCOL, rx:MIDCOL*CELL, ry:0, digging:null, moveT:1, fromR:0,fromC:MIDCOL,toR:0,toC:MIDCOL, hasDescended:false};
+  o2 = 100; cargoWeight = 0; cargoValue = 0;
+  mode = "diving";
+  document.getElementById("hud").style.display = "flex";
+  document.getElementById("dpad").style.display = "block";
+  document.getElementById("hint").style.display = "block";
+  document.getElementById("shop-overlay").classList.add("hidden");
+  document.getElementById("fail-overlay").classList.add("hidden");
+  blip(300,.1,"square",.1);
+}
+function toShop(){
+  mode = "shop";
+  document.getElementById("hud").style.display = "none";
+  document.getElementById("dpad").style.display = "none";
+  document.getElementById("hint").style.display = "none";
+  renderShop();
+  document.getElementById("shop-overlay").classList.remove("hidden");
+}
+function bankAndSurface(){
+  const isRecord = player.row > meta.bestDepth && player.row > 0;
+  meta.currency += cargoValue;
+  meta.bestDepth = Math.max(meta.bestDepth, player.row);
+  justRecord = isRecord;
+  save();
+  if (cargoValue>0){ blip(700,.1,"sine",.14); blip(1000,.14,"sine",.1); }
+  toShop();
+}
+function failDive(){
+  mode = "fail";
+  document.getElementById("fail-text").textContent =
+    "Lost the dive at "+player.row+"m with \u20aa"+cargoValue+" of cargo. It's gone.";
+  document.getElementById("fail-overlay").classList.remove("hidden");
+  blip(100,.4,"sawtooth",.15);
+}
+document.getElementById("start-btn").addEventListener("click", () => { ensureAudio(); if(actx.state==="suspended") actx.resume();
+  document.getElementById("start-overlay").classList.add("hidden"); toShop(); });
+document.getElementById("descend-btn").addEventListener("click", newDive);
+document.getElementById("fail-continue").addEventListener("click", () => { document.getElementById("fail-overlay").classList.add("hidden"); toShop(); });
+document.getElementById("guide-toggle").addEventListener("click", () => {
+  const g = document.getElementById("guide"); g.classList.toggle("show");
+  document.getElementById("guide-toggle").textContent = g.classList.contains("show") ? "Field Guide \u25b4" : "Field Guide \u25be";
+});
+
+function renderShop(){
+  document.getElementById("shop-currency").textContent = "\u20aa"+meta.currency;
+  document.getElementById("shop-record").textContent = justRecord ? "\ud83c\udfc6 NEW RECORD DEPTH!" : "";
+  document.getElementById("shop-stats").textContent = "Best depth: "+meta.bestDepth+"m";
+  document.getElementById("drill-lvl").textContent = "Tier "+meta.drillTier+" / 5";
+  document.getElementById("o2-lvl").textContent = "Lv "+meta.o2Level+" \u2014 "+o2Capacity()+"s tank";
+  document.getElementById("cargo-lvl").textContent = "Lv "+meta.cargoLevel+" \u2014 "+cargoCapacity()+" cap";
+  document.getElementById("boots-lvl").textContent = "Lv "+meta.bootsLevel+" \u2014 +"+Math.round((moveSpeedMult()-1)*100)+"% speed";
+  const bd = document.getElementById("buy-drill");
+  if (meta.drillTier>=5){ bd.textContent="MAX"; bd.disabled=true; }
+  else { const c=COSTS.drill[meta.drillTier]; bd.textContent="\u20aa"+c; bd.disabled = meta.currency<c; }
+  const bo = document.getElementById("buy-o2"); const oc = COSTS.o2(meta.o2Level);
+  if (meta.o2Level>=8){ bo.textContent="MAX"; bo.disabled=true; } else { bo.textContent="\u20aa"+oc; bo.disabled = meta.currency<oc; }
+  const bc = document.getElementById("buy-cargo"); const cc = COSTS.cargo(meta.cargoLevel);
+  if (meta.cargoLevel>=8){ bc.textContent="MAX"; bc.disabled=true; } else { bc.textContent="\u20aa"+cc; bc.disabled = meta.currency<cc; }
+  const bb = document.getElementById("buy-boots"); const bcost = COSTS.boots(meta.bootsLevel);
+  if (meta.bootsLevel>=6){ bb.textContent="MAX"; bb.disabled=true; } else { bb.textContent="\u20aa"+bcost; bb.disabled = meta.currency<bcost; }
+}
+document.getElementById("buy-drill").addEventListener("click", () => {
+  const c = COSTS.drill[meta.drillTier]; if (meta.currency<c || meta.drillTier>=5) return;
+  meta.currency-=c; meta.drillTier++; save(); blip(650,.1,"triangle",.12); renderShop();
+});
+document.getElementById("buy-o2").addEventListener("click", () => {
+  const c = COSTS.o2(meta.o2Level); if (meta.currency<c || meta.o2Level>=8) return;
+  meta.currency-=c; meta.o2Level++; save(); blip(650,.1,"triangle",.12); renderShop();
+});
+document.getElementById("buy-cargo").addEventListener("click", () => {
+  const c = COSTS.cargo(meta.cargoLevel); if (meta.currency<c || meta.cargoLevel>=8) return;
+  meta.currency-=c; meta.cargoLevel++; save(); blip(650,.1,"triangle",.12); renderShop();
+});
+document.getElementById("buy-boots").addEventListener("click", () => {
+  const c = COSTS.boots(meta.bootsLevel); if (meta.currency<c || meta.bootsLevel>=6) return;
+  meta.currency-=c; meta.bootsLevel++; save(); blip(650,.1,"triangle",.12); renderShop();
+});
+
+/* ---------- input ---------- */
+const keys = new Set();
+addEventListener("keydown", e => { const k=e.key.toLowerCase(); keys.add(k);
+  if (["w","a","s","d","arrowup","arrowdown","arrowleft","arrowright"].includes(k)) e.preventDefault(); });
+addEventListener("keyup", e => keys.delete(e.key.toLowerCase()));
+function currentDir(){
+  if (keys.has("w")||keys.has("arrowup")) return [-1,0];
+  if (keys.has("s")||keys.has("arrowdown")) return [1,0];
+  if (keys.has("a")||keys.has("arrowleft")) return [0,-1];
+  if (keys.has("d")||keys.has("arrowright")) return [0,1];
+  return heldDir;
+}
+function bindDpad(id, dir){
+  const el = document.getElementById(id);
+  const s = e => { e.preventDefault(); heldDir = dir; };
+  const en = e => { e.preventDefault(); if (heldDir===dir) heldDir=null; };
+  el.addEventListener("touchstart", s); el.addEventListener("touchend", en);
+  el.addEventListener("mousedown", s); el.addEventListener("mouseup", en); el.addEventListener("mouseleave", en);
+}
+bindDpad("dp-up",[-1,0]); bindDpad("dp-down",[1,0]); bindDpad("dp-left",[0,-1]); bindDpad("dp-right",[0,1]);
+
+/* ---------- update ---------- */
+let lastT = performance.now();
+function update(dt){
+  if (mode !== "diving") return;
+  if (shakeTime>0) shakeTime = Math.max(0, shakeTime-dt);
+
+  o2 -= (100/o2Capacity())*dt;
+  for (const g of gasClouds){
+    if (Math.hypot(player.rx-g.x, player.ry-g.y) < GAS_RADIUS) o2 -= GAS_DRAIN*dt;
+  }
+  if (o2<=0){ o2=0; failDive(); return; }
+
+  if (player.digging){
+    player.digging.t += dt;
+    if (player.digging.t >= player.digging.dur){
+      const {row,col,tile,hardness} = player.digging;
+      tile.dug = true; tile.hardness = "empty";
+      if (tile.ore && cargoWeight+tile.ore.weight <= cargoCapacity()){
+        cargoWeight += tile.ore.weight; cargoValue += tile.ore.value;
+        oreChime(tile.ore.tier); spawnParticles(col*CELL+CELL/2, row*CELL+CELL/2, ORE[tile.ore.tier].hex);
+        floatingTexts.push({x:col*CELL+CELL/2, y:row*CELL+CELL/2, text:"+\u20aa"+tile.ore.value+" "+ORE[tile.ore.tier].name,
+          color:ORE[tile.ore.tier].hex, life:1.1});
+      } else { digThud(hardness); if (tile.ore) floatingTexts.push({x:col*CELL+CELL/2,y:row*CELL+CELL/2,text:"CARGO FULL",color:"#e2453c",life:.9}); }
+      if (tile.hazard === "gas"){
+        gasClouds.push({x:col*CELL+CELL/2, y:row*CELL+CELL/2, life:GAS_LIFE});
+        gasHiss(); spawnParticles(col*CELL+CELL/2, row*CELL+CELL/2, "#7cf29a");
+        shakeTime = Math.max(shakeTime, 0.18);
+      }
+      if (hardness==="hardrock") shakeTime = Math.max(shakeTime, 0.1);
+      if (hardness==="obsidian") shakeTime = Math.max(shakeTime, 0.2);
+      if (hardness!=="rubble") checkInstability(row, col);
+      player.fromR=player.row; player.fromC=player.col; player.toR=row; player.toC=col; player.moveT=0;
+      player.row=row; player.col=col; player.digging=null;
+      if (player.row>0) player.hasDescended = true;
+    }
+  } else if (player.moveT < 1){
+    player.moveT = Math.min(1, player.moveT + dt*8*moveSpeedMult());
+  } else {
+    const dir = currentDir();
+    if (dir){
+      const nr = player.row+dir[0], nc = player.col+dir[1];
+      const t = getTile(nr,nc);
+      if (t.hardness === "empty"){
+        player.fromR=player.row; player.fromC=player.col; player.toR=nr; player.toC=nc; player.moveT=0; player.row=nr; player.col=nc;
+        if (player.row>0) player.hasDescended = true;
+      } else if (t.hardness === "bedrock"){
+        // wall, no action
+      } else {
+        const mult = drillMultiplier(meta.drillTier, t.hardness);
+        if (mult === Infinity){ blip(90,.1,"sawtooth",.08); }
+        else player.digging = {row:nr, col:nc, tile:t, hardness:t.hardness, t:0, dur:DIG_BASE[t.hardness]*mult};
+      }
+    }
+  }
+
+  const ease = player.moveT<1 ? (1-Math.pow(1-player.moveT,3)) : 1;
+  player.rx = (player.fromC + (player.toC-player.fromC)*ease) * CELL + CELL/2;
+  player.ry = (player.fromR + (player.toR-player.fromR)*ease) * CELL + CELL/2;
+  if (player.digging){
+    const p = player.digging.t/player.digging.dur;
+    player.rx = player.col*CELL+CELL/2 + (player.digging.col-player.col)*CELL*0.35*Math.min(1,p);
+    player.ry = player.row*CELL+CELL/2 + (player.digging.row-player.row)*CELL*0.35*Math.min(1,p);
+  }
+
+  if (player.hasDescended && player.row<=0 && !player.digging && player.moveT>=1){ bankAndSurface(); return; }
+
+  camera.x += (player.rx - camera.x)*Math.min(1,dt*6);
+  camera.y += (player.ry - camera.y)*Math.min(1,dt*6);
+  particles.forEach(p=>{p.x+=p.vx*dt; p.y+=p.vy*dt; p.life-=dt;}); particles = particles.filter(p=>p.life>0);
+  gasClouds.forEach(g=>g.life-=dt); gasClouds = gasClouds.filter(g=>g.life>0);
+  floatingTexts.forEach(f=>{f.y-=24*dt; f.life-=dt;}); floatingTexts = floatingTexts.filter(f=>f.life>0);
+  for (const [key, u] of unstable){
+    u.timer -= dt;
+    if (Math.random() < dt*2.2) spawnParticles(u.col*CELL+CELL/2, u.row*CELL+CELL/2, "#8a8378");
+    if (u.timer <= 0){ collapseTile(u); unstable.delete(key); }
+  }
+
+  const of = document.getElementById("o2-fill");
+  of.style.width = o2+"%"; of.style.background = o2<25?"var(--warn)":o2<50?"var(--amber)":"var(--o2)";
+  document.getElementById("o2-pct").textContent = Math.ceil(o2)+"%";
+  document.getElementById("cargo-value").textContent = "\u20aa"+cargoValue;
+  document.getElementById("cargo-weight").textContent = cargoWeight+"/"+cargoCapacity();
+  document.getElementById("depth-val").textContent = player.row+"m";
+}
+function spawnParticles(x,y,color){
+  for (let i=0;i<6;i++){ const a=Math.random()*Math.PI*2, s=40+Math.random()*40;
+    particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:.4,color}); }
+}
+
+/* ---------- render ---------- */
+function tileColor(hardness, dug, digProgress){
+  if (dug) return null;
+  let base = hardness==="dirt" ? [107,74,46] : hardness==="stone" ? [92,92,98] :
+             hardness==="hardrock" ? [42,42,53] : hardness==="obsidian" ? [26,15,46] :
+             hardness==="rubble" ? [76,66,54] : [21,17,25];
+  if (digProgress) base = base.map(v => v*(1-digProgress*0.5));
+  return "rgb("+base[0]+","+base[1]+","+base[2]+")";
+}
+function render(){
+  const w = innerWidth, h = innerHeight;
+  const depthT = Math.min(1, (player?player.row:0)/120);
+  const skyTop = [13+depthT*6, 10+depthT*4, 26+depthT*16];
+  ctx.fillStyle = "rgb("+skyTop[0]+","+skyTop[1]+","+skyTop[2]+")"; ctx.fillRect(0,0,w,h);
+  if (mode==="start" || mode==="shop" || mode==="fail"){ requestAnimationFrame(loop); return; }
+
+  const shakeMag = shakeTime>0 ? shakeTime*36 : 0;
+  const shx = (Math.random()-0.5)*shakeMag, shy = (Math.random()-0.5)*shakeMag;
+  ctx.save(); ctx.translate(shx, shy);
+
+  const ox = camera.x - w/2, oy = camera.y - h/2;
+  const c0 = Math.floor(ox/CELL)-1, c1 = Math.ceil((ox+w)/CELL)+1;
+  const r0 = Math.floor(oy/CELL)-1, r1 = Math.ceil((oy+h)/CELL)+1;
+
+  for (let row=r0; row<=r1; row++) for (let col=c0; col<=c1; col++){
+    const sx = col*CELL-ox, sy = row*CELL-oy;
+    if (row<0) continue;
+    const t = getTile(row,col);
+    const digging = player.digging && player.digging.row===row && player.digging.col===col;
+    const prog = digging ? player.digging.t/player.digging.dur : 0;
+    const color = tileColor(t.hardness, t.dug, prog);
+    if (color){
+      ctx.fillStyle = color; ctx.fillRect(sx,sy,CELL,CELL);
+      if (t.hardness==="obsidian"){
+        ctx.strokeStyle = "rgba(193,125,255,.35)"; ctx.strokeRect(sx+2,sy+2,CELL-4,CELL-4);
+      }
+      if (t.hardness==="rubble"){
+        ctx.fillStyle = "rgba(20,15,10,.4)";
+        ctx.beginPath(); ctx.arc(sx+8,sy+10,2,0,7); ctx.arc(sx+20,sy+18,2,0,7); ctx.arc(sx+14,sy+24,1.5,0,7); ctx.fill();
+      }
+      if (t.ore && !t.dug){
+        ctx.fillStyle = ORE[t.ore.tier].hex; ctx.globalAlpha=.9;
+        ctx.beginPath(); ctx.arc(sx+CELL/2, sy+CELL/2, 5, 0, 7); ctx.fill(); ctx.globalAlpha=1;
+      }
+      if (t.hazard === "gas" && !t.dug){
+        ctx.fillStyle = "rgba(124,242,154,.25)";
+        ctx.beginPath(); ctx.arc(sx+CELL/2, sy+CELL*0.28, 3, 0, 7); ctx.fill();
+        ctx.beginPath(); ctx.arc(sx+CELL*0.65, sy+CELL*0.4, 2, 0, 7); ctx.fill();
+      }
+      ctx.strokeStyle = "rgba(0,0,0,.25)"; ctx.strokeRect(sx+.5,sy+.5,CELL-1,CELL-1);
+      if (digging){
+        ctx.strokeStyle = "rgba(232,163,61,.8)"; ctx.lineWidth=2;
+        ctx.strokeRect(sx+3,sy+3,CELL-6,CELL-6);
+      }
+    } else {
+      ctx.fillStyle = "rgba(0,0,0,.35)"; ctx.fillRect(sx,sy,CELL,CELL);
+    }
+  }
+
+  unstable.forEach(u => {
+    const sx = u.col*CELL-ox, sy = u.row*CELL-oy;
+    if (sx<-CELL||sx>w+CELL||sy<-CELL||sy>h+CELL) return;
+    const inten = 1-(u.timer/u.total);
+    ctx.strokeStyle = "rgba(226,69,60,"+(0.3+inten*0.6)+")"; ctx.lineWidth=1.5;
+    ctx.beginPath();
+    ctx.moveTo(sx+4,sy+4); ctx.lineTo(sx+CELL/2,sy+CELL/2); ctx.lineTo(sx+CELL-6,sy+8);
+    ctx.moveTo(sx+CELL/2,sy+CELL/2); ctx.lineTo(sx+8,sy+CELL-6);
+    ctx.stroke();
+  });
+
+  gasClouds.forEach(g => {
+    const a = Math.min(1, g.life/GAS_LIFE);
+    const gg = ctx.createRadialGradient(g.x-ox,g.y-oy,0,g.x-ox,g.y-oy,GAS_RADIUS);
+    gg.addColorStop(0, "rgba(124,242,154,"+(a*0.35)+")"); gg.addColorStop(1,"rgba(124,242,154,0)");
+    ctx.fillStyle = gg; ctx.beginPath(); ctx.arc(g.x-ox,g.y-oy,GAS_RADIUS,0,7); ctx.fill();
+  });
+
+  particles.forEach(p=>{ ctx.globalAlpha=Math.max(0,p.life/.4); ctx.fillStyle=p.color;
+    ctx.beginPath(); ctx.arc(p.x-ox,p.y-oy,2,0,7); ctx.fill(); ctx.globalAlpha=1; });
+
+  const px = player.rx-ox, py = player.ry-oy;
+  const glow = ctx.createRadialGradient(px,py,0,px,py,CELL*3.2);
+  glow.addColorStop(0,"rgba(232,163,61,.18)"); glow.addColorStop(1,"rgba(232,163,61,0)");
+  ctx.fillStyle = glow; ctx.fillRect(px-CELL*3.2,py-CELL*3.2,CELL*6.4,CELL*6.4);
+
+  ctx.fillStyle = "#ede3d3"; ctx.beginPath(); ctx.arc(px,py,9,0,7); ctx.fill();
+  ctx.strokeStyle = "#0d0a1a"; ctx.lineWidth=2; ctx.stroke();
+  ctx.fillStyle = "#e8a33d"; ctx.beginPath(); ctx.arc(px,py-4,2.5,0,7); ctx.fill();
+
+  ctx.font = "11px 'Space Mono', monospace"; ctx.textAlign = "center";
+  floatingTexts.forEach(f => {
+    ctx.globalAlpha = Math.max(0, Math.min(1, f.life/1.1));
+    ctx.fillStyle = f.color; ctx.fillText(f.text, f.x-ox, f.y-oy);
+  });
+  ctx.globalAlpha = 1; ctx.textAlign = "left";
+
+  ctx.restore();
+
+  const vg = ctx.createRadialGradient(w/2,h/2,h*0.25,w/2,h/2,h*0.8);
+  vg.addColorStop(0,"rgba(0,0,0,0)"); vg.addColorStop(1,"rgba(0,0,0,.5)");
+  ctx.fillStyle = vg; ctx.fillRect(0,0,w,h);
+
+  requestAnimationFrame(loop);
+}
+function loop(now){ const dt = Math.min((now-lastT)/1000,.05); lastT=now; update(dt); render(); }
+requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

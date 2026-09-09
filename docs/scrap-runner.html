@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>SCRAP RUNNER</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0906; --rust:#b5502a; --amber:#e8a33d; --teal:#4fd1c5; --gold:#f5c542;
+    --grey:#7a746a; --warn:#e2453c; --ink:#e8e2d5; --dim:#4a453c;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent; user-select:none;}
+  html,body{height:100%; margin:0; overflow:hidden; background:var(--bg); color:var(--ink);
+    font-family:'IBM Plex Mono', monospace;}
+  h1,h2,.display{font-family:'Oswald', sans-serif; text-transform:uppercase;}
+  #game{position:fixed; inset:0;}
+  canvas{display:block; width:100%; height:100%;}
+
+  .overlay{position:fixed; inset:0; display:flex; align-items:center; justify-content:center;
+    background:rgba(6,5,3,.92); flex-direction:column; gap:18px; padding:24px; text-align:center; z-index:100;}
+  .overlay.hidden{display:none;}
+  .overlay h1{font-size:clamp(28px,8vw,44px); color:var(--amber); letter-spacing:2px; margin:0;
+    text-shadow:0 0 20px rgba(232,163,61,.3);}
+  .overlay p{color:var(--grey); max-width:340px; line-height:1.6; margin:0; font-size:14px;}
+  .overlay .stat-line{color:var(--ink); font-size:15px;}
+  .overlay .stat-line b{color:var(--gold);}
+  .btn{font-family:'Oswald'; text-transform:uppercase; letter-spacing:1px; font-size:15px;
+    background:var(--rust); color:var(--ink); border:none; padding:14px 32px; border-radius:2px;
+    box-shadow:0 3px 0 #7a3418; cursor:pointer;}
+  .btn:active{transform:translateY(2px); box-shadow:0 1px 0 #7a3418;}
+
+  #hud{position:fixed; inset:0; pointer-events:none; z-index:20; padding:16px; display:flex;
+    flex-direction:column; justify-content:space-between;}
+  #hud-top{display:flex; justify-content:space-between; align-items:flex-start; gap:12px;}
+  .panel{background:rgba(10,9,6,.65); border:1px solid rgba(232,163,61,.25); border-radius:3px; padding:8px 12px;
+    backdrop-filter:blur(2px);}
+  #battery-wrap{width:130px;}
+  #battery-label{font-size:10px; letter-spacing:1px; color:var(--grey); display:flex; justify-content:space-between;}
+  #battery-bar{height:8px; background:#1c1912; border-radius:2px; margin-top:4px; overflow:hidden;}
+  #battery-fill{height:100%; width:100%; background:var(--teal); transition:width .2s, background .3s;}
+  #bag-wrap{text-align:right;}
+  #bag-label{font-size:10px; letter-spacing:1px; color:var(--grey);}
+  #bag-value{font-size:20px; color:var(--gold); font-family:'Oswald';}
+  #bag-weight{font-size:11px; color:var(--ink);}
+
+  #compass{width:46px; height:46px; border-radius:50%; border:1px solid rgba(232,163,61,.35);
+    display:flex; align-items:center; justify-content:center; position:relative; background:rgba(10,9,6,.65);}
+  #compass-arrow{width:0; height:0; border-left:6px solid transparent; border-right:6px solid transparent;
+    border-bottom:16px solid var(--amber); transform-origin:50% 60%;}
+  #compass-label{position:absolute; bottom:-16px; font-size:8px; letter-spacing:1px; color:var(--grey); white-space:nowrap;}
+
+  #joystick{position:fixed; left:22px; bottom:22px; width:110px; height:110px; border-radius:50%;
+    border:2px solid rgba(232,163,61,.25); background:rgba(10,9,6,.4); z-index:30; pointer-events:auto; touch-action:none;}
+  #joystick-nub{position:absolute; width:44px; height:44px; border-radius:50%; background:rgba(232,163,61,.5);
+    left:33px; top:33px;}
+  #hint{position:fixed; right:16px; bottom:22px; font-size:11px; color:var(--dim); z-index:20; text-align:right; line-height:1.5;}
+  @media (hover:hover) and (pointer:fine){ #joystick{display:none;} }
+</style>
+</head>
+<body>
+
+<div id="game"><canvas id="c"></canvas></div>
+
+<div id="hud">
+  <div id="hud-top">
+    <div id="battery-wrap" class="panel">
+      <div id="battery-label"><span>LIGHT</span><span id="battery-pct">100%</span></div>
+      <div id="battery-bar"><div id="battery-fill"></div></div>
+    </div>
+    <div id="compass" class="panel"><div id="compass-arrow"></div><div id="compass-label">ENTRANCE</div></div>
+    <div id="bag-wrap" class="panel">
+      <div id="bag-label">HAUL</div>
+      <div id="bag-value" id="bag-value">₪0</div>
+      <div id="bag-weight">0 / 10</div>
+    </div>
+  </div>
+</div>
+
+<div id="joystick"><div id="joystick-nub"></div></div>
+<div id="hint">WASD / ARROWS TO MOVE<br>RETURN TO ENTRANCE TO BANK</div>
+
+<div id="start-overlay" class="overlay">
+  <h1>Scrap Runner</h1>
+  <p>The junkyard goes on forever, and it's dark. Salvage what you can — the deeper you go, the better it gets. Your flashlight won't last. Get back to the entrance to bank your haul, or lose it all in the dark.</p>
+  <p class="stat-line" id="best-line"></p>
+  <button class="btn" id="start-btn">Drop In</button>
+</div>
+
+<div id="end-overlay" class="overlay hidden">
+  <h1 id="end-title">Extracted</h1>
+  <p class="stat-line">Haul value: <b id="end-value">0</b></p>
+  <p class="stat-line" id="end-best"></p>
+  <button class="btn" id="retry-btn">Drop In Again</button>
+</div>
+
+<script>
+(() => {
+"use strict";
+const canvas = document.getElementById("c"), ctx = canvas.getContext("2d");
+function resize(){ canvas.width = innerWidth*devicePixelRatio; canvas.height = innerHeight*devicePixelRatio;
+  canvas.style.width = innerWidth+"px"; canvas.style.height = innerHeight+"px";
+  ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0); }
+resize(); addEventListener("resize", resize);
+
+/* ---------- PRNG ---------- */
+function mulberry32(seed){ return function(){ let t = seed += 0x6D2B79F5;
+  t = Math.imul(t ^ t>>>15, t | 1); t ^= t + Math.imul(t ^ t>>>7, t | 61);
+  return ((t ^ t>>>14) >>> 0) / 4294967296; }; }
+function chunkRand(cx, cy, salt){ return mulberry32(((cx*198491317) ^ (cy*6542989) ^ salt) >>> 0); }
+
+/* ---------- world constants ---------- */
+const TILE = 28, CHUNK = 12;
+const LIGHT_FULL = 2.6, LIGHT_EDGE = 5.4; // tiles
+const PLAYER_SPEED = 128; // px/s
+const BATTERY_DRAIN = 100/100; // %/sec (~100s full run)
+const BAG_CAPACITY = 10;
+const TIERS = [
+  {name:"common", color:"#7a746a", glow:"rgba(122,116,106,.5)", vw:[1,15], wt:1},
+  {name:"uncommon", color:"#4fd1c5", glow:"rgba(79,209,197,.6)", vw:[20,42], wt:2},
+  {name:"rare", color:"#f5c542", glow:"rgba(245,197,66,.8)", vw:[55,120], wt:3},
+];
+function tierWeights(depth){
+  if (depth<=1) return [.85,.14,.01];
+  if (depth<=4) return [.55,.35,.10];
+  return [.30,.40,.30];
+}
+function pickTier(r, depth){
+  const w = tierWeights(depth); const roll = r();
+  if (roll < w[0]) return 0; if (roll < w[0]+w[1]) return 1; return 2;
+}
+
+/* ---------- chunk generation ---------- */
+const chunks = new Map();
+let runSeed = 1;
+function key(cx,cy){ return cx+","+cy; }
+function getChunk(cx,cy){
+  const k = key(cx,cy);
+  if (chunks.has(k)) return chunks.get(k);
+  const r = chunkRand(cx, cy, runSeed);
+  const depth = Math.max(Math.abs(cx), Math.abs(cy));
+  const obstacles = new Set(); const items = [];
+  const density = Math.min(0.10 + depth*0.012, 0.30);
+  for (let ty=0; ty<CHUNK; ty++) for (let tx=0; tx<CHUNK; tx++){
+    const wx = cx*CHUNK+tx, wy = cy*CHUNK+ty;
+    if (cx===0 && cy===0 && Math.abs(tx-CHUNK/2)<2 && Math.abs(ty-CHUNK/2)<2) continue; // clear spawn
+    if (r() < density) obstacles.add(tx+","+ty);
+  }
+  const itemChance = 0.045 + Math.min(depth*0.003, 0.03);
+  for (let ty=0; ty<CHUNK; ty++) for (let tx=0; tx<CHUNK; tx++){
+    if (obstacles.has(tx+","+ty)) continue;
+    if (r() < itemChance){
+      const tier = pickTier(r, depth); const t = TIERS[tier];
+      const value = Math.round(t.vw[0] + r()*(t.vw[1]-t.vw[0]));
+      items.push({tx,ty, tier, value, weight:t.wt, id:cx+"_"+cy+"_"+tx+"_"+ty, taken:false});
+    } else if (r() < 0.006){
+      items.push({tx,ty, tier:"battery", value:0, weight:0, id:cx+"_"+cy+"_"+tx+"_"+ty+"_b", taken:false});
+    }
+  }
+  const c = {obstacles, items, depth};
+  chunks.set(k, c);
+  return c;
+}
+function tileObstacle(wx, wy){
+  const cx = Math.floor(wx/CHUNK), cy = Math.floor(wy/CHUNK);
+  const tx = ((wx%CHUNK)+CHUNK)%CHUNK, ty = ((wy%CHUNK)+CHUNK)%CHUNK;
+  return getChunk(cx,cy).obstacles.has(tx+","+ty);
+}
+
+/* ---------- audio ---------- */
+let actx=null, master=null, noiseBuf=null;
+function ensureAudio(){
+  if (actx) return;
+  actx = new (window.AudioContext||window.webkitAudioContext)();
+  master = actx.createGain(); master.gain.value=.45; master.connect(actx.destination);
+  const len = actx.sampleRate*2; noiseBuf = actx.createBuffer(1,len,actx.sampleRate);
+  const d = noiseBuf.getChannelData(0); for(let i=0;i<len;i++) d[i]=Math.random()*2-1;
+  const hum = actx.createOscillator(); hum.type="sine"; hum.frequency.value=48;
+  const hg = actx.createGain(); hg.gain.value=.02; hum.connect(hg); hg.connect(master); hum.start();
+}
+function blip(freq=600, dur=.08, type="square", vol=.1){
+  if (!actx) return; const o=actx.createOscillator(); o.type=type; o.frequency.value=freq;
+  const g=actx.createGain(); g.gain.value=vol; o.connect(g); g.connect(master);
+  g.gain.setValueAtTime(vol, actx.currentTime); g.gain.exponentialRampToValueAtTime(.001, actx.currentTime+dur);
+  o.start(); o.stop(actx.currentTime+dur+.02);
+}
+function pickupSound(tier){
+  if (tier==="battery"){ blip(500,.12,"sine",.12); blip(750,.15,"sine",.1); return; }
+  const f = [420,620,900][tier]; blip(f,.09,"triangle",.11);
+}
+
+/* ---------- input ---------- */
+const keys = new Set();
+addEventListener("keydown", e => keys.add(e.key.toLowerCase()));
+addEventListener("keyup", e => keys.delete(e.key.toLowerCase()));
+let joyVec = {x:0,y:0};
+(() => {
+  const stick = document.getElementById("joystick"), nub = document.getElementById("joystick-nub");
+  let active=false, cx=0, cy=0;
+  function start(e){ active=true; const r=stick.getBoundingClientRect(); cx=r.left+r.width/2; cy=r.top+r.height/2; move(e); }
+  function move(e){ if(!active) return; const t = e.touches?e.touches[0]:e;
+    let dx=t.clientX-cx, dy=t.clientY-cy; const d=Math.hypot(dx,dy), max=40;
+    if (d>max){ dx=dx/d*max; dy=dy/d*max; }
+    nub.style.left = 33+dx+"px"; nub.style.top = 33+dy+"px";
+    joyVec.x = dx/max; joyVec.y = dy/max; }
+  function end(){ active=false; joyVec.x=0; joyVec.y=0; nub.style.left="33px"; nub.style.top="33px"; }
+  stick.addEventListener("touchstart", e=>{e.preventDefault(); start(e);});
+  stick.addEventListener("touchmove", e=>{e.preventDefault(); move(e);});
+  stick.addEventListener("touchend", end);
+})();
+
+/* ---------- game state ---------- */
+let state = "menu"; // menu | playing | ended
+let player = {x:0, y:0, hasLeft:false};
+let battery = 100, bagWeight = 0, bagValue = 0;
+let camera = {x:0,y:0};
+let explored = new Set();
+let particles = [];
+const bestKey = "scrap-runner-best";
+
+function startRun(){
+  ensureAudio(); if (actx.state==="suspended") actx.resume();
+  runSeed = Math.floor(Math.random()*1e9);
+  chunks.clear(); explored.clear();
+  player = {x: CHUNK/2*TILE, y: CHUNK/2*TILE, hasLeft:false};
+  battery = 100; bagWeight = 0; bagValue = 0; particles = [];
+  state = "playing";
+  document.getElementById("start-overlay").classList.add("hidden");
+  document.getElementById("end-overlay").classList.add("hidden");
+  blip(300,.1,"square",.1);
+}
+function endRun(success){
+  state = "ended";
+  const best = +(localStorage.getItem(bestKey)||0);
+  const value = success ? bagValue : 0;
+  if (value > best) localStorage.setItem(bestKey, value);
+  document.getElementById("end-title").textContent = success ? "Extracted" : "Lost In The Dark";
+  document.getElementById("end-value").textContent = "₪"+value;
+  const newBest = Math.max(best, value);
+  document.getElementById("end-best").textContent = "Best haul: ₪"+newBest;
+  document.getElementById("end-overlay").classList.remove("hidden");
+  success ? (blip(700,.12,"sine",.15), blip(1000,.16,"sine",.12)) : blip(120,.4,"sawtooth",.15);
+}
+document.getElementById("start-btn").addEventListener("click", startRun);
+document.getElementById("retry-btn").addEventListener("click", startRun);
+function refreshBestLine(){
+  const best = +(localStorage.getItem(bestKey)||0);
+  document.getElementById("best-line").textContent = best>0 ? "Best haul: ₪"+best : "";
+}
+refreshBestLine();
+
+/* ---------- update ---------- */
+let lastT = performance.now();
+function update(dt){
+  if (state !== "playing") return;
+  let dx=0, dy=0;
+  if (keys.has("w")||keys.has("arrowup")) dy -= 1;
+  if (keys.has("s")||keys.has("arrowdown")) dy += 1;
+  if (keys.has("a")||keys.has("arrowleft")) dx -= 1;
+  if (keys.has("d")||keys.has("arrowright")) dx += 1;
+  dx += joyVec.x; dy += joyVec.y;
+  const mag = Math.hypot(dx,dy);
+  if (mag > 0.05){
+    dx/=Math.max(mag,1); dy/=Math.max(mag,1);
+    const nx = player.x + dx*PLAYER_SPEED*dt, ny = player.y + dy*PLAYER_SPEED*dt;
+    if (!collides(nx, player.y)) player.x = nx;
+    if (!collides(player.x, ny)) player.y = ny;
+    const dEntrance = Math.hypot(player.x, player.y);
+    if (dEntrance > TILE*2) player.hasLeft = true;
+  }
+
+  battery -= BATTERY_DRAIN*dt;
+  if (battery <= 0){ battery = 0; endRun(false); }
+
+  // pickups
+  const ptx = Math.floor(player.x/TILE), pty = Math.floor(player.y/TILE);
+  const pcx = Math.floor(ptx/CHUNK), pcy = Math.floor(pty/CHUNK);
+  for (let ccx=pcx-1; ccx<=pcx+1; ccx++) for (let ccy=pcy-1; ccy<=pcy+1; ccy++){
+    const chunk = getChunk(ccx,ccy);
+    for (const it of chunk.items){
+      if (it.taken) continue;
+      const wx = (ccx*CHUNK+it.tx+0.5)*TILE, wy = (ccy*CHUNK+it.ty+0.5)*TILE;
+      if (Math.hypot(player.x-wx, player.y-wy) < 16){
+        if (it.tier === "battery"){
+          it.taken = true; battery = Math.min(100, battery+28); pickupSound("battery");
+          spawnParticles(wx,wy,"#4fd1c5");
+        } else if (bagWeight + it.weight <= BAG_CAPACITY){
+          it.taken = true; bagWeight += it.weight; bagValue += it.value;
+          pickupSound(it.tier); spawnParticles(wx,wy, TIERS[it.tier].color);
+        }
+      }
+    }
+  }
+
+  // explored memory
+  for (let oy=-1; oy<=1; oy++) for (let ox=-1; ox<=1; ox++){
+    if (Math.hypot(ox,oy) <= LIGHT_EDGE) explored.add((ptx+ox)+","+(pty+oy));
+  }
+
+  // extraction
+  if (player.hasLeft && Math.hypot(player.x, player.y) < 20) endRun(true);
+
+  camera.x += (player.x - camera.x)*Math.min(1, dt*6);
+  camera.y += (player.y - camera.y)*Math.min(1, dt*6);
+
+  particles.forEach(p => { p.x += p.vx*dt; p.y += p.vy*dt; p.life -= dt; });
+  particles = particles.filter(p => p.life > 0);
+
+  // low battery pulse
+  const bf = document.getElementById("battery-fill");
+  bf.style.width = battery+"%";
+  bf.style.background = battery < 25 ? "var(--warn)" : battery < 50 ? "var(--amber)" : "var(--teal)";
+  document.getElementById("battery-pct").textContent = Math.ceil(battery)+"%";
+  document.getElementById("bag-value").textContent = "₪"+bagValue;
+  document.getElementById("bag-weight").textContent = bagWeight+" / "+BAG_CAPACITY;
+  const ang = Math.atan2(-player.y, -player.x) + Math.PI/2;
+  document.getElementById("compass-arrow").style.transform = "rotate("+ang+"rad)";
+}
+function collides(x,y){
+  const r = 9;
+  const pts = [[x-r,y-r],[x+r,y-r],[x-r,y+r],[x+r,y+r]];
+  for (const [px,py] of pts){
+    if (tileObstacle(Math.floor(px/TILE), Math.floor(py/TILE))) return true;
+  }
+  return false;
+}
+function spawnParticles(x,y,color){
+  for (let i=0;i<6;i++){
+    const a = Math.random()*Math.PI*2, s = 40+Math.random()*40;
+    particles.push({x,y, vx:Math.cos(a)*s, vy:Math.sin(a)*s, life:.4, color});
+  }
+}
+
+/* ---------- render ---------- */
+function render(){
+  const w = innerWidth, h = innerHeight;
+  ctx.fillStyle = "#000"; ctx.fillRect(0,0,w,h);
+  if (state === "menu"){ requestAnimationFrame(loop); return; }
+
+  const ox = camera.x - w/2, oy = camera.y - h/2;
+  const t0x = Math.floor(ox/TILE)-1, t1x = Math.ceil((ox+w)/TILE)+1;
+  const t0y = Math.floor(oy/TILE)-1, t1y = Math.ceil((oy+h)/TILE)+1;
+  const ptx = player.x/TILE, pty = player.y/TILE;
+
+  for (let ty=t0y; ty<=t1y; ty++) for (let tx=t0x; tx<=t1x; tx++){
+    const d = Math.hypot(tx+0.5-ptx, ty+0.5-pty);
+    let bright = d <= LIGHT_FULL ? 1 : d >= LIGHT_EDGE ? 0 : 1-((d-LIGHT_FULL)/(LIGHT_EDGE-LIGHT_FULL));
+    const seen = explored.has(tx+","+ty);
+    if (bright <= 0 && !seen) continue;
+    const sx = tx*TILE - ox, sy = ty*TILE - oy;
+    const obstacle = tileObstacle(tx,ty);
+    const floorBase = obstacle ? [90,60,40] : [45,42,34];
+    const b = Math.max(bright, seen ? 0.10 : 0);
+    ctx.fillStyle = `rgb(${floorBase[0]*b},${floorBase[1]*b},${floorBase[2]*b})`;
+    ctx.fillRect(sx,sy,TILE,TILE);
+    if (obstacle){
+      ctx.strokeStyle = `rgba(${20*b},${18*b},${14*b},1)`; ctx.strokeRect(sx+1,sy+1,TILE-2,TILE-2);
+    }
+  }
+
+  // items
+  const pcx = Math.floor(ptx/CHUNK), pcy = Math.floor(pty/CHUNK);
+  for (let ccx=pcx-2; ccx<=pcx+2; ccx++) for (let ccy=pcy-2; ccy<=pcy+2; ccy++){
+    const chunk = getChunk(ccx,ccy);
+    for (const it of chunk.items){
+      if (it.taken) continue;
+      const wx = ccx*CHUNK+it.tx, wy = ccy*CHUNK+it.ty;
+      const d = Math.hypot(wx+0.5-ptx, wy+0.5-pty);
+      if (d > LIGHT_EDGE) continue;
+      const bright = d <= LIGHT_FULL ? 1 : 1-((d-LIGHT_FULL)/(LIGHT_EDGE-LIGHT_FULL));
+      const sx = wx*TILE - ox + TILE/2, sy = wy*TILE - oy + TILE/2;
+      const color = it.tier==="battery" ? "#4fd1c5" : TIERS[it.tier].color;
+      ctx.globalAlpha = Math.max(0.15, bright);
+      ctx.fillStyle = color;
+      ctx.beginPath(); ctx.arc(sx,sy,it.tier==="battery"?5:4,0,7); ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  // entrance marker
+  {
+    const sx = 0-ox, sy = 0-oy, d = Math.hypot(ptx,pty), bright = d<=LIGHT_FULL?1:d>=LIGHT_EDGE?0:1-((d-LIGHT_FULL)/(LIGHT_EDGE-LIGHT_FULL));
+    const seen = true; const b = Math.max(bright, 0.25);
+    ctx.strokeStyle = `rgba(232,163,61,${b})`; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.arc(sx,sy,16,0,7); ctx.stroke();
+  }
+
+  // particles
+  particles.forEach(p => { ctx.globalAlpha = Math.max(0,p.life/.4); ctx.fillStyle=p.color;
+    ctx.beginPath(); ctx.arc(p.x-ox,p.y-oy,2,0,7); ctx.fill(); ctx.globalAlpha=1; });
+
+  // player
+  {
+    const sx = player.x-ox, sy = player.y-oy;
+    ctx.fillStyle = "#e8e2d5"; ctx.beginPath(); ctx.arc(sx,sy,8,0,7); ctx.fill();
+    ctx.strokeStyle = "#0a0906"; ctx.lineWidth=2; ctx.stroke();
+  }
+
+  // vignette
+  const g = ctx.createRadialGradient(w/2,h/2,h*0.2,w/2,h/2,h*0.75);
+  g.addColorStop(0,"rgba(0,0,0,0)"); g.addColorStop(1,"rgba(0,0,0,.6)");
+  ctx.fillStyle = g; ctx.fillRect(0,0,w,h);
+
+  requestAnimationFrame(loop);
+}
+function loop(now){
+  const dt = Math.min((now-lastT)/1000, .05); lastT = now;
+  update(dt); render();
+}
+requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

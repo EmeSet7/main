@@ -326,6 +326,47 @@
   }
   .qty-badge.ok   { background: var(--green-dim); color: var(--green); } /* green badge — has stock */
   .qty-badge.zero { background: var(--red-dim);   color: var(--red); }  /* red badge  — out of stock */
+  .qty-badge.low  { background: rgba(244,214,48,0.14); color: var(--yellow); } /* yellow badge — at/under minimum stock */
+
+  /* Small red dot on the "To Order" nav tab, shown only when there's at least one item to order */
+  .nav-tab-badge {
+    display: inline-block;
+    min-width: 15px;
+    height: 15px;
+    padding: 0 4px;
+    margin-left: 6px;
+    border-radius: 8px;
+    background: var(--red-dim);
+    color: var(--red);
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 15px;
+    text-align: center;
+    font-family: var(--mono);
+  }
+
+  /* To Order list — a single-column stack of warning rows, shown in the To Order tab */
+  .order-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    background: var(--surface);
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .order-row:hover { background: var(--surface2); border-color: var(--accent); }
+  .order-row-code { font-family: var(--mono); font-weight: 600; color: var(--accent); font-size: 13px; }
+  .order-row-name { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
+  .order-row-right { text-align: right; flex-shrink: 0; }
+  .order-row-qty { font-family: var(--mono); font-size: 13px; font-weight: 600; }
+  .order-row-qty.zero { color: var(--red); }
+  .order-row-qty.low  { color: var(--yellow); }
+  .order-row-min { font-size: 10px; color: var(--text-dim); font-family: var(--mono); margin-top: 2px; }
   .loc-badge {
     font-size: 9px;
     color: var(--text-dim);
@@ -406,6 +447,7 @@
   }
   .qty-display.zero { color: var(--red); }   /* big number goes red when stock hits 0 */
   .qty-display.ok   { color: var(--green); } /* big number is green when stock > 0 */
+  .qty-display.low  { color: var(--yellow); } /* big number goes yellow when at/under min stock */
 
   .qty-buttons { display: flex; flex-direction: column; gap: 8px; }
   .qty-btn {
@@ -888,6 +930,7 @@
       <button class="nav-tab active" id="tab-stock" onclick="switchTab('stock')">Stock</button>
       <button class="nav-tab" id="tab-wo" onclick="switchTab('wo')">Work Orders</button>
       <button class="nav-tab" id="tab-finance" onclick="switchTab('finance')">Finance</button>
+      <button class="nav-tab" id="tab-toorder" onclick="switchTab('toorder')">To Order<span class="nav-tab-badge hidden" id="toorder-nav-badge">0</span></button>
     </div>
     <div style="display:flex;align-items:center;gap:10px;">
       <div class="save-status"><span class="save-dot" id="save-dot"></span><span id="save-label">No file loaded</span></div>
@@ -916,6 +959,12 @@
       <div class="stat">
         <div class="stat-value" id="stat-finance-balance">€0</div>
         <div class="stat-label">Balance Due</div>
+      </div>
+    </div>
+    <div class="header-stats hidden" id="toorder-stats">
+      <div class="stat">
+        <div class="stat-value" id="stat-toorder">0</div>
+        <div class="stat-label">Need Ordering</div>
       </div>
     </div>
   </header>
@@ -995,6 +1044,11 @@
 
   </div>
 
+  <!-- TO ORDER MAIN VIEW -->
+  <div class="main hidden" id="toorder-main">
+    <div class="detail" id="toorder-detail" style="max-width:700px; margin:0 auto; width:100%;"></div>
+  </div>
+
   <!-- FINANCE MAIN VIEW -->
   <div class="main hidden" id="finance-main">
     <div class="detail" id="finance-detail" style="max-width:1100px; margin:0 auto; width:100%;"></div>
@@ -1039,6 +1093,10 @@
       <div class="field">
         <label>Initial Qty</label>
         <input id="m-qty" type="number" min="0" step="1" placeholder="0">
+      </div>
+      <div class="field">
+        <label>Min Stock</label>
+        <input id="m-minstock" type="number" min="0" step="1" placeholder="0">
       </div>
       <div class="field full">
         <label>Location</label>
@@ -1525,18 +1583,23 @@ function switchTab(tab) {
   document.getElementById('tab-stock').classList.toggle('active', tab === 'stock');
   document.getElementById('tab-wo').classList.toggle('active', tab === 'wo');
   document.getElementById('tab-finance').classList.toggle('active', tab === 'finance');
+  document.getElementById('tab-toorder').classList.toggle('active', tab === 'toorder');
   document.getElementById('stock-main').classList.toggle('hidden', tab !== 'stock');
   document.getElementById('wo-main').classList.toggle('hidden', tab !== 'wo');
   document.getElementById('finance-main').classList.toggle('hidden', tab !== 'finance');
+  document.getElementById('toorder-main').classList.toggle('hidden', tab !== 'toorder');
   document.getElementById('stock-stats').classList.toggle('hidden', tab !== 'stock');
   document.getElementById('wo-stats').classList.toggle('hidden', tab !== 'wo');
   document.getElementById('finance-stats').classList.toggle('hidden', tab !== 'finance');
+  document.getElementById('toorder-stats').classList.toggle('hidden', tab !== 'toorder');
   if (tab === 'stock') {
     scanInput.focus();
   } else if (tab === 'wo') {
     renderWoList();
   } else if (tab === 'finance') {
     renderFinance();
+  } else if (tab === 'toorder') {
+    renderToOrder();
   }
 }
 
@@ -2755,16 +2818,20 @@ function renderList() {
     return;
   }
 
-  list.innerHTML = filtered.map(p => `
+  list.innerHTML = filtered.map(p => {
+    const needsOrder = (p.minStock || 0) > 0 && p.qty <= p.minStock;
+    const badgeClass = p.qty === 0 ? 'zero' : (needsOrder ? 'low' : 'ok');
+    return `
     <div class="part-item ${p.id === selectedId ? 'active' : ''}" onclick="selectPart('${p.id}')">
-      <div class="part-item-code">${p.code}</div>
+      <div class="part-item-code">${needsOrder ? '⚠ ' : ''}${p.code}</div>
       <div class="part-item-name">${p.manufacturer ? p.manufacturer + ' — ' : ''}${p.description || '—'}</div>
       <div class="part-item-row">
-        <span class="qty-badge ${p.qty > 0 ? 'ok' : 'zero'}">${p.qty} units</span>
+        <span class="qty-badge ${badgeClass}">${p.qty} units</span>
         <span class="loc-badge">${p.location || ''}</span>
       </div>
     </div>
-  `).join('');
+  `;
+  }).join('');
 
   updateStats();
 }
@@ -2772,6 +2839,67 @@ function renderList() {
 function updateStats() {
   document.getElementById('stat-parts').textContent = parts.length;
   document.getElementById('stat-units').textContent = parts.reduce((s,p) => s + p.qty, 0);
+  updateToOrderBadge();
+}
+
+// ─── TO ORDER ──────────────────────────────────────────────────────────────
+// A part needs ordering when it has a minStock > 0 (0 = no warning wanted)
+// and its current qty has dropped to or below that minimum.
+// Sorted most-urgent first: out of stock, then furthest below minimum.
+function getPartsToOrder() {
+  return parts
+    .filter(p => (p.minStock || 0) > 0 && p.qty <= p.minStock)
+    .sort((a, b) => (a.qty - a.minStock) - (b.qty - b.minStock));
+}
+
+// Keeps the little red count badge on the "To Order" nav tab in sync.
+// Called from updateStats(), so it refreshes any time the parts list re-renders.
+function updateToOrderBadge() {
+  const count = getPartsToOrder().length;
+  const badge = document.getElementById('toorder-nav-badge');
+  const statEl = document.getElementById('stat-toorder');
+  if (badge) {
+    badge.textContent = count;
+    badge.classList.toggle('hidden', count === 0);
+  }
+  if (statEl) statEl.textContent = count;
+}
+
+function renderToOrder() {
+  const list = getPartsToOrder();
+  const wrap = document.getElementById('toorder-detail');
+  if (!list.length) {
+    wrap.innerHTML = `
+      <div class="no-selection">
+        <div class="no-selection-icon">◫</div>
+        <p>Nothing needs ordering right now.</p>
+        <p style="margin-top:6px;font-size:12px;">Set a Min Stock on any part in Stock to get a warning here when it runs low.</p>
+      </div>`;
+    return;
+  }
+  wrap.innerHTML = `
+    <div class="section-title" style="margin-bottom:10px;">To Order (${list.length})</div>
+    ${list.map(p => {
+      const state = p.qty === 0 ? 'zero' : 'low';
+      return `
+      <div class="order-row" onclick="jumpToPartFromOrder('${p.id}')">
+        <div style="min-width:0;overflow:hidden;">
+          <div class="order-row-code">${p.code}</div>
+          <div class="order-row-name">${p.manufacturer ? p.manufacturer + ' — ' : ''}${p.description || '—'}${p.location ? ' · ' + p.location : ''}</div>
+        </div>
+        <div class="order-row-right">
+          <div class="order-row-qty ${state}">${p.qty} in stock</div>
+          <div class="order-row-min">min ${p.minStock}</div>
+        </div>
+      </div>`;
+    }).join('')}
+  `;
+}
+
+// Clicking a To Order row jumps to the Stock tab with that part selected.
+function jumpToPartFromOrder(id) {
+  switchTab('stock');
+  selectPart(id);
 }
 
 // ─── DETAIL ────────────────────────────────────────────────────────────────
@@ -2802,7 +2930,8 @@ function selectPart(id) {
         <button class="qty-btn plus" onclick="adjustQty('${p.id}', 1)">+</button>
         <button class="qty-btn minus" onclick="adjustQty('${p.id}', -1)">−</button>
       </div>
-      <div class="qty-display ${p.qty > 0 ? 'ok' : 'zero'}" id="qty-display">${p.qty}</div>
+      <div class="qty-display ${qtyDisplayClass(p)}" id="qty-display">${p.qty}</div>
+      <div id="qty-warning" style="font-size:11px;color:var(--yellow);margin-top:4px;font-family:var(--mono);${(p.minStock||0) > 0 && p.qty <= p.minStock ? '' : 'display:none;'}">⚠ At or below min stock (${p.minStock})</div>
       <div class="qty-meta">
         <div class="qty-price-label">Sale Price</div>
         <div class="qty-price">${p.price ? '€' + parseFloat(p.price).toFixed(2) : '—'}</div>
@@ -2834,6 +2963,10 @@ function selectPart(id) {
           <label>Quantity</label>
           <input id="e-qty" type="number" min="0" step="1" value="${p.qty}">
         </div>
+        <div class="field">
+          <label>Min Stock <span style="font-weight:400;color:var(--text-dim)">(0 = no warning)</span></label>
+          <input id="e-minstock" type="number" min="0" step="1" value="${p.minStock || 0}">
+        </div>
         <div class="field full">
           <label>Location</label>
           <!-- datalist gives dropdown of existing locations, still accepts new text -->
@@ -2857,6 +2990,30 @@ function selectPart(id) {
   `;
 }
 
+// Which color state the big qty number (and its badge equivalents) should show:
+// red when out of stock, yellow when at/under a set minimum, green otherwise.
+function qtyDisplayClass(p) {
+  if (p.qty === 0) return 'zero';
+  if ((p.minStock || 0) > 0 && p.qty <= p.minStock) return 'low';
+  return 'ok';
+}
+
+// Refreshes the big qty number + the "at or below min stock" hint line in the
+// detail panel without a full re-render. Shared by adjustQty and bulkAdjust.
+function refreshQtyDisplay(p) {
+  const d = document.getElementById('qty-display');
+  if (d) {
+    d.textContent = p.qty;
+    d.className = 'qty-display ' + qtyDisplayClass(p);
+  }
+  const w = document.getElementById('qty-warning');
+  if (w) {
+    const warn = (p.minStock || 0) > 0 && p.qty <= p.minStock;
+    w.style.display = warn ? '' : 'none';
+    w.textContent = `⚠ At or below min stock (${p.minStock})`;
+  }
+}
+
 function adjustQty(id, delta) {
   const p = parts.find(x => x.id === id);
   if (!p) return;
@@ -2864,25 +3021,21 @@ function adjustQty(id, delta) {
   p.qty = Math.max(0, p.qty + delta);
   save();
   logEvent('qty', p.code, `${delta > 0 ? '+1' : '−1'} (${before} → ${p.qty})`);
-  // update just the number without full re-render
-  const d = document.getElementById('qty-display');
-  if (d) {
-    d.textContent = p.qty;
-    d.className = 'qty-display ' + (p.qty > 0 ? 'ok' : 'zero');
-  }
+  refreshQtyDisplay(p);
   renderList();
 }
 
 function savePart(id) {
   const p = parts.find(x => x.id === id);
   if (!p) return;
-  const before = { code: p.code, manufacturer: p.manufacturer, description: p.description, price: p.price, qty: p.qty, location: p.location };
+  const before = { code: p.code, manufacturer: p.manufacturer, description: p.description, price: p.price, qty: p.qty, location: p.location, minStock: p.minStock || 0 };
   p.code = document.getElementById('e-code').value.trim() || p.code;
   p.manufacturer = document.getElementById('e-manufacturer').value.trim();
   p.description = document.getElementById('e-description').value.trim();
   p.price = parseFloat(document.getElementById('e-price').value) || 0;
   p.qty = Math.max(0, parseInt(document.getElementById('e-qty').value) || 0);
   p.location = document.getElementById('e-location').value.trim();
+  p.minStock = Math.max(0, parseInt(document.getElementById('e-minstock').value) || 0);
   save();
   rememberPart(p);
 
@@ -2894,6 +3047,7 @@ function savePart(id) {
   if (before.price !== p.price) changed.push(`price €${before.price} → €${p.price}`);
   if (before.qty !== p.qty) changed.push(`qty ${before.qty} → ${p.qty}`);
   if (before.location !== p.location) changed.push(`location → ${p.location || '—'}`);
+  if (before.minStock !== p.minStock) changed.push(`min stock ${before.minStock} → ${p.minStock}`);
   if (changed.length) logEvent('edit', p.code, changed.join(', '));
 
   selectPart(id);
@@ -2926,11 +3080,7 @@ function bulkAdjust(id, direction) {
   p.qty = Math.max(0, p.qty + (amount * direction));
   save();
   logEvent('qty', p.code, `bulk ${direction > 0 ? '+' : '−'}${amount} (${before} → ${p.qty})`);
-  const d = document.getElementById('qty-display');
-  if (d) {
-    d.textContent = p.qty;
-    d.className = 'qty-display ' + (p.qty > 0 ? 'ok' : 'zero');
-  }
+  refreshQtyDisplay(p);
   renderList();
 }
 
@@ -3068,6 +3218,7 @@ function openModal(code) {
   document.getElementById('m-description').value = '';
   document.getElementById('m-price').value = '';
   document.getElementById('m-qty').value = '1';
+  document.getElementById('m-minstock').value = '0';
   document.getElementById('m-location').value = '';
   document.getElementById('modal-code-label').textContent =
     code ? `Code "${code}" not found — add it to stock.` : 'Add a new part manually.';
@@ -3094,6 +3245,7 @@ function saveNewPart() {
     description: document.getElementById('m-description').value.trim(),
     price: parseFloat(document.getElementById('m-price').value) || 0,
     qty: Math.max(0, parseInt(document.getElementById('m-qty').value) || 0),
+    minStock: Math.max(0, parseInt(document.getElementById('m-minstock').value) || 0),
     location: document.getElementById('m-location').value.trim(),
   };
   parts.push(part);

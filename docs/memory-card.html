@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>MEMORY</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bezel:#9a9a9a; --bezel-lo:#6f6f72; --bezel-hi:#c4c4c8;
+    --screen:#050814; --navy:#0d1642; --navy-deep:#060a24;
+    --ink:#dfe7ff; --ink-dim:#5f6a95; --cyan:#5be3ff; --amber:#ffb454; --magenta:#ff4fb8;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent; user-select:none;}
+  html,body{height:100%; margin:0; overflow:hidden; background:#1a1a1c;
+    font-family:'Share Tech Mono', monospace; color:var(--ink);}
+  .display{font-family:'Press Start 2P', monospace;}
+
+  #console{
+    position:fixed; inset:0; display:flex; align-items:center; justify-content:center;
+    background:radial-gradient(ellipse at 50% 20%, #2a2a2c, #131314 70%);
+  }
+  #bezel{
+    position:relative; width:min(100vw, 640px); height:min(100vh, 900px);
+    background:linear-gradient(160deg, var(--bezel-hi), var(--bezel) 40%, var(--bezel-lo));
+    border-radius:18px; padding:4vh 4vw;
+    box-shadow:0 20px 60px rgba(0,0,0,.6), inset 0 2px 2px rgba(255,255,255,.5), inset 0 -3px 6px rgba(0,0,0,.4);
+    display:flex; flex-direction:column;
+  }
+  #bezel::before{
+    content:"MEMORY"; position:absolute; top:1.4vh; left:50%; transform:translateX(-50%);
+    font-family:'Press Start 2P'; font-size:9px; letter-spacing:3px; color:#4b4b4e;
+  }
+  #screen-wrap{
+    flex:1; position:relative; border-radius:6px; overflow:hidden;
+    background:var(--screen);
+    box-shadow:inset 0 0 0 3px #333, inset 0 0 30px rgba(0,0,0,.8), 0 1px 0 rgba(255,255,255,.3);
+  }
+  #screen-wrap::after{ /* scanlines + vignette */
+    content:""; position:absolute; inset:0; pointer-events:none; z-index:50;
+    background:
+      repeating-linear-gradient(rgba(0,0,0,0) 0, rgba(0,0,0,0) 2px, rgba(0,0,0,.18) 3px),
+      radial-gradient(ellipse at 50% 50%, transparent 55%, rgba(0,0,0,.55) 100%);
+  }
+  .pane{position:absolute; inset:0; display:flex; flex-direction:column; opacity:0; pointer-events:none;
+    transition:opacity .5s ease;}
+  .pane.active{opacity:1; pointer-events:auto;}
+
+  /* BOOT */
+  #boot{align-items:center; justify-content:center; background:var(--navy-deep); text-align:center; gap:22px;}
+  #boot .card-icon{width:56px; height:38px; border:2px solid var(--cyan); border-radius:3px; position:relative;}
+  #boot .card-icon::before{content:""; position:absolute; top:6px; left:6px; right:6px; height:4px; background:var(--cyan); opacity:.7;}
+  #boot .card-icon::after{content:""; position:absolute; bottom:6px; left:6px; width:14px; height:14px; border:2px solid var(--cyan); border-radius:50%;}
+  #boot p{font-family:'Press Start 2P'; font-size:10px; letter-spacing:1px; color:var(--ink); animation:blink 1.3s steps(1) infinite;}
+  @keyframes blink{50%{opacity:.15;}}
+
+  /* CARD SCREEN */
+  #card-screen{background:linear-gradient(180deg, var(--navy), var(--navy-deep)); padding:3.2vh 3.5vw;}
+  #card-header{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:2.2vh;}
+  #card-header h1{font-family:'Press Start 2P'; font-size:11px; margin:0; letter-spacing:1px;}
+  #card-header .stat{font-size:12px; color:var(--ink-dim);}
+  #mute-btn{background:none; border:1px solid var(--ink-dim); color:var(--ink-dim); border-radius:3px;
+    font-size:14px; padding:2px 8px; font-family:inherit;}
+  #mute-btn.on{color:var(--cyan); border-color:var(--cyan);}
+
+  #grid{flex:1; display:grid; grid-template-columns:repeat(3,1fr); grid-template-rows:repeat(5,1fr);
+    gap:2.2vh 3.5vw; align-content:center;}
+  .slot{position:relative; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:6px; border-radius:4px; padding:6px 2px; cursor:pointer;
+    border:1px solid transparent; transition:border-color .15s;}
+  .slot canvas{image-rendering:pixelated; width:34px; height:34px;}
+  .slot .empty-mark{width:34px; height:34px; border:1px dashed var(--ink-dim); border-radius:3px; opacity:.35;}
+  .slot .label{font-size:9px; color:var(--ink-dim); letter-spacing:.5px; text-align:center; line-height:1.3;}
+  .slot.used .label{color:var(--ink);}
+  .slot.focus{border-color:var(--cyan);}
+  .slot.focus .label{color:var(--cyan);}
+  .slot.shake{animation:shake .25s;}
+  @keyframes shake{25%{transform:translateX(-3px);}75%{transform:translateX(3px);}}
+
+  #hint-bar{display:flex; gap:22px; justify-content:center; padding-top:1.6vh; font-size:11px; color:var(--ink-dim);}
+  #hint-bar b{color:var(--cyan);}
+
+  /* INFO OVERLAY */
+  #info-overlay{position:absolute; inset:0; z-index:60; background:rgba(6,10,36,.94);
+    display:flex; align-items:center; justify-content:center; opacity:0; pointer-events:none; transition:opacity .2s;}
+  #info-overlay.show{opacity:1; pointer-events:auto;}
+  #info-box{width:82%; max-width:340px; border:1px solid var(--cyan); border-radius:4px; padding:18px; text-align:center;}
+  #info-box h2{font-family:'Press Start 2P'; font-size:11px; margin:0 0 12px;}
+  #info-box p{font-size:13px; color:var(--ink-dim); line-height:1.6; margin:0 0 18px;}
+  #info-box .row{display:flex; gap:10px; justify-content:center;}
+  #info-box button{font-family:inherit; font-size:11px; background:none; border:1px solid var(--ink-dim);
+    color:var(--ink); padding:8px 12px; border-radius:3px;}
+  #info-box button:active{border-color:var(--cyan); color:var(--cyan);}
+  #info-msg{font-size:11px; color:var(--magenta); min-height:16px; margin-top:10px;}
+
+  /* SCENE */
+  #scene-screen{background:#000;}
+  #scene-canvas{width:100%; height:100%; display:block;}
+  #scene-hud{position:absolute; inset:0; pointer-events:none; z-index:40; padding:2.4vh 3vw;
+    display:flex; flex-direction:column; justify-content:space-between;}
+  #scene-title{font-family:'Press Start 2P'; font-size:9px; letter-spacing:1px; opacity:.8;
+    text-shadow:0 0 6px rgba(0,0,0,.8);}
+  #scene-back{align-self:flex-end; font-size:11px; color:var(--ink-dim); transition:opacity .6s;
+    text-shadow:0 0 6px rgba(0,0,0,.8);}
+  #scene-mute{position:absolute; top:2.4vh; right:3vw; pointer-events:auto; background:none; border:none;
+    color:var(--ink); font-size:15px; opacity:.75;}
+
+  @media (prefers-reduced-motion: reduce){ * { animation-duration:.01ms !important; } }
+</style>
+</head>
+<body>
+
+<div id="console"><div id="bezel"><div id="screen-wrap">
+
+  <div id="boot" class="pane active">
+    <div class="card-icon"></div>
+    <p>TAP TO INSERT<br>MEMORY CARD</p>
+  </div>
+
+  <div id="card-screen" class="pane">
+    <div id="card-header">
+      <h1>MEMORY CARD</h1>
+      <div class="stat"><span id="blocks-used">0</span>/15 BLOCKS <button id="mute-btn">♪</button></div>
+    </div>
+    <div id="grid"></div>
+    <div id="hint-bar"><span><b>✕</b> OPEN</span><span><b>△</b> INFO</span></div>
+
+    <div id="info-overlay">
+      <div id="info-box">
+        <h2 id="info-title"></h2>
+        <p id="info-blurb"></p>
+        <div class="row">
+          <button data-act="copy">COPY</button>
+          <button data-act="delete">DELETE</button>
+          <button data-act="close">CLOSE</button>
+        </div>
+        <div id="info-msg"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="scene-screen" class="pane">
+    <canvas id="scene-canvas"></canvas>
+    <div id="scene-hud">
+      <div id="scene-title"></div>
+      <div id="scene-back">tap or ↩ to return</div>
+    </div>
+    <button id="scene-mute">♪</button>
+  </div>
+
+</div></div></div>
+
+<script>
+(() => {
+"use strict";
+
+/* ---------- data ---------- */
+const SCENES = {
+  "night-drive": {title:"NIGHT DRIVE", blurb:"Empty road. Full tank. No destination.", size:412},
+  "static-bay":  {title:"STATIC BAY",  blurb:"Channel 3 never came in clean.", size:298},
+  "tide-pool":   {title:"TIDE POOL",   blurb:"Low tide, low light, slow tape.", size:355},
+  "parking-b2":  {title:"PARKING B2",  blurb:"Level -2. The light never fully turns on.", size:203},
+  "signal-lost": {title:"SIGNAL LOST", blurb:"Please stand by.", size:271},
+  "ghost-lap":   {title:"GHOST LAP",   blurb:"One more clean lap before bed.", size:389},
+};
+// 15 card slots, only some occupied — matches a real half-used card
+const PLACEMENT = ["night-drive",null,"static-bay","tide-pool",null,null,
+                    "parking-b2",null,null,"signal-lost",null,null,null,"ghost-lap",null];
+const COLS = 3, ROWS = 5;
+const REDUCED = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+/* ---------- audio ---------- */
+let actx = null, master = null, noiseBuf = null;
+function ensureAudio(){
+  if (actx) return;
+  actx = new (window.AudioContext || window.webkitAudioContext)();
+  const comp = actx.createDynamicsCompressor();
+  master = actx.createGain(); master.gain.value = 0.5;
+  master.connect(comp); comp.connect(actx.destination);
+  const len = actx.sampleRate * 2;
+  noiseBuf = actx.createBuffer(1, len, actx.sampleRate);
+  const d = noiseBuf.getChannelData(0);
+  for (let i=0;i<len;i++) d[i] = Math.random()*2-1;
+}
+function noise(){
+  const s = actx.createBufferSource(); s.buffer = noiseBuf; s.loop = true; return s;
+}
+function tone(freq, type="sine"){
+  const o = actx.createOscillator(); o.type = type; o.frequency.value = freq; return o;
+}
+function blip(freq=880, dur=.07, type="square", vol=.12){
+  if (!actx) return;
+  const o = tone(freq, type), g = actx.createGain();
+  g.gain.value = vol; o.connect(g); g.connect(master);
+  g.gain.setValueAtTime(vol, actx.currentTime);
+  g.gain.exponentialRampToValueAtTime(.001, actx.currentTime + dur);
+  o.start(); o.stop(actx.currentTime + dur + .02);
+}
+let muted = false;
+function setMuted(v){
+  muted = v;
+  [$("mute-btn"), $("scene-mute")].forEach(b => b.classList.toggle("on", !muted));
+  [$("mute-btn"), $("scene-mute")].forEach(b => b.textContent = muted ? "✕" : "♪");
+  if (master) master.gain.setTargetAtTime(muted ? 0 : 0.5, actx.currentTime, .1);
+}
+
+/* ---------- helpers ---------- */
+const $ = id => document.getElementById(id);
+function show(id){ document.querySelectorAll(".pane").forEach(p => p.classList.remove("active")); $(id).classList.add("active"); }
+
+/* ---------- boot ---------- */
+$("boot").addEventListener("click", startUp, {once:true});
+function startUp(){
+  ensureAudio(); if (actx.state === "suspended") actx.resume();
+  blip(220, .12, "square", .15);
+  setTimeout(() => { blip(440,.08); buildGrid(); show("card-screen"); }, 220);
+}
+
+/* ---------- card grid ---------- */
+let cursor = PLACEMENT.findIndex(x => x);
+function buildGrid(){
+  const grid = $("grid"); grid.innerHTML = "";
+  let used = 0, kb = 0;
+  PLACEMENT.forEach((id, i) => {
+    const el = document.createElement("div");
+    el.className = "slot" + (id ? " used" : "");
+    el.dataset.idx = i;
+    if (id){
+      used++; kb += SCENES[id].size;
+      const cv = document.createElement("canvas"); cv.width = 28; cv.height = 28;
+      el.appendChild(cv);
+      const lab = document.createElement("div"); lab.className = "label";
+      lab.textContent = SCENES[id].title; el.appendChild(lab);
+      drawIcon(cv.getContext("2d"), id);
+      el.addEventListener("click", () => { cursor = i; updateFocus(); openSlot(); });
+    } else {
+      const mark = document.createElement("div"); mark.className = "empty-mark"; el.appendChild(mark);
+      const lab = document.createElement("div"); lab.className = "label"; lab.textContent = "----"; el.appendChild(lab);
+      el.addEventListener("click", () => { cursor = i; updateFocus(); emptyBonk(el); });
+    }
+    grid.appendChild(el);
+  });
+  $("blocks-used").textContent = used;
+  updateFocus();
+  // icon flicker loop
+  let frame = 0;
+  setInterval(() => { frame++; document.querySelectorAll(".slot.used canvas").forEach(cv => {
+    const id = PLACEMENT[cv.closest(".slot").dataset.idx];
+    drawIcon(cv.getContext("2d"), id, frame);
+  }); }, REDUCED ? 900 : 480);
+}
+function updateFocus(){
+  document.querySelectorAll(".slot").forEach(el => el.classList.toggle("focus", +el.dataset.idx === cursor));
+}
+function emptyBonk(el){
+  blip(140, .12, "sawtooth", .1);
+  el.classList.remove("shake"); void el.offsetWidth; el.classList.add("shake");
+}
+document.addEventListener("keydown", e => {
+  if (!$("card-screen").classList.contains("active") || $("info-overlay").classList.contains("show")) return;
+  const row = Math.floor(cursor/COLS), col = cursor%COLS;
+  let nr = row, nc = col;
+  if (e.key === "ArrowRight") nc = Math.min(COLS-1, col+1);
+  else if (e.key === "ArrowLeft") nc = Math.max(0, col-1);
+  else if (e.key === "ArrowDown") nr = Math.min(ROWS-1, row+1);
+  else if (e.key === "ArrowUp") nr = Math.max(0, row-1);
+  else if (e.key === "Enter" || e.key === " "){ PLACEMENT[cursor] ? openSlot() : emptyBonk(document.querySelector(`.slot[data-idx="${cursor}"]`)); return; }
+  else if (e.key.toLowerCase() === "i"){ openInfo(); return; }
+  else return;
+  const ni = nr*COLS+nc;
+  if (ni !== cursor){ cursor = ni; updateFocus(); blip(660,.04,"square",.06); }
+});
+
+/* icon rendering — small pixel-style sprites, 2-frame */
+function drawIcon(ctx, id, frame=0){
+  const c = ctx.canvas, w = c.width, h = c.height;
+  ctx.clearRect(0,0,w,h);
+  ctx.imageSmoothingEnabled = false;
+  const f = frame % 2;
+  ctx.fillStyle = "#0d1642"; ctx.fillRect(0,0,w,h);
+  ctx.strokeStyle = "#4b5a99"; ctx.strokeRect(.5,.5,w-1,h-1);
+  ctx.fillStyle = "#5be3ff";
+  if (id === "night-drive"){
+    ctx.fillStyle="#ffb454"; ctx.beginPath(); ctx.arc(w/2, h*.35, f?3:2.4, 0, 7); ctx.fill();
+    ctx.strokeStyle="#5be3ff"; ctx.beginPath();
+    ctx.moveTo(w*.5,h*.4); ctx.lineTo(w*.15,h); ctx.moveTo(w*.5,h*.4); ctx.lineTo(w*.85,h); ctx.stroke();
+  } else if (id === "static-bay"){
+    for (let i=0;i<40;i++){ ctx.fillStyle = Math.random()>.5?"#5be3ff":"#0d1642";
+      ctx.fillRect(Math.random()*w, Math.random()*h, 2, 2); }
+  } else if (id === "tide-pool"){
+    ctx.strokeStyle="#5be3ff";
+    for (let r=0;r<3;r++){ ctx.beginPath();
+      for (let x=0;x<=w;x+=3){ const y = h/2 + r*5 + Math.sin(x/4 + f*3 + r)*3; x===0?ctx.moveTo(x,y):ctx.lineTo(x,y); }
+      ctx.stroke(); }
+  } else if (id === "parking-b2"){
+    ctx.fillStyle = f ? "#ffe98a" : "#3a3a1a"; ctx.fillRect(w*.2, h*.15, w*.6, 4);
+    ctx.strokeStyle="#4b5a99"; ctx.strokeRect(4,h*.4,w-8,h*.5);
+  } else if (id === "signal-lost"){
+    ctx.strokeStyle="#ff4fb8";
+    ctx.beginPath(); ctx.moveTo(w/2,h*.7); ctx.lineTo(w/2,h*.3+f*2);
+    ctx.lineTo(w*.3,h*.15); ctx.moveTo(w/2,h*.3+f*2); ctx.lineTo(w*.7,h*.15); ctx.stroke();
+  } else if (id === "ghost-lap"){
+    ctx.strokeStyle="#5be3ff"; ctx.beginPath(); ctx.ellipse(w/2,h/2,w*.35,h*.25,0,0,7); ctx.stroke();
+    const t = f*Math.PI; ctx.fillStyle="#ffb454";
+    ctx.beginPath(); ctx.arc(w/2+Math.cos(t)*w*.35, h/2+Math.sin(t)*h*.25, 2, 0, 7); ctx.fill();
+  }
+}
+
+/* ---------- info overlay ---------- */
+$("hint-bar").previousElementSibling; // no-op guard
+document.addEventListener("keydown", e => { if (e.key === "Escape"){ closeInfo(); if ($("scene-screen").classList.contains("active")) closeScene(); }});
+function openInfo(){
+  const id = PLACEMENT[cursor]; if (!id) return;
+  $("info-title").textContent = SCENES[id].title;
+  $("info-blurb").textContent = SCENES[id].blurb;
+  $("info-msg").textContent = "";
+  $("info-overlay").classList.add("show");
+  blip(520,.06);
+}
+function closeInfo(){ $("info-overlay").classList.remove("show"); }
+$("info-overlay").addEventListener("click", e => {
+  const act = e.target.dataset.act; if (!act) return;
+  if (act === "close") closeInfo();
+  else { blip(160,.15,"sawtooth",.12); $("info-msg").textContent = act === "copy" ? "THIS MEMORY CANNOT BE COPIED." : "SOME THINGS AREN'T MEANT TO BE DELETED."; }
+});
+// triangle key opens info too (already bound to "i"); add tap-and-hold-free desktop shortcut via button-less flow
+$("card-screen").addEventListener("dblclick", () => openInfo());
+
+/* ---------- scene management ---------- */
+let sceneRAF = null, sceneAudioStop = null, activeId = null, backTimer = null;
+const canvas = $("scene-canvas"); const ctx2d = canvas.getContext("2d");
+function fitCanvas(){
+  const wrap = $("screen-wrap").getBoundingClientRect();
+  const dpr = Math.min(devicePixelRatio||1, 2);
+  canvas.width = wrap.width*dpr; canvas.height = wrap.height*dpr;
+  canvas.style.width = wrap.width+"px"; canvas.style.height = wrap.height+"px";
+  ctx2d.setTransform(dpr,0,0,dpr,0,0);
+}
+window.addEventListener("resize", fitCanvas);
+
+function openSlot(){
+  const id = PLACEMENT[cursor]; if (!id) return;
+  closeInfo();
+  blip(700,.05); blip(1050,.08);
+  activeId = id;
+  $("scene-title").textContent = SCENES[id].title;
+  fitCanvas();
+  show("scene-screen");
+  startSceneAudio(id);
+  runScene(id);
+  armBackHint();
+}
+function armBackHint(){
+  clearTimeout(backTimer);
+  $("scene-back").style.opacity = 1;
+  backTimer = setTimeout(() => { $("scene-back").style.opacity = 0; }, 2600);
+}
+function closeScene(){
+  if (!activeId) return;
+  cancelAnimationFrame(sceneRAF);
+  if (sceneAudioStop) sceneAudioStop();
+  activeId = null;
+  blip(500,.05); blip(300,.08);
+  show("card-screen");
+}
+$("scene-screen").addEventListener("click", e => { if (e.target.id !== "scene-mute") closeScene(); });
+document.addEventListener("keydown", e => { if (e.key === "Enter" && activeId) closeScene(); });
+
+$("mute-btn").addEventListener("click", e => { e.stopPropagation(); ensureAudio(); setMuted(!muted); });
+$("scene-mute").addEventListener("click", e => { e.stopPropagation(); ensureAudio(); setMuted(!muted); });
+
+/* ---------- scene visuals + audio ---------- */
+function startSceneAudio(id){
+  ensureAudio();
+  const nodes = [];
+  const mk = (n) => { nodes.push(n); return n; };
+  if (id === "night-drive"){
+    const drone = mk(tone(55)); const dg = mk(actx.createGain()); dg.gain.value=.05;
+    drone.connect(dg); dg.connect(master); drone.start();
+    const hiss = mk(noise()); const hf = mk(actx.createBiquadFilter()); hf.type="lowpass"; hf.frequency.value=500;
+    const hg = mk(actx.createGain()); hg.gain.value=.04;
+    hiss.connect(hf); hf.connect(hg); hg.connect(master); hiss.start();
+    var whoosh = setInterval(() => {
+      const w = noise(), wf = actx.createBiquadFilter(); wf.type="bandpass"; wf.frequency.value=1200+Math.random()*800;
+      const wg = actx.createGain(); wg.gain.value=0;
+      w.connect(wf); wf.connect(wg); wg.connect(master);
+      wg.gain.setValueAtTime(0, actx.currentTime); wg.gain.linearRampToValueAtTime(.06, actx.currentTime+.4);
+      wg.gain.linearRampToValueAtTime(0, actx.currentTime+1.4);
+      w.start(); w.stop(actx.currentTime+1.5);
+    }, 4000+Math.random()*3000);
+    return sceneAudioStop = () => { clearInterval(whoosh); nodes.forEach(n=>{try{n.stop&&n.stop();n.disconnect&&n.disconnect();}catch(e){}}); };
+  }
+  if (id === "static-bay"){
+    const hiss = mk(noise()); const hf = mk(actx.createBiquadFilter()); hf.type="highpass"; hf.frequency.value=1800;
+    const hg = mk(actx.createGain()); hg.gain.value=.06;
+    hiss.connect(hf); hf.connect(hg); hg.connect(master); hiss.start();
+    var thump = setInterval(() => { if (Math.random()<.4) blip(90+Math.random()*40,.09,"square",.05); }, 900);
+    return sceneAudioStop = () => { clearInterval(thump); nodes.forEach(n=>{try{n.stop&&n.stop();n.disconnect&&n.disconnect();}catch(e){}}); };
+  }
+  if (id === "tide-pool"){
+    const hiss = mk(noise()); const hf = mk(actx.createBiquadFilter()); hf.type="lowpass"; hf.frequency.value=900;
+    const hg = mk(actx.createGain()); hg.gain.value=.045;
+    hiss.connect(hf); hf.connect(hg); hg.connect(master); hiss.start();
+    const pad1 = mk(tone(196)), pad2 = mk(tone(199)); const pg = mk(actx.createGain()); pg.gain.value=.035;
+    pad1.connect(pg); pad2.connect(pg); pg.connect(master); pad1.start(); pad2.start();
+    return sceneAudioStop = () => nodes.forEach(n=>{try{n.stop&&n.stop();n.disconnect&&n.disconnect();}catch(e){}});
+  }
+  if (id === "parking-b2"){
+    const hum = mk(tone(120)); const hg = mk(actx.createGain()); hg.gain.value=.05;
+    hum.connect(hg); hg.connect(master); hum.start();
+    window._pbGain = hg;
+    return sceneAudioStop = () => nodes.forEach(n=>{try{n.stop&&n.stop();n.disconnect&&n.disconnect();}catch(e){}});
+  }
+  if (id === "signal-lost"){
+    const hiss = mk(noise()); const hf = mk(actx.createBiquadFilter()); hf.type="bandpass"; hf.frequency.value=2000;
+    const hg = mk(actx.createGain()); hg.gain.value=.05;
+    hiss.connect(hf); hf.connect(hg); hg.connect(master); hiss.start();
+    var sweep = setInterval(() => {
+      const o = actx.createOscillator(), g = actx.createGain(); o.type="sine";
+      const f0 = 300+Math.random()*200; o.frequency.setValueAtTime(f0, actx.currentTime);
+      o.frequency.linearRampToValueAtTime(f0*(1.5+Math.random()), actx.currentTime+.6);
+      g.gain.value=0; o.connect(g); g.connect(master);
+      g.gain.setValueAtTime(0,actx.currentTime); g.gain.linearRampToValueAtTime(.05,actx.currentTime+.1);
+      g.gain.linearRampToValueAtTime(0,actx.currentTime+.7);
+      o.start(); o.stop(actx.currentTime+.8);
+    }, 2200);
+    return sceneAudioStop = () => { clearInterval(sweep); nodes.forEach(n=>{try{n.stop&&n.stop();n.disconnect&&n.disconnect();}catch(e){}}); };
+  }
+  if (id === "ghost-lap"){
+    const drone = mk(tone(80,"sawtooth")); const df = mk(actx.createBiquadFilter()); df.type="lowpass"; df.frequency.value=400;
+    const dg = mk(actx.createGain()); dg.gain.value=.035;
+    drone.connect(df); df.connect(dg); dg.connect(master); drone.start();
+    window._glOsc = drone;
+    return sceneAudioStop = () => nodes.forEach(n=>{try{n.stop&&n.stop();n.disconnect&&n.disconnect();}catch(e){}});
+  }
+}
+
+function runScene(id){
+  let start = performance.now(), last = start;
+  function frame(now){
+    const t = (now-start)/1000, dt = (now-last)/1000; last = now;
+    const w = canvas.width/Math.min(devicePixelRatio||1,2), h = canvas.height/Math.min(devicePixelRatio||1,2);
+    draw(id, ctx2d, w, h, t, dt);
+    sceneRAF = requestAnimationFrame(frame);
+  }
+  sceneRAF = requestAnimationFrame(frame);
+}
+
+function draw(id, c, w, h, t){
+  if (id === "night-drive") return drawNightDrive(c,w,h,t);
+  if (id === "static-bay") return drawStaticBay(c,w,h,t);
+  if (id === "tide-pool") return drawTidePool(c,w,h,t);
+  if (id === "parking-b2") return drawParkingB2(c,w,h,t);
+  if (id === "signal-lost") return drawSignalLost(c,w,h,t);
+  if (id === "ghost-lap") return drawGhostLap(c,w,h,t);
+}
+
+function drawNightDrive(c,w,h,t){
+  const g = c.createLinearGradient(0,0,0,h); g.addColorStop(0,"#050814"); g.addColorStop(1,"#0d1030");
+  c.fillStyle = g; c.fillRect(0,0,w,h);
+  const vx = w/2, vy = h*.42;
+  c.fillStyle = "rgba(255,180,84,.18)"; c.beginPath(); c.arc(vx,vy,80,0,7); c.fill();
+  c.fillStyle = "rgba(255,180,84,.9)"; c.beginPath(); c.arc(vx,vy,3,0,7); c.fill();
+  c.strokeStyle = "rgba(200,210,255,.5)"; c.lineWidth=1;
+  c.beginPath(); c.moveTo(vx,vy); c.lineTo(0,h); c.moveTo(vx,vy); c.lineTo(w,h); c.stroke();
+  c.strokeStyle = "rgba(200,210,255,.6)";
+  for (let i=0;i<10;i++){
+    const p = ((t*.5+i/10)%1);
+    const y = vy + p*p*(h-vy);
+    const xw = (y-vy)/(h-vy) * (w*.06);
+    c.beginPath(); c.moveTo(vx-xw*0.2,y); c.lineTo(vx-xw,y+4); c.stroke();
+    c.beginPath(); c.moveTo(vx+xw*0.2,y); c.lineTo(vx+xw,y+4); c.stroke();
+  }
+  for (let i=0;i<30;i++){
+    const sx = (i*97 % w), sy = (i*53 % (h*.4));
+    c.fillStyle = `rgba(220,230,255,${0.2+0.3*Math.sin(t+i)})`; c.fillRect(sx,sy,1,1);
+  }
+}
+function drawStaticBay(c,w,h,t){
+  const cell = 4, cols = Math.ceil(w/cell), rows = Math.ceil(h/cell);
+  for (let y=0;y<rows;y++) for (let x=0;x<cols;x++){
+    const v = Math.random();
+    c.fillStyle = v>.96 ? "#5be3ff" : v>.5 ? "#cfd8ff" : "#0d1642";
+    c.fillRect(x*cell,y*cell,cell,cell);
+  }
+  if (Math.random()<.08){
+    const yb = Math.random()*h, hb = 6+Math.random()*20;
+    c.fillStyle="rgba(255,79,184,.15)"; c.fillRect(0,yb,w,hb);
+  }
+}
+function drawTidePool(c,w,h,t){
+  const g = c.createLinearGradient(0,0,0,h); g.addColorStop(0,"#04202a"); g.addColorStop(1,"#01323f");
+  c.fillStyle=g; c.fillRect(0,0,w,h);
+  for (let layer=0; layer<5; layer++){
+    c.beginPath();
+    for (let x=0;x<=w;x+=8){
+      const y = h*.5 + layer*22 + Math.sin(x*.01 + t*.4 + layer*1.3)*14;
+      x===0?c.moveTo(x,y):c.lineTo(x,y);
+    }
+    c.lineTo(w,h); c.lineTo(0,h); c.closePath();
+    c.fillStyle = `rgba(91,227,255,${0.05+layer*0.02})`; c.fill();
+  }
+  for (let i=0;i<12;i++){
+    const bx = (i*137)%w, by = h - ((t*10+i*40)%h);
+    c.fillStyle="rgba(200,255,240,.15)"; c.beginPath(); c.arc(bx,by,2+Math.sin(i)*1.5,0,7); c.fill();
+  }
+}
+function drawParkingB2(c,w,h,t){
+  const flicker = Math.sin(t*40)*0.5+0.5;
+  const chance = Math.random();
+  const on = chance > .06;
+  const bright = on ? (0.85+flicker*.15) : 0.05;
+  if (window._pbGain) window._pbGain.gain.value = 0.05*bright;
+  c.fillStyle = `rgba(10,10,14,1)`; c.fillRect(0,0,w,h);
+  for (let i=0;i<400;i++){
+    const x = (i*53)%w, y = (i*97)%h;
+    c.fillStyle = `rgba(255,255,255,${0.015*bright})`; c.fillRect(x,y,1,1);
+  }
+  c.fillStyle = `rgba(255,233,138,${.5*bright})`; c.fillRect(w*.2,h*.12,w*.6,4);
+  c.fillStyle = `rgba(255,233,138,${.15*bright})`; c.fillRect(0,0,w,h*.35);
+  c.strokeStyle = `rgba(120,120,130,${.4})`;
+  for (let x=0;x<w;x+=w/6){ c.beginPath(); c.moveTo(x,h*.4); c.lineTo(x,h); c.stroke(); }
+}
+function drawSignalLost(c,w,h,t){
+  c.fillStyle="#000"; c.fillRect(0,0,w,h);
+  const bands = 6;
+  for (let i=0;i<bands;i++){
+    const y = (i/bands)*h + (t*40)%(h/bands);
+    c.fillStyle = i%2? "rgba(255,79,184,.08)":"rgba(91,227,255,.08)";
+    c.fillRect(0,y,w,h/bands*0.6);
+  }
+  for (let i=0;i<200;i++){
+    c.fillStyle = Math.random()>.5?"rgba(255,255,255,.05)":"rgba(91,227,255,.05)";
+    c.fillRect(Math.random()*w, Math.random()*h, 2, 1);
+  }
+  c.fillStyle="rgba(200,210,255,.4)"; c.font="10px 'Share Tech Mono'";
+  c.fillText("NO SIGNAL", w*.5-25, h*.5 + Math.sin(t*3)*3);
+}
+function drawGhostLap(c,w,h,t){
+  c.fillStyle="#050814"; c.fillRect(0,0,w,h);
+  const cx=w/2, cy=h/2, rx=w*.32, ry=h*.24;
+  c.strokeStyle="rgba(91,227,255,.35)"; c.setLineDash([6,6]); c.lineWidth=2;
+  c.beginPath(); c.ellipse(cx,cy,rx,ry,0,0,7); c.stroke(); c.setLineDash([]);
+  const speed = 0.5 + Math.sin(t*.2)*0.15;
+  if (window._glOsc) window._glOsc.frequency.value = 70 + speed*40;
+  for (let i=0;i<14;i++){
+    const tt = t*speed - i*0.05;
+    const x = cx+Math.cos(tt)*rx, y = cy+Math.sin(tt)*ry;
+    c.fillStyle = `rgba(255,180,84,${0.5-(i/14)*0.5})`;
+    c.beginPath(); c.arc(x,y,3-(i/14)*2,0,7); c.fill();
+  }
+}
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,1071 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Wallpaper Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink: #16171b;
+    --paper: #f1efe8;
+    --paper-dim: #d8d5cb;
+    --panel: #1c1d22;
+    --panel-line: #33353d;
+    --blue: #4c6fff;
+    --blue-dim: #2e3a6e;
+    --pen: #e0533a;
+    --muted: #8b8a86;
+    --ok: #5fbf8a;
+  }
+
+  *{ box-sizing:border-box; }
+
+  html,body{
+    margin:0; padding:0; height:100%;
+    background:var(--ink);
+    color:var(--paper);
+    font-family:'Space Grotesk', sans-serif;
+    overflow:hidden;
+  }
+
+  .mono{ font-family:'JetBrains Mono', monospace; }
+
+  /* ---------- layout ---------- */
+  .app{
+    display:grid;
+    grid-template-columns: 340px 1fr;
+    height:100vh;
+    height:100dvh;
+  }
+
+  .stage{
+    position:relative;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:
+      linear-gradient(135deg, #101115 25%, transparent 25%) -10px 0/20px 20px,
+      linear-gradient(225deg, #101115 25%, transparent 25%) -10px 0/20px 20px,
+      linear-gradient(315deg, #101115 25%, transparent 25%) 0 0/20px 20px,
+      linear-gradient(45deg, #101115 25%, transparent 25%) 0 0/20px 20px;
+    background-color:#0c0d10;
+    padding:36px;
+    overflow:hidden;
+  }
+
+  .canvas-wrap{
+    position:relative;
+    max-width:100%;
+    max-height:100%;
+    box-shadow: 0 30px 80px -20px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.06);
+  }
+
+  #canvas{
+    display:block;
+    max-width: calc(100vw - 340px - 72px);
+    max-height: calc(100vh - 72px);
+    width:auto; height:auto;
+  }
+
+  .readout{
+    position:absolute;
+    left:12px; bottom:12px;
+    font-size:11px;
+    letter-spacing:0.04em;
+    color: rgba(241,239,232,0.82);
+    background: rgba(12,13,16,0.55);
+    backdrop-filter: blur(6px);
+    padding:6px 10px;
+    border:1px solid rgba(241,239,232,0.15);
+    pointer-events:none;
+    white-space:nowrap;
+  }
+  .readout .dot{
+    display:inline-block; width:6px; height:6px; border-radius:50%;
+    background:var(--ok); margin-right:7px;
+    box-shadow:0 0 6px var(--ok);
+  }
+
+  /* ---------- panel ---------- */
+  .panel{
+    background:var(--panel);
+    border-right:1px solid var(--panel-line);
+    display:flex;
+    flex-direction:column;
+    height:100%;
+    overflow:hidden;
+  }
+
+  .panel-head{
+    padding:22px 22px 16px;
+    border-bottom:1px solid var(--panel-line);
+    flex-shrink:0;
+  }
+  .panel-head h1{
+    margin:0;
+    font-size:19px;
+    font-weight:700;
+    letter-spacing:-0.01em;
+  }
+  .panel-head .sub{
+    margin-top:4px;
+    font-size:11px;
+    color:var(--muted);
+    letter-spacing:0.06em;
+    text-transform:uppercase;
+  }
+
+  .panel-scroll{
+    flex:1;
+    overflow-y:auto;
+    padding:20px 22px 24px;
+  }
+  .panel-scroll::-webkit-scrollbar{ width:8px; }
+  .panel-scroll::-webkit-scrollbar-thumb{ background:var(--panel-line); }
+
+  .field{ margin-bottom:26px; }
+  .field-label{
+    font-size:10.5px;
+    letter-spacing:0.12em;
+    text-transform:uppercase;
+    color:var(--muted);
+    margin-bottom:10px;
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+  }
+  .field-label .val{
+    color:var(--paper);
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px;
+  }
+
+  /* style selector as tabs */
+  .style-grid{
+    display:grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap:6px;
+  }
+  .style-btn{
+    background:transparent;
+    border:1px solid var(--panel-line);
+    color:var(--muted);
+    padding:10px 4px;
+    font-family:'JetBrains Mono', monospace;
+    font-size:10px;
+    letter-spacing:0.04em;
+    text-transform:uppercase;
+    cursor:pointer;
+    transition: all .15s ease;
+  }
+  .style-btn:hover{ border-color:#54565f; color:var(--paper); }
+  .style-btn.active{
+    background:var(--blue);
+    border-color:var(--blue);
+    color:#fff;
+  }
+
+  /* palette swatches */
+  .swatch-row{
+    display:flex;
+    height:40px;
+    border:1px solid var(--panel-line);
+    overflow:hidden;
+  }
+  .swatch{ flex:1; }
+
+  select{
+    width:100%;
+    background:#111217;
+    border:1px solid var(--panel-line);
+    color:var(--paper);
+    font-family:'JetBrains Mono', monospace;
+    font-size:12px;
+    padding:9px 10px;
+    cursor:pointer;
+    appearance:none;
+    -webkit-appearance:none;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6'><path d='M0 0L5 6L10 0Z' fill='%238b8a86'/></svg>");
+    background-repeat:no-repeat;
+    background-position: right 12px center;
+  }
+  select:focus{ outline:2px solid var(--blue); outline-offset:1px; }
+
+  input[type=range]{
+    width:100%;
+    -webkit-appearance:none;
+    height:2px;
+    background:var(--panel-line);
+    outline:none;
+    margin-top:2px;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;
+    width:14px; height:14px;
+    border-radius:50%;
+    background:var(--blue);
+    cursor:pointer;
+    border:2px solid var(--panel);
+    box-shadow:0 0 0 1px var(--blue);
+  }
+  input[type=range]::-moz-range-thumb{
+    width:14px; height:14px;
+    border-radius:50%;
+    background:var(--blue);
+    cursor:pointer;
+    border:2px solid var(--panel);
+  }
+  input[type=range]:focus-visible::-webkit-slider-thumb{
+    box-shadow: 0 0 0 3px rgba(76,111,255,0.4);
+  }
+
+  .toggle-row{
+    display:flex;
+    border:1px solid var(--panel-line);
+  }
+  .toggle-row button{
+    flex:1;
+    background:transparent;
+    border:none;
+    color:var(--muted);
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px;
+    letter-spacing:0.04em;
+    padding:9px 4px;
+    cursor:pointer;
+    border-left:1px solid var(--panel-line);
+  }
+  .toggle-row button:first-child{ border-left:none; }
+  .toggle-row button.active{ background:var(--blue-dim); color:#fff; }
+
+  .hidden-fields{ display:none; }
+
+  /* mood presets */
+  .preset-grid{
+    display:grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap:8px;
+  }
+  .preset-btn{
+    background:#111217;
+    border:1px solid var(--panel-line);
+    color:var(--paper);
+    text-align:left;
+    padding:10px;
+    cursor:pointer;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    transition: border-color .15s ease;
+  }
+  .preset-btn:hover{ border-color:#54565f; }
+  .preset-btn.active{ border-color:var(--blue); box-shadow: 0 0 0 1px var(--blue) inset; }
+  .preset-name{
+    font-family:'JetBrains Mono', monospace;
+    font-size:10.5px;
+    letter-spacing:0.02em;
+    line-height:1.3;
+  }
+  .preset-swatch{
+    display:flex; height:14px; overflow:hidden;
+  }
+  .preset-swatch span{ flex:1; }
+
+  .field-sizes select{ margin-bottom:8px; }
+  .custom-size{
+    display:none;
+    gap:8px;
+  }
+  .custom-size.show{ display:flex; }
+  .custom-size input{
+    width:100%;
+    background:#111217;
+    border:1px solid var(--panel-line);
+    color:var(--paper);
+    font-family:'JetBrains Mono', monospace;
+    font-size:12px;
+    padding:9px 10px;
+  }
+
+  .panel-foot{
+    flex-shrink:0;
+    padding:16px 22px 20px;
+    border-top:1px solid var(--panel-line);
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+
+  .seed-line{
+    font-family:'JetBrains Mono', monospace;
+    font-size:10.5px;
+    color:var(--muted);
+    letter-spacing:0.03em;
+    display:flex;
+    justify-content:space-between;
+  }
+  .seed-line b{ color:var(--paper); font-weight:500; }
+
+  button.primary, button.secondary{
+    width:100%;
+    padding:13px 14px;
+    border:none;
+    font-family:'JetBrains Mono', monospace;
+    font-size:12px;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    cursor:pointer;
+    transition: transform .08s ease, filter .15s ease;
+  }
+  button.primary{
+    background:var(--pen);
+    color:#fff;
+  }
+  button.primary:hover{ filter:brightness(1.1); }
+  button.primary:active{ transform: scale(0.98); }
+
+  button.secondary{
+    background:transparent;
+    border:1px solid var(--panel-line);
+    color:var(--paper);
+  }
+  button.secondary:hover{ border-color:#54565f; }
+
+  button:disabled{ opacity:0.5; cursor:progress; }
+
+  /* ---------- mobile ---------- */
+  @media (max-width: 820px){
+    .app{
+      grid-template-columns: 1fr;
+      grid-template-rows: 46vh 1fr;
+    }
+    .stage{ padding:16px; }
+    #canvas{
+      max-width: calc(100vw - 32px);
+      max-height: calc(46vh - 32px);
+    }
+    .panel{ border-right:none; border-top:1px solid var(--panel-line); }
+  }
+
+  .visually-hidden{
+    position:absolute; width:1px; height:1px;
+    overflow:hidden; clip:rect(0,0,0,0);
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ transition:none !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <aside class="panel">
+    <div class="panel-head">
+      <h1>Wallpaper Studio</h1>
+      <div class="sub">generative &middot; plotter series</div>
+    </div>
+
+    <div class="panel-scroll">
+
+      <div class="field">
+        <div class="field-label">Mode</div>
+        <div class="toggle-row" role="group" aria-label="Mode">
+          <button data-mode="presets" class="active">Moods</button>
+          <button data-mode="freeform">Freeform</button>
+        </div>
+      </div>
+
+      <div class="field" id="presetFields">
+        <div class="field-label">Mood</div>
+        <div class="preset-grid" id="presetGrid"></div>
+      </div>
+
+      <div id="freeformFields" class="hidden-fields">
+
+        <div class="field">
+          <div class="field-label">Style</div>
+          <div class="style-grid" role="group" aria-label="Style">
+            <button class="style-btn active" data-style="lowpoly">Low-Poly</button>
+            <button class="style-btn" data-style="organic">Organic</button>
+            <button class="style-btn" data-style="flow">Flow</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <div class="field-label">Palette <span class="val" id="harmonyVal">Analogous</span></div>
+          <div class="swatch-row" id="swatchRow"></div>
+          <select id="harmonySelect" style="margin-top:8px;">
+            <option value="analogous">Analogous</option>
+            <option value="complementary">Complementary</option>
+            <option value="splitComplementary">Split-complementary</option>
+            <option value="triadic">Triadic</option>
+            <option value="monochrome">Monochrome</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <div class="field-label">Base tone</div>
+          <div class="toggle-row" role="group" aria-label="Base tone">
+            <button data-base="dark" class="active">Dark</button>
+            <button data-base="light">Light</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <div class="field-label">Density <span class="val" id="densityVal">55%</span></div>
+          <input type="range" id="density" min="10" max="100" value="55">
+        </div>
+
+        <div class="field">
+          <div class="field-label">Grain <span class="val" id="grainVal">On</span></div>
+          <div class="toggle-row" role="group" aria-label="Grain">
+            <button data-grain="on" class="active">On</button>
+            <button data-grain="off">Off</button>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="field field-sizes">
+        <div class="field-label">Canvas size</div>
+        <select id="sizeSelect">
+          <optgroup label="Desktop">
+            <option value="1920x1080">1920 &times; 1080 — FHD</option>
+            <option value="2560x1440">2560 &times; 1440 — QHD</option>
+            <option value="3840x2160">3840 &times; 2160 — 4K</option>
+          </optgroup>
+          <optgroup label="Phone">
+            <option value="1170x2532">1170 &times; 2532 — iPhone</option>
+            <option value="1080x2400">1080 &times; 2400 — Android</option>
+          </optgroup>
+          <optgroup label="Other">
+            <option value="1500x1500">1500 &times; 1500 — Square</option>
+            <option value="custom">Custom&hellip;</option>
+          </optgroup>
+        </select>
+        <div class="custom-size" id="customSize">
+          <input type="number" id="customW" placeholder="width" min="200" max="6000">
+          <input type="number" id="customH" placeholder="height" min="200" max="6000">
+        </div>
+      </div>
+
+    </div>
+
+    <div class="panel-foot">
+      <div class="seed-line mono">
+        <span>PLOT</span>
+        <b id="seedLabel">#00000</b>
+      </div>
+      <button class="primary" id="regenBtn">Regenerate</button>
+      <button class="secondary" id="downloadBtn">Download PNG</button>
+    </div>
+  </aside>
+
+  <main class="stage">
+    <div class="canvas-wrap">
+      <canvas id="canvas"></canvas>
+      <div class="readout mono" id="readout"><span class="dot"></span>—</div>
+    </div>
+  </main>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  // ---------------- seeded RNG ----------------
+  function mulberry32(a){
+    return function(){
+      a |= 0; a = (a + 0x6D2B79F5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  let rand = Math.random;
+  let currentSeed = 0;
+
+  function newSeed(){
+    currentSeed = Math.floor(Math.random() * 90000) + 10000;
+    rand = mulberry32(currentSeed);
+    return currentSeed;
+  }
+
+  // ---------------- state ----------------
+  const state = {
+    mode: 'presets',
+    activePreset: null,
+    style: 'lowpoly',
+    harmony: 'analogous',
+    base: 'dark',
+    density: 55,
+    grain: true,
+    w: 1920,
+    h: 1080,
+    palette: []
+  };
+
+  // ---------------- mood presets ----------------
+  // Each preset locks style + a hue/saturation/lightness band so regenerating
+  // gives variety *within* a distinct identity, instead of pure random hue
+  // (which tends to converge on similar moody blues/greys).
+  const PRESETS = [
+    { id:'midnight',  name:'Midnight Circuit', style:'flow',    base:'dark',
+      hueMin:205, hueMax:255, satMin:65, satMax:90, lightMin:45, lightMax:65,
+      density:75, grain:true,  swatch:['#1b2a6b','#3d5ce0','#7b8cff'] },
+    { id:'paper',     name:'Paper Static',     style:'lowpoly', base:'light',
+      hueMin:28,  hueMax:42,  satMin:12, satMax:30, lightMin:55, lightMax:75,
+      density:35, grain:true,  swatch:['#e7ded0','#c9b998','#8a7452'] },
+    { id:'sunbleach', name:'Sun-Bleached',     style:'organic', base:'light',
+      hueMin:10,  hueMax:34,  satMin:45, satMax:70, lightMin:60, lightMax:80,
+      density:55, grain:true,  swatch:['#f4b28c','#ef8a63','#d95d3a'] },
+    { id:'neon',      name:'Neon Drift',       style:'flow',    base:'dark',
+      hueMin:285, hueMax:335, satMin:75, satMax:95, lightMin:50, lightMax:70,
+      density:90, grain:false, swatch:['#3a0f3a','#c93bd6','#ff7ae0'] },
+    { id:'ember',     name:'Ash & Ember',      style:'organic', base:'dark',
+      hueMin:0,   hueMax:22,  satMin:35, satMax:60, lightMin:35, lightMax:55,
+      density:50, grain:true,  swatch:['#2a1c1a','#8a3b2c','#c96a4a'] },
+    { id:'cold',      name:'Cold Front',       style:'lowpoly', base:'light',
+      hueMin:185, hueMax:212, satMin:28, satMax:52, lightMin:55, lightMax:75,
+      density:45, grain:false, swatch:['#dbe9ea','#8fb9bd','#3f6e73'] },
+  ];
+
+  // ---------------- color helpers ----------------
+  function hslToHex(h, s, l){
+    h = ((h % 360) + 360) % 360;
+    s /= 100; l /= 100;
+    const k = n => (n + h / 30) % 12;
+    const a = s * Math.min(l, 1 - l);
+    const f = n => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+    const toHex = x => Math.round(255 * x).toString(16).padStart(2, '0');
+    return `#${toHex(f(0))}${toHex(f(8))}${toHex(f(4))}`;
+  }
+
+  function generatePalette(harmony, opts){
+    opts = opts || {};
+    const hueMin = opts.hueMin != null ? opts.hueMin : 0;
+    const hueMax = opts.hueMax != null ? opts.hueMax : 360;
+    const satMin = opts.satMin != null ? opts.satMin : 55;
+    const satMax = opts.satMax != null ? opts.satMax : 85;
+    const lightMin = opts.lightMin != null ? opts.lightMin : 40;
+    const lightMax = opts.lightMax != null ? opts.lightMax : 70;
+
+    const baseHue = hueMin + rand() * (hueMax - hueMin);
+    const s = satMin + rand() * (satMax - satMin);
+    let hues = [];
+    switch(harmony){
+      case 'complementary':
+        hues = [baseHue, baseHue, baseHue + 180, baseHue + 180, baseHue + 20];
+        break;
+      case 'splitComplementary':
+        hues = [baseHue, baseHue + 150, baseHue + 210, baseHue + 20, baseHue - 20];
+        break;
+      case 'triadic':
+        hues = [baseHue, baseHue + 120, baseHue + 240, baseHue + 120, baseHue];
+        break;
+      case 'monochrome':
+        hues = [baseHue, baseHue, baseHue, baseHue, baseHue];
+        break;
+      case 'analogous':
+      default:
+        hues = [baseHue - 30, baseHue - 15, baseHue, baseHue + 15, baseHue + 30];
+    }
+    return hues.map((h, i) => {
+      let l;
+      if(harmony === 'monochrome'){
+        l = 25 + i * 14;
+      } else {
+        l = lightMin + rand() * (lightMax - lightMin);
+      }
+      return hslToHex(h, s, l);
+    });
+  }
+
+  function hexToRgb(hex){
+    const v = parseInt(hex.slice(1), 16);
+    return { r: (v >> 16) & 255, g: (v >> 8) & 255, b: v & 255 };
+  }
+
+  function lerpColor(hexA, hexB, t){
+    const a = hexToRgb(hexA), b = hexToRgb(hexB);
+    const r = Math.round(a.r + (b.r - a.r) * t);
+    const g = Math.round(a.g + (b.g - a.g) * t);
+    const bl = Math.round(a.b + (b.b - a.b) * t);
+    return `rgb(${r},${g},${bl})`;
+  }
+
+  // ---------------- value noise (for flow field) ----------------
+  function makeNoise2D(){
+    const grad = [];
+    const perm = new Uint8Array(512);
+    const p = new Uint8Array(256);
+    for(let i = 0; i < 256; i++) p[i] = i;
+    for(let i = 255; i > 0; i--){
+      const j = Math.floor(rand() * (i + 1));
+      [p[i], p[j]] = [p[j], p[i]];
+    }
+    for(let i = 0; i < 512; i++) perm[i] = p[i & 255];
+
+    function fade(t){ return t*t*t*(t*(t*6-15)+10); }
+    function lerp(a,b,t){ return a+t*(b-a); }
+    function grad2(hash, x, y){
+      const h = hash & 3;
+      const u = h < 2 ? x : y;
+      const v = h < 2 ? y : x;
+      return ((h & 1) ? -u : u) + ((h & 2) ? -2*v : 2*v);
+    }
+
+    return function(x, y){
+      const X = Math.floor(x) & 255, Y = Math.floor(y) & 255;
+      x -= Math.floor(x); y -= Math.floor(y);
+      const u = fade(x), v = fade(y);
+      const aa = perm[perm[X]+Y], ab = perm[perm[X]+Y+1];
+      const ba = perm[perm[X+1]+Y], bb = perm[perm[X+1]+Y+1];
+      return lerp(
+        lerp(grad2(aa,x,y), grad2(ba,x-1,y), u),
+        lerp(grad2(ab,x,y-1), grad2(bb,x-1,y-1), u),
+        v
+      ) * 0.5 + 0.5;
+    };
+  }
+
+  // ---------------- renderers ----------------
+  function fillBase(ctx, w, h, palette, base){
+    // randomize shade amount per generation (not just a fixed constant) so
+    // backgrounds don't all converge on the same darkness/lightness
+    const amt = base === 'dark' ? -(0.38 + rand() * 0.32) : (0.5 + rand() * 0.28);
+    const bg = shade(palette[0], amt);
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, w, h);
+    return bg;
+  }
+
+  function shade(hex, amt){
+    const { r, g, b } = hexToRgb(hex);
+    const f = c => {
+      let v = amt >= 0 ? c + (255 - c) * amt : c * (1 + amt);
+      return Math.max(0, Math.min(255, Math.round(v)));
+    };
+    return `rgb(${f(r)},${f(g)},${f(b)})`;
+  }
+
+  function drawLowPoly(ctx, w, h, palette, density){
+    fillBase(ctx, w, h, palette, state.base);
+    const cols = Math.round(6 + (density / 100) * 26);
+    const cellW = w / cols;
+    const rows = Math.round(cellW > 0 ? h / cellW : 6);
+    const cellH = h / rows;
+    const jitter = 0.42;
+
+    const pts = [];
+    for(let y = 0; y <= rows; y++){
+      pts.push([]);
+      for(let x = 0; x <= cols; x++){
+        const jx = (rand() - 0.5) * jitter * cellW;
+        const jy = (rand() - 0.5) * jitter * cellH;
+        pts[y].push([x*cellW + jx, y*cellH + jy]);
+      }
+    }
+
+    const maxDist = Math.hypot(w, h);
+    function colorFor(px, py){
+      const d = Math.hypot(px - w*0.5, py - h*0.5) / maxDist;
+      const idx = d * (palette.length - 1);
+      const i0 = Math.floor(idx), i1 = Math.min(palette.length - 1, i0 + 1);
+      return lerpColor(palette[i0], palette[i1], idx - i0);
+    }
+
+    ctx.lineJoin = 'round';
+    for(let y = 0; y < rows; y++){
+      for(let x = 0; x < cols; x++){
+        const p1 = pts[y][x], p2 = pts[y][x+1], p3 = pts[y+1][x], p4 = pts[y+1][x+1];
+        [[p1,p2,p3],[p2,p4,p3]].forEach(tri=>{
+          const cx = (tri[0][0]+tri[1][0]+tri[2][0])/3;
+          const cy = (tri[0][1]+tri[1][1]+tri[2][1])/3;
+          const c = colorFor(cx, cy);
+          ctx.beginPath();
+          ctx.moveTo(tri[0][0], tri[0][1]);
+          ctx.lineTo(tri[1][0], tri[1][1]);
+          ctx.lineTo(tri[2][0], tri[2][1]);
+          ctx.closePath();
+          ctx.fillStyle = c;
+          ctx.fill();
+          ctx.strokeStyle = c;
+          ctx.lineWidth = 1;
+          ctx.stroke();
+        });
+      }
+    }
+  }
+
+  function drawOrganic(ctx, w, h, palette, density){
+    const bg = fillBase(ctx, w, h, palette, state.base);
+    const count = Math.round(4 + (density/100) * 10);
+    ctx.globalCompositeOperation = state.base === 'dark' ? 'screen' : 'multiply';
+
+    for(let i = 0; i < count; i++){
+      const cx = rand() * w;
+      const cy = rand() * h;
+      const baseR = (Math.min(w,h)) * (0.18 + rand() * 0.28);
+      const color = palette[i % palette.length];
+      const pts = [];
+      const nPts = 8 + Math.floor(rand()*4);
+      for(let a = 0; a < nPts; a++){
+        const ang = (a / nPts) * Math.PI * 2;
+        const r = baseR * (0.7 + rand()*0.6);
+        pts.push([cx + Math.cos(ang)*r, cy + Math.sin(ang)*r]);
+      }
+
+      ctx.beginPath();
+      for(let a = 0; a < nPts; a++){
+        const p0 = pts[a];
+        const p1 = pts[(a+1)%nPts];
+        const mx = (p0[0]+p1[0])/2, my = (p0[1]+p1[1])/2;
+        if(a === 0) ctx.moveTo(mx, my);
+        else ctx.quadraticCurveTo(p0[0], p0[1], mx, my);
+      }
+      ctx.closePath();
+
+      const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, baseR*1.3);
+      const { r: cr, g: cg, b: cb } = hexToRgb(color);
+      grad.addColorStop(0, `rgba(${cr},${cg},${cb},1)`);
+      grad.addColorStop(1, `rgba(${cr},${cg},${cb},0)`);
+      ctx.fillStyle = grad;
+      ctx.filter = 'blur(' + Math.round(baseR*0.06) + 'px)';
+      ctx.fill();
+      ctx.filter = 'none';
+    }
+    ctx.globalCompositeOperation = 'source-over';
+  }
+
+  function drawFlow(ctx, w, h, palette, density){
+    fillBase(ctx, w, h, palette, state.base);
+    const noise = makeNoise2D();
+    // scale particle budget down for very large canvases so mobile devices don't stall
+    const megapixels = (w * h) / 1e6;
+    const perfFactor = Math.min(1, 3.2 / Math.max(megapixels, 1));
+    const particles = Math.round((200 + (density/100) * 1800) * perfFactor);
+    const scale = 0.0016;
+    const steps = 90;
+    const stepLen = Math.max(w,h) * 0.0022;
+
+    ctx.lineCap = 'round';
+    const rgbPalette = palette.map(hexToRgb);
+    for(let i = 0; i < particles; i++){
+      let x = rand() * w;
+      let y = rand() * h;
+      const c = rgbPalette[Math.floor(rand()*rgbPalette.length)];
+      ctx.strokeStyle = `rgb(${c.r},${c.g},${c.b})`;
+      ctx.globalAlpha = 0.35 + rand()*0.25;
+      ctx.lineWidth = 0.6 + rand()*1.6;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      for(let s = 0; s < steps; s++){
+        const n = noise(x*scale, y*scale);
+        const ang = n * Math.PI * 4;
+        x += Math.cos(ang) * stepLen;
+        y += Math.sin(ang) * stepLen;
+        if(x < -50 || x > w+50 || y < -50 || y > h+50) break;
+        ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function applyGrain(ctx, w, h){
+    const imgData = ctx.getImageData(0, 0, w, h);
+    const d = imgData.data;
+    for(let i = 0; i < d.length; i += 4){
+      const n = (rand() - 0.5) * 14;
+      d[i]   = Math.max(0, Math.min(255, d[i]+n));
+      d[i+1] = Math.max(0, Math.min(255, d[i+1]+n));
+      d[i+2] = Math.max(0, Math.min(255, d[i+2]+n));
+    }
+    ctx.putImageData(imgData, 0, 0);
+  }
+
+  // ---------------- render orchestration ----------------
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+  function render(){
+    try{
+      canvas.width = state.w;
+      canvas.height = state.h;
+
+      rand = mulberry32(currentSeed);
+      const opts = state.mode === 'presets' ? getActivePresetOpts() : null;
+      const harmonyToUse = state.mode === 'presets' ? 'analogous' : state.harmony;
+      state.palette = generatePalette(harmonyToUse, opts);
+
+      // re-seed again so drawing uses a fresh continuation deterministic on same seed
+      rand = mulberry32(currentSeed + 1);
+
+      if(state.style === 'lowpoly') drawLowPoly(ctx, state.w, state.h, state.palette, state.density);
+      else if(state.style === 'organic') drawOrganic(ctx, state.w, state.h, state.palette, state.density);
+      else drawFlow(ctx, state.w, state.h, state.palette, state.density);
+
+      if(state.grain) applyGrain(ctx, state.w, state.h);
+
+      renderSwatches();
+      renderReadout();
+      hideErrorBanner();
+    } catch(err){
+      console.error('Render failed:', err);
+      showErrorBanner((err.message || String(err)) + (err.stack ? ' — ' + err.stack.split('\n').slice(0,2).join(' | ') : ''));
+    }
+  }
+
+  function getActivePresetOpts(){
+    const preset = PRESETS.find(p => p.id === state.activePreset) || PRESETS[0];
+    return {
+      hueMin: preset.hueMin, hueMax: preset.hueMax,
+      satMin: preset.satMin, satMax: preset.satMax,
+      lightMin: preset.lightMin, lightMax: preset.lightMax
+    };
+  }
+
+  function showErrorBanner(msg){
+    let el = document.getElementById('errBanner');
+    if(!el){
+      el = document.createElement('div');
+      el.id = 'errBanner';
+      el.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#e0533a;color:#fff;font-family:JetBrains Mono,monospace;font-size:12px;padding:10px 16px;z-index:9999;';
+      document.body.appendChild(el);
+    }
+    el.textContent = 'Render error: ' + msg;
+  }
+  function hideErrorBanner(){
+    const el = document.getElementById('errBanner');
+    if(el) el.remove();
+  }
+
+  function renderSwatches(){
+    const row = document.getElementById('swatchRow');
+    row.innerHTML = '';
+    state.palette.forEach(c => {
+      const el = document.createElement('div');
+      el.className = 'swatch';
+      el.style.background = c;
+      row.appendChild(el);
+    });
+  }
+
+  function renderReadout(){
+    let label;
+    if(state.mode === 'presets'){
+      const preset = PRESETS.find(p => p.id === state.activePreset);
+      label = preset ? preset.name.toUpperCase() : 'MOOD';
+    } else {
+      label = { lowpoly:'LOW-POLY', organic:'ORGANIC', flow:'FLOW FIELD' }[state.style];
+    }
+    document.getElementById('readout').innerHTML =
+      `<span class="dot"></span>${label} · ${state.density}% DENS · ${state.w}×${state.h}`;
+    document.getElementById('seedLabel').textContent = '#' + String(currentSeed).padStart(5,'0');
+  }
+
+  // ---------------- UI wiring ----------------
+  // ---------------- mode & preset wiring ----------------
+  function buildPresetGrid(){
+    const grid = document.getElementById('presetGrid');
+    grid.innerHTML = '';
+    PRESETS.forEach(preset => {
+      const btn = document.createElement('button');
+      btn.className = 'preset-btn';
+      btn.dataset.preset = preset.id;
+      btn.innerHTML = `
+        <div class="preset-swatch">${preset.swatch.map(c => `<span style="background:${c}"></span>`).join('')}</div>
+        <div class="preset-name">${preset.name}</div>
+      `;
+      btn.addEventListener('click', () => selectPreset(preset.id));
+      grid.appendChild(btn);
+    });
+  }
+
+  function selectPreset(id){
+    const preset = PRESETS.find(p => p.id === id);
+    if(!preset) return;
+    state.activePreset = id;
+    state.style = preset.style;
+    state.base = preset.base;
+    state.density = preset.density;
+    state.grain = preset.grain;
+    document.querySelectorAll('.preset-btn').forEach(b =>
+      b.classList.toggle('active', b.dataset.preset === id));
+    newSeed();
+    render();
+  }
+
+  function syncFreeformUI(){
+    document.querySelectorAll('.style-btn').forEach(b =>
+      b.classList.toggle('active', b.dataset.style === state.style));
+    document.querySelectorAll('[data-base]').forEach(b =>
+      b.classList.toggle('active', b.dataset.base === state.base));
+    document.querySelectorAll('[data-grain]').forEach(b =>
+      b.classList.toggle('active', (b.dataset.grain === 'on') === state.grain));
+    document.getElementById('grainVal').textContent = state.grain ? 'On' : 'Off';
+    document.getElementById('density').value = state.density;
+    document.getElementById('densityVal').textContent = state.density + '%';
+  }
+
+  document.querySelectorAll('[data-mode]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      document.querySelectorAll('[data-mode]').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      state.mode = btn.dataset.mode;
+      document.getElementById('presetFields').classList.toggle('hidden-fields', state.mode !== 'presets');
+      document.getElementById('freeformFields').classList.toggle('hidden-fields', state.mode !== 'freeform');
+      if(state.mode === 'freeform'){
+        syncFreeformUI();
+        render();
+      } else {
+        selectPreset(state.activePreset);
+      }
+    });
+  });
+
+  document.querySelectorAll('.style-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      document.querySelectorAll('.style-btn').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      state.style = btn.dataset.style;
+      render();
+    });
+  });
+
+  document.querySelectorAll('[data-base]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      btn.parentElement.querySelectorAll('button').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      state.base = btn.dataset.base;
+      render();
+    });
+  });
+
+  document.querySelectorAll('[data-grain]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      btn.parentElement.querySelectorAll('button').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      state.grain = btn.dataset.grain === 'on';
+      document.getElementById('grainVal').textContent = state.grain ? 'On' : 'Off';
+      render();
+    });
+  });
+
+  const harmonySelect = document.getElementById('harmonySelect');
+  harmonySelect.addEventListener('change', ()=>{
+    state.harmony = harmonySelect.value;
+    document.getElementById('harmonyVal').textContent =
+      harmonySelect.options[harmonySelect.selectedIndex].textContent;
+    render();
+  });
+
+  const densitySlider = document.getElementById('density');
+  densitySlider.addEventListener('input', ()=>{
+    state.density = parseInt(densitySlider.value, 10);
+    document.getElementById('densityVal').textContent = state.density + '%';
+  });
+  densitySlider.addEventListener('change', render);
+
+  const sizeSelect = document.getElementById('sizeSelect');
+  const customSize = document.getElementById('customSize');
+  const customW = document.getElementById('customW');
+  const customH = document.getElementById('customH');
+
+  function applySize(){
+    if(sizeSelect.value === 'custom'){
+      customSize.classList.add('show');
+      const w = parseInt(customW.value, 10), h = parseInt(customH.value, 10);
+      if(w > 0 && h > 0){ state.w = w; state.h = h; render(); }
+    } else {
+      customSize.classList.remove('show');
+      const [w,h] = sizeSelect.value.split('x').map(Number);
+      state.w = w; state.h = h;
+      render();
+    }
+  }
+  sizeSelect.addEventListener('change', applySize);
+  [customW, customH].forEach(inp => inp.addEventListener('change', applySize));
+
+  document.getElementById('regenBtn').addEventListener('click', ()=>{
+    newSeed();
+    render();
+  });
+
+  // ---------------- save / share ----------------
+  function supportsFileShare(){
+    try{
+      if(!navigator.canShare) return false;
+      const testFile = new File([new Uint8Array([0])], 'test.png', { type: 'image/png' });
+      return navigator.canShare({ files: [testFile] });
+    } catch(e){ return false; }
+  }
+
+  function triggerDownload(blob, filename){
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.download = filename;
+    link.href = url;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+  }
+
+  const downloadBtn = document.getElementById('downloadBtn');
+  const useShare = supportsFileShare();
+  const saveLabel = useShare ? 'Save to Photos' : 'Download PNG';
+  downloadBtn.textContent = saveLabel;
+
+  downloadBtn.addEventListener('click', ()=>{
+    downloadBtn.disabled = true;
+    downloadBtn.textContent = 'Preparing…';
+    canvas.toBlob(async (blob)=>{
+      if(!blob){
+        downloadBtn.disabled = false;
+        downloadBtn.textContent = saveLabel;
+        showErrorBanner('Could not export image.');
+        return;
+      }
+      const filename = `wallpaper-${state.style}-${currentSeed}-${state.w}x${state.h}.png`;
+      if(useShare){
+        try{
+          const file = new File([blob], filename, { type: 'image/png' });
+          await navigator.share({ files: [file], title: 'Wallpaper' });
+        } catch(err){
+          if(err && err.name !== 'AbortError'){
+            triggerDownload(blob, filename);
+          }
+        }
+      } else {
+        triggerDownload(blob, filename);
+      }
+      downloadBtn.disabled = false;
+      downloadBtn.textContent = saveLabel;
+    }, 'image/png');
+  });
+
+  // ---------------- init ----------------
+  buildPresetGrid();
+  newSeed();
+  const firstPreset = PRESETS[0];
+  state.activePreset = firstPreset.id;
+  state.style = firstPreset.style;
+  state.base = firstPreset.base;
+  state.density = firstPreset.density;
+  state.grain = firstPreset.grain;
+  document.querySelector(`.preset-btn[data-preset="${firstPreset.id}"]`).classList.add('active');
+  syncFreeformUI();
+  applySize();
+})();
+</script>
+
+</body>
+</html>
