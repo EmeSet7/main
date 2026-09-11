@@ -279,6 +279,77 @@
     grid-template-columns: 1fr; /* fallback single-column mode, toggled via view switch */
   }
 
+  /* Work Order cards carry a lot more info than a parts card (number, 2 badges,
+     customer, unit, balance) — 148px was crushing everything into wrapped,
+     overlapping text. Give WO's compact grid a wider minimum column. */
+  #wo-list.parts-list {
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  }
+
+  /* LIST VIEW — parts: previously list-view just stretched the same tiny,
+     stacked compact-card markup edge-to-edge (small fonts, wasted horizontal
+     space, still-truncated text). Lay it out as one proper row instead so it
+     actually uses the width you get from switching to list view. */
+  .parts-list.list-view .part-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+  }
+  .parts-list.list-view .part-item-code {
+    flex: 0 0 140px;
+    font-size: 13px;
+  }
+  .parts-list.list-view .part-item-name {
+    flex: 1;
+    min-width: 0;
+    margin-top: 0;
+    font-size: 12px;
+  }
+  .parts-list.list-view .part-item-row {
+    flex: 0 0 auto;
+    margin-top: 0;
+    gap: 14px;
+  }
+  .parts-list.list-view .qty-badge {
+    font-size: 11px;
+    padding: 3px 8px;
+  }
+  .parts-list.list-view .loc-badge {
+    font-size: 11px;
+    min-width: 70px;
+    text-align: right;
+  }
+
+  /* LIST VIEW — work orders: same fix, one row per order spread left-to-right
+     instead of the compact card's stacked lines stretched full-width. */
+  #wo-list.list-view .part-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+  }
+  #wo-list.list-view .wo-item-top {
+    flex: 0 0 150px;
+    min-width: 0;
+  }
+  #wo-list.list-view .wo-item-customer {
+    flex: 1;
+    min-width: 60px;
+    margin-top: 0;
+    font-size: 13px;
+  }
+  #wo-list.list-view .wo-item-unit {
+    flex: 0 0 130px;
+    min-width: 0;
+    margin-top: 0;
+    font-size: 12px;
+  }
+  #wo-list.list-view .wo-item-bottom {
+    flex: 0 0 auto;
+    margin-top: 0;
+  }
+
   .part-item {
     padding: 8px 9px;
     border-radius: 6px;
@@ -327,6 +398,27 @@
   .qty-badge.ok   { background: var(--green-dim); color: var(--green); } /* green badge — has stock */
   .qty-badge.zero { background: var(--red-dim);   color: var(--red); }  /* red badge  — out of stock */
   .qty-badge.low  { background: rgba(244,214,48,0.14); color: var(--yellow); } /* yellow badge — at/under minimum stock */
+
+  /* EOL / replaced-part indicators */
+  .eol-banner {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(244,214,48,0.1);
+    border: 1px solid rgba(244,214,48,0.35);
+    color: var(--yellow);
+    font-size: 12px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    margin: 10px 0 4px;
+  }
+  .eol-banner strong { font-family: var(--mono); }
+  .eol-banner-icon { font-size: 14px; flex-shrink: 0; }
+  .eol-tag {
+    font-size: 10px;
+    color: var(--yellow);
+    cursor: help;
+  }
 
   /* Small red dot on the "To Order" nav tab, shown only when there's at least one item to order */
   .nav-tab-badge {
@@ -2763,9 +2855,17 @@ function handleScan() {
   if (part) {
     selectPart(part.id);
     renderList();
-  } else {
-    openModal(code);
+    return;
   }
+  // No exact match on the live code — check if this is a discontinued/EOL
+  // code that's been superseded by a current part (see "Replaces Old Code(s)").
+  const replacement = parts.find(p => (p.oldCodes||[]).some(c => c.toLowerCase() === code.toLowerCase()));
+  if (replacement) {
+    selectPart(replacement.id);
+    renderList();
+    return;
+  }
+  openModal(code);
 }
 
 // ─── LOCATION FILTER ───────────────────────────────────────────────────────
@@ -2807,7 +2907,8 @@ function renderList() {
       p.code.toLowerCase().includes(q) ||
       (p.manufacturer||'').toLowerCase().includes(q) ||
       (p.description||'').toLowerCase().includes(q) ||
-      (p.location||'').toLowerCase().includes(q);
+      (p.location||'').toLowerCase().includes(q) ||
+      (p.oldCodes||[]).some(c => c.toLowerCase().includes(q));
     const matchesLocation = !selectedLocation || p.location === selectedLocation;
     return matchesSearch && matchesLocation;
   });
@@ -2823,7 +2924,7 @@ function renderList() {
     const badgeClass = p.qty === 0 ? 'zero' : (needsOrder ? 'low' : 'ok');
     return `
     <div class="part-item ${p.id === selectedId ? 'active' : ''}" onclick="selectPart('${p.id}')">
-      <div class="part-item-code">${needsOrder ? '⚠ ' : ''}${p.code}</div>
+      <div class="part-item-code">${needsOrder ? '⚠ ' : ''}${p.code}${(p.oldCodes && p.oldCodes.length) ? ' <span class="eol-tag" title="Replaces '+p.oldCodes.join(', ')+'">⇄</span>' : ''}</div>
       <div class="part-item-name">${p.manufacturer ? p.manufacturer + ' — ' : ''}${p.description || '—'}</div>
       <div class="part-item-row">
         <span class="qty-badge ${badgeClass}">${p.qty} units</span>
@@ -2924,6 +3025,11 @@ function selectPart(id) {
         <button class="btn danger" onclick="deletePart('${p.id}')">Delete</button>
       </div>
     </div>
+    ${(p.oldCodes && p.oldCodes.length) ? `
+    <div class="eol-banner">
+      <span class="eol-banner-icon">⇄</span>
+      <span>Replaces discontinued code${p.oldCodes.length > 1 ? 's' : ''}: <strong>${p.oldCodes.join(', ')}</strong> — this is now the live part.</span>
+    </div>` : ''}
 
     <div class="qty-control">
       <div class="qty-buttons">
@@ -2971,6 +3077,10 @@ function selectPart(id) {
           <label>Location</label>
           <!-- datalist gives dropdown of existing locations, still accepts new text -->
           <input id="e-location" value="${p.location||''}" placeholder="Pick existing or type new…" list="location-suggestions" autocomplete="off">
+        </div>
+        <div class="field full">
+          <label>Replaces Old Code(s) <span style="font-weight:400;color:var(--text-dim)">(discontinued refs, comma-separated)</span></label>
+          <input id="e-oldcodes" value="${(p.oldCodes||[]).join(', ')}" placeholder="e.g. 12345, 98765">
         </div>
       </div>
 
@@ -3028,7 +3138,7 @@ function adjustQty(id, delta) {
 function savePart(id) {
   const p = parts.find(x => x.id === id);
   if (!p) return;
-  const before = { code: p.code, manufacturer: p.manufacturer, description: p.description, price: p.price, qty: p.qty, location: p.location, minStock: p.minStock || 0 };
+  const before = { code: p.code, manufacturer: p.manufacturer, description: p.description, price: p.price, qty: p.qty, location: p.location, minStock: p.minStock || 0, oldCodes: (p.oldCodes||[]).join(',') };
   p.code = document.getElementById('e-code').value.trim() || p.code;
   p.manufacturer = document.getElementById('e-manufacturer').value.trim();
   p.description = document.getElementById('e-description').value.trim();
@@ -3036,6 +3146,10 @@ function savePart(id) {
   p.qty = Math.max(0, parseInt(document.getElementById('e-qty').value) || 0);
   p.location = document.getElementById('e-location').value.trim();
   p.minStock = Math.max(0, parseInt(document.getElementById('e-minstock').value) || 0);
+  p.oldCodes = document.getElementById('e-oldcodes').value
+    .split(',')
+    .map(c => c.trim().toUpperCase())
+    .filter(Boolean);
   save();
   rememberPart(p);
 
@@ -3048,6 +3162,7 @@ function savePart(id) {
   if (before.qty !== p.qty) changed.push(`qty ${before.qty} → ${p.qty}`);
   if (before.location !== p.location) changed.push(`location → ${p.location || '—'}`);
   if (before.minStock !== p.minStock) changed.push(`min stock ${before.minStock} → ${p.minStock}`);
+  if (before.oldCodes !== p.oldCodes.join(',')) changed.push(`replaces → ${p.oldCodes.join(', ') || '—'}`);
   if (changed.length) logEvent('edit', p.code, changed.join(', '));
 
   selectPart(id);
