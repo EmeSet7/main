@@ -2,39 +2,7 @@
   "timezone": "Europe/Lisbon",
   "rules": [
     {
-      "id": "example1",
-      "title": "Take out the trash",
-      "category": "chore",
-      "recurrence": {
-        "type": "weekly",
-        "daysOfWeek": [
-          2
-        ]
-      },
-      "time": "20:00",
-      "duration": 15,
-      "notes": "Bins go out Tuesday night",
-      "startDate": null,
-      "endDate": null,
-      "active": true
-    },
-    {
-      "id": "example2",
-      "title": "Pay rent",
-      "category": "finance",
-      "recurrence": {
-        "type": "monthly",
-        "dayOfMonth": 1
-      },
-      "time": null,
-      "duration": 30,
-      "notes": "",
-      "startDate": null,
-      "endDate": null,
-      "active": true
-    },
-    {
-      "id": "2a3d1e30",
+      "id": "5df98fa3",
       "title": "Actual update",
       "category": "finance",
       "recurrence": {
@@ -44,9 +12,43 @@
         ]
       },
       "time": null,
+      "duration": 10,
+      "notes": "",
+      "startDate": "2026-09-18",
+      "endDate": null,
+      "active": true
+    },
+    {
+      "id": "df4ffad2",
+      "title": "Bath towels",
+      "category": "chore",
+      "recurrence": {
+        "type": "weekly",
+        "daysOfWeek": [
+          6
+        ]
+      },
+      "time": null,
+      "duration": 10,
+      "notes": "",
+      "startDate": "2026-09-19",
+      "endDate": null,
+      "active": true
+    },
+    {
+      "id": "5b8a6b04",
+      "title": "Bem sheets",
+      "category": "chore",
+      "recurrence": {
+        "type": "weekly",
+        "daysOfWeek": [
+          0
+        ]
+      },
+      "time": null,
       "duration": 30,
       "notes": "",
-      "startDate": null,
+      "startDate": "2026-09-13",
       "endDate": null,
       "active": true
     }

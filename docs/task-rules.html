@@ -211,6 +211,15 @@
         <div class="day" data-d="6">S</div>
         <div class="day" data-d="0">S</div>
       </div>
+      <label>Repeat every</label>
+      <div class="row" style="align-items:center;">
+        <input type="number" id="f-week-interval" min="1" value="1" style="flex:0 0 70px;">
+        <div style="flex:1; color:var(--text-dim); font-size:12.5px; padding-top:8px;" id="week-interval-label">week</div>
+      </div>
+      <div id="field-week-anchor" class="field-hide">
+        <label>Reference date (defines which week counts)</label>
+        <input type="date" id="f-week-anchor">
+      </div>
     </div>
 
     <div id="field-daily" class="field-hide">
@@ -219,10 +228,39 @@
     </div>
 
     <div id="field-monthly" class="field-hide">
-      <label>Day of month</label>
-      <select id="f-dom">
-        <option value="last">Last day of month</option>
-      </select>
+      <label>Pattern</label>
+      <div class="chip-row">
+        <div class="chip active" id="monthly-mode-dom" data-mode="dayOfMonth">Day of month</div>
+        <div class="chip" id="monthly-mode-weekday" data-mode="weekday">Weekday pattern</div>
+      </div>
+
+      <div id="field-monthly-dom">
+        <label>Day of month</label>
+        <select id="f-dom">
+          <option value="last">Last day of month</option>
+        </select>
+      </div>
+
+      <div id="field-monthly-weekday" class="field-hide">
+        <label>Occurrence</label>
+        <select id="f-monthly-position">
+          <option value="1">1st</option>
+          <option value="2">2nd</option>
+          <option value="3">3rd</option>
+          <option value="4">4th</option>
+          <option value="-1" selected>Last</option>
+        </select>
+        <label>Weekday</label>
+        <select id="f-monthly-weekday-day">
+          <option value="1">Monday</option>
+          <option value="2">Tuesday</option>
+          <option value="3">Wednesday</option>
+          <option value="4">Thursday</option>
+          <option value="5" selected>Friday</option>
+          <option value="6">Saturday</option>
+          <option value="0">Sunday</option>
+        </select>
+      </div>
     </div>
 
     <div id="field-once" class="field-hide">
@@ -344,16 +382,39 @@ function updateTypeFields(){
   document.getElementById('field-once').className = t==='once' ? '' : 'field-hide';
 }
 
+document.getElementById('f-week-interval').addEventListener('input', updateWeekIntervalUI);
+function updateWeekIntervalUI(){
+  const n = Number(document.getElementById('f-week-interval').value) || 1;
+  document.getElementById('week-interval-label').textContent = n === 1 ? 'week' : `weeks (biweekly = 2)`;
+  document.getElementById('field-week-anchor').className = n > 1 ? '' : 'field-hide';
+}
+
+let monthlyMode = 'dayOfMonth';
+document.getElementById('monthly-mode-dom').onclick = () => setMonthlyMode('dayOfMonth');
+document.getElementById('monthly-mode-weekday').onclick = () => setMonthlyMode('weekday');
+function setMonthlyMode(mode){
+  monthlyMode = mode;
+  document.getElementById('monthly-mode-dom').classList.toggle('active', mode==='dayOfMonth');
+  document.getElementById('monthly-mode-weekday').classList.toggle('active', mode==='weekday');
+  document.getElementById('field-monthly-dom').className = mode==='dayOfMonth' ? '' : 'field-hide';
+  document.getElementById('field-monthly-weekday').className = mode==='weekday' ? '' : 'field-hide';
+}
+
+const POSITION_NAMES = {'1':'1st','2':'2nd','3':'3rd','4':'4th','-1':'Last'};
 function recurrenceSummary(r){
   const rec = r.recurrence;
   if(rec.type === 'weekly'){
     const days = (rec.daysOfWeek||[]).slice().sort((a,b)=> (a===0?7:a)-(b===0?7:b)).map(d=>DAY_NAMES[d]);
-    return 'Every ' + (days.length ? days.join(', ') : '—');
+    const dayStr = days.length ? days.join(', ') : '—';
+    return (rec.interval > 1) ? `Every ${rec.interval} weeks: ${dayStr}` : `Every ${dayStr}`;
   }
   if(rec.type === 'daily'){
     return rec.interval > 1 ? `Every ${rec.interval} days` : 'Every day';
   }
   if(rec.type === 'monthly'){
+    if(rec.mode === 'weekday'){
+      return `${POSITION_NAMES[rec.position]} ${DAY_NAMES[rec.dayOfWeek]} of month`;
+    }
     return rec.dayOfMonth === 'last' ? 'Last day of month' : `Day ${rec.dayOfMonth} of month`;
   }
   if(rec.type === 'once'){
@@ -370,7 +431,11 @@ function resetForm(){
   selectedCat = 'chore';
   selectedDays = new Set();
   document.getElementById('f-interval-daily').value = 1;
+  document.getElementById('f-week-interval').value = 1;
+  document.getElementById('f-week-anchor').value = '';
   document.getElementById('f-dom').value = '1';
+  document.getElementById('f-monthly-position').value = '-1';
+  document.getElementById('f-monthly-weekday-day').value = '5';
   document.getElementById('f-once-date').value = '';
   document.getElementById('f-time').value = '';
   document.getElementById('f-duration').value = 30;
@@ -382,6 +447,8 @@ function resetForm(){
   renderCatChips();
   renderDayPicker();
   updateTypeFields();
+  updateWeekIntervalUI();
+  setMonthlyMode('dayOfMonth');
 }
 
 function editRule(id){
@@ -394,7 +461,11 @@ function editRule(id){
   selectedCat = r.category;
   selectedDays = new Set(r.recurrence.daysOfWeek || []);
   document.getElementById('f-interval-daily').value = r.recurrence.interval || 1;
-  document.getElementById('f-dom').value = r.recurrence.dayOfMonth || '1';
+  document.getElementById('f-week-interval').value = (r.recurrence.type === 'weekly') ? (r.recurrence.interval || 1) : 1;
+  document.getElementById('f-week-anchor').value = r.anchorDate || '';
+  document.getElementById('f-dom').value = (r.recurrence.mode !== 'weekday') ? (r.recurrence.dayOfMonth || '1') : '1';
+  document.getElementById('f-monthly-position').value = r.recurrence.position || '-1';
+  document.getElementById('f-monthly-weekday-day').value = (r.recurrence.dayOfWeek !== undefined && r.recurrence.mode === 'weekday') ? r.recurrence.dayOfWeek : '5';
   document.getElementById('f-once-date').value = r.recurrence.date || '';
   document.getElementById('f-time').value = r.time || '';
   document.getElementById('f-duration').value = r.duration || 30;
@@ -406,6 +477,8 @@ function editRule(id){
   renderCatChips();
   renderDayPicker();
   updateTypeFields();
+  updateWeekIntervalUI();
+  setMonthlyMode(r.recurrence.type === 'monthly' ? (r.recurrence.mode || 'dayOfMonth') : 'dayOfMonth');
   window.scrollTo({top:0, behavior:'smooth'});
 }
 
@@ -425,14 +498,27 @@ document.getElementById('saveBtn').onclick = () => {
   if(!title){ toast('Title required'); return; }
   const type = document.getElementById('f-type').value;
   let recurrence = { type };
+  let anchorDate = null;
   if(type === 'weekly'){
     if(selectedDays.size === 0){ toast('Pick at least one day'); return; }
     recurrence.daysOfWeek = Array.from(selectedDays);
+    const weekInterval = Number(document.getElementById('f-week-interval').value) || 1;
+    recurrence.interval = weekInterval;
+    if(weekInterval > 1){
+      anchorDate = document.getElementById('f-week-anchor').value || document.getElementById('f-start').value;
+      if(!anchorDate){ toast('Reference date required for every-N-weeks'); return; }
+    }
   } else if(type === 'daily'){
     recurrence.interval = Number(document.getElementById('f-interval-daily').value) || 1;
   } else if(type === 'monthly'){
-    const dom = document.getElementById('f-dom').value;
-    recurrence.dayOfMonth = dom === 'last' ? 'last' : Number(dom);
+    recurrence.mode = monthlyMode;
+    if(monthlyMode === 'weekday'){
+      recurrence.position = Number(document.getElementById('f-monthly-position').value);
+      recurrence.dayOfWeek = Number(document.getElementById('f-monthly-weekday-day').value);
+    } else {
+      const dom = document.getElementById('f-dom').value;
+      recurrence.dayOfMonth = dom === 'last' ? 'last' : Number(dom);
+    }
   } else if(type === 'once'){
     const d = document.getElementById('f-once-date').value;
     if(!d){ toast('Pick a date'); return; }
@@ -449,6 +535,7 @@ document.getElementById('saveBtn').onclick = () => {
     notes: document.getElementById('f-notes').value.trim(),
     startDate: document.getElementById('f-start').value || null,
     endDate: document.getElementById('f-end').value || null,
+    anchorDate: anchorDate,
     active: true,
   };
 
