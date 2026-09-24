@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QR Forge</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+  :root{
+    --ink:#0b1220;
+    --panel:#111b2e;
+    --panel-2:#0e1728;
+    --line:#25334d;
+    --line-bright:#3a5175;
+    --cyan:#5fd4e0;
+    --cyan-dim:#2f7a82;
+    --paper:#eef1e8;
+    --paper-dim:#b9c2b3;
+    --warn:#e0a15f;
+    --danger:#e0685f;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      repeating-linear-gradient(0deg, rgba(95,212,224,0.05) 0px, rgba(95,212,224,0.05) 1px, transparent 1px, transparent 32px),
+      repeating-linear-gradient(90deg, rgba(95,212,224,0.05) 0px, rgba(95,212,224,0.05) 1px, transparent 1px, transparent 32px),
+      var(--ink);
+    color:var(--paper);
+    font-family:'JetBrains Mono',monospace;
+    min-height:100vh;
+    padding:24px 16px 60px;
+  }
+  h1,h2,h3{font-family:'Bebas Neue',sans-serif;letter-spacing:0.5px;margin:0;}
+  .wrap{max-width:1080px;margin:0 auto;}
+
+  header{display:flex;align-items:baseline;justify-content:space-between;border-bottom:2px solid var(--line-bright);padding-bottom:14px;margin-bottom:22px;flex-wrap:wrap;gap:8px;}
+  header h1{font-size:38px;color:var(--paper);}
+  header h1 span{color:var(--cyan);}
+  header .sub{font-size:12px;color:var(--paper-dim);}
+
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:22px;}
+  @media(max-width:860px){.grid{grid-template-columns:1fr;}}
+
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:2px;padding:18px;position:relative;}
+  .panel::before{content:'';position:absolute;top:-1px;left:-1px;width:10px;height:10px;border-top:2px solid var(--cyan);border-left:2px solid var(--cyan);}
+  .panel::after{content:'';position:absolute;bottom:-1px;right:-1px;width:10px;height:10px;border-bottom:2px solid var(--cyan);border-right:2px solid var(--cyan);}
+  .panel h2{font-size:20px;color:var(--cyan);margin-bottom:12px;}
+
+  .tabs{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:16px;}
+  .tab{background:var(--panel-2);border:1px solid var(--line);color:var(--paper-dim);padding:7px 12px;font-family:'JetBrains Mono';font-size:11px;letter-spacing:.5px;cursor:pointer;border-radius:2px;text-transform:uppercase;}
+  .tab.active{color:var(--ink);background:var(--cyan);border-color:var(--cyan);font-weight:700;}
+
+  label{display:block;font-size:11px;color:var(--paper-dim);margin:12px 0 5px;text-transform:uppercase;letter-spacing:.5px;}
+  label:first-of-type{margin-top:0;}
+  input[type=text],input[type=password],input[type=url],textarea,select{
+    width:100%;background:var(--panel-2);border:1px solid var(--line);color:var(--paper);
+    font-family:'JetBrains Mono';font-size:13px;padding:9px 10px;border-radius:2px;
+  }
+  input:focus,textarea:focus,select:focus{outline:none;border-color:var(--cyan);}
+  textarea{resize:vertical;min-height:60px;}
+  .row{display:flex;gap:10px;}
+  .row>*{flex:1;}
+  .checkline{display:flex;align-items:center;gap:8px;margin-top:12px;}
+  .checkline input{width:auto;}
+  .checkline label{margin:0;}
+
+  .swatches{display:flex;gap:8px;flex-wrap:wrap;}
+  .swatch-btn{width:34px;height:34px;border-radius:3px;border:2px solid transparent;cursor:pointer;}
+  .swatch-btn.active{border-color:var(--cyan);}
+  input[type=color]{width:44px;height:34px;padding:2px;background:var(--panel-2);border:1px solid var(--line);border-radius:2px;cursor:pointer;}
+
+  .opt-btns{display:flex;gap:6px;}
+  .opt-btn{flex:1;background:var(--panel-2);border:1px solid var(--line);color:var(--paper-dim);padding:10px 6px;font-family:'JetBrains Mono';font-size:11px;cursor:pointer;border-radius:2px;text-align:center;text-transform:uppercase;}
+  .opt-btn.active{border-color:var(--cyan);color:var(--cyan);}
+
+  .preview-stage{display:flex;flex-direction:column;align-items:center;gap:14px;}
+  .qr-holder{background:var(--paper);padding:18px;border-radius:2px;width:100%;max-width:340px;aspect-ratio:1;display:flex;align-items:center;justify-content:center;}
+  .qr-holder svg{width:100%;height:100%;display:block;}
+
+  .meter{width:100%;max-width:340px;}
+  .meter-bar{height:8px;background:var(--panel-2);border:1px solid var(--line);border-radius:4px;overflow:hidden;margin:6px 0;}
+  .meter-fill{height:100%;background:var(--cyan);transition:width .15s ease;}
+  .meter-fill.warn{background:var(--warn);}
+  .meter-fill.danger{background:var(--danger);}
+  .meter-text{font-size:11px;color:var(--paper-dim);display:flex;justify-content:space-between;}
+  .meter-text b{color:var(--paper);}
+  .error-msg{color:var(--danger);font-size:12px;margin-top:6px;}
+
+  .downloads{display:flex;gap:8px;width:100%;max-width:340px;}
+  .dl-btn{flex:1;background:var(--panel-2);border:1px solid var(--line-bright);color:var(--cyan);font-family:'JetBrains Mono';font-size:12px;padding:10px;cursor:pointer;border-radius:2px;text-transform:uppercase;letter-spacing:.5px;}
+  .dl-btn:hover{background:var(--cyan);color:var(--ink);}
+  .dl-btn:disabled{opacity:.35;cursor:not-allowed;}
+
+  .icon-grid{display:flex;gap:8px;flex-wrap:wrap;}
+  .icon-btn{width:44px;height:44px;background:var(--panel-2);border:1px solid var(--line);border-radius:2px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+  .icon-btn.active{border-color:var(--cyan);}
+  .icon-btn svg{width:24px;height:24px;stroke:var(--paper);fill:none;}
+
+  .hint{font-size:11px;color:var(--paper-dim);line-height:1.5;margin-top:4px;}
+  .field-group{border-top:1px dashed var(--line);margin-top:16px;padding-top:12px;}
+  .field-group:first-child{border-top:none;margin-top:0;padding-top:0;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>QR<span>·</span>FORGE</h1>
+    <div class="sub">standalone qr generator — no server, no upload</div>
+  </header>
+
+  <div class="grid">
+    <!-- LEFT: content + fields -->
+    <div class="panel">
+      <h2>Content</h2>
+      <div class="tabs" id="typeTabs">
+        <div class="tab active" data-type="url">URL</div>
+        <div class="tab" data-type="text">Text</div>
+        <div class="tab" data-type="wifi">WiFi</div>
+        <div class="tab" data-type="vcard">vCard</div>
+        <div class="tab" data-type="card">Design Card</div>
+      </div>
+
+      <div id="fields"></div>
+
+      <div class="field-group">
+        <label>Error correction</label>
+        <div class="opt-btns" id="ecLevel">
+          <div class="opt-btn" data-ec="L">L · 7%</div>
+          <div class="opt-btn active" data-ec="M">M · 15%</div>
+          <div class="opt-btn" data-ec="Q">Q · 25%</div>
+          <div class="opt-btn" data-ec="H">H · 30%</div>
+        </div>
+        <div class="hint">Lower = more room for content. Higher = survives more print/scan damage. Design Card content usually wants L.</div>
+      </div>
+
+      <div class="field-group">
+        <label>Module style</label>
+        <div class="opt-btns" id="moduleStyle">
+          <div class="opt-btn active" data-style="square">Square</div>
+          <div class="opt-btn" data-style="rounded">Rounded</div>
+          <div class="opt-btn" data-style="dot">Dot</div>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <label>Eye style</label>
+        <div class="opt-btns" id="eyeStyle">
+          <div class="opt-btn active" data-style="square">Square</div>
+          <div class="opt-btn" data-style="rounded">Rounded</div>
+          <div class="opt-btn" data-style="circle">Circle</div>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <label>Colors</label>
+        <div class="row">
+          <div>
+            <div class="hint" style="margin:0 0 5px">Foreground</div>
+            <input type="color" id="fgColor" value="#0b1220">
+          </div>
+          <div>
+            <div class="hint" style="margin:0 0 5px">Background</div>
+            <input type="color" id="bgColor" value="#eef1e8">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: preview -->
+    <div class="panel">
+      <h2>Preview</h2>
+      <div class="preview-stage">
+        <div class="qr-holder" id="qrHolder"></div>
+        <div class="meter">
+          <div class="meter-text"><span>Payload</span><b id="byteText">0 / 0 bytes</b></div>
+          <div class="meter-bar"><div class="meter-fill" id="meterFill" style="width:0%"></div></div>
+          <div id="errorMsg" class="error-msg"></div>
+        </div>
+        <div class="downloads">
+          <button class="dl-btn" id="dlSvg">Download SVG</button>
+          <button class="dl-btn" id="dlPng">Download PNG</button>
+        </div>
+        <div class="hint" id="scanHint">Version <span id="verNum">–</span> · always test-scan before relying on a code.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =========================================================================
+   QR ENGINE — ISO/IEC 18004, byte mode only
+   ========================================================================= */
+const GF_EXP = new Uint8Array(512);
+const GF_LOG = new Uint8Array(256);
+(function initGF(){
+  let x=1;
+  for(let i=0;i<255;i++){GF_EXP[i]=x;GF_LOG[x]=i;x<<=1;if(x&0x100)x^=0x11D;}
+  for(let i=255;i<512;i++)GF_EXP[i]=GF_EXP[i-255];
+})();
+function gfMul(a,b){if(a===0||b===0)return 0;return GF_EXP[GF_LOG[a]+GF_LOG[b]];}
+function rsEncode(dataBytes,ecCount){
+  let gen=[1];
+  for(let i=0;i<ecCount;i++){
+    gen.push(0);
+    for(let j=gen.length-1;j>0;j--) gen[j]=gen[j-1]^gfMul(gen[j],GF_EXP[i]);
+    gen[0]=gfMul(gen[0],GF_EXP[i]);
+  }
+  const remainder=new Uint8Array(ecCount);
+  for(let i=0;i<dataBytes.length;i++){
+    const factor=dataBytes[i]^remainder[0];
+    remainder.copyWithin(0,1);
+    remainder[ecCount-1]=0;
+    if(factor!==0){for(let j=0;j<ecCount;j++) remainder[j]^=gfMul(gen[ecCount-1-j],factor);}
+  }
+  return Array.from(remainder);
+}
+const TOTAL_CODEWORDS=[0,26,44,70,100,134,172,196,242,292,346,404,466,532,581,655,733,815,901,991,1085,1156,1258,1364,1474,1588,1706,1828,1921,2051,2185,2323,2465,2611,2761,2876,3034,3196,3362,3532,3706];
+const BLOCK_TABLE={
+L:[null,[7,1,19,0,0],[10,1,34,0,0],[15,1,55,0,0],[20,1,80,0,0],[26,1,108,0,0],[18,2,68,0,0],[20,2,78,0,0],[24,2,97,0,0],[30,2,116,0,0],[18,2,68,2,69],[20,4,81,0,0],[24,2,92,2,93],[26,4,107,0,0],[30,3,115,1,116],[22,5,87,1,88],[24,5,98,1,99],[28,1,107,5,108],[30,5,120,1,121],[28,3,113,4,114],[28,3,107,5,108],[28,4,116,4,117],[28,2,111,7,112],[30,4,121,5,122],[30,6,117,4,118],[26,8,106,4,107],[28,10,114,2,115],[30,8,122,4,123],[30,3,117,10,118],[30,7,116,7,117],[30,5,115,10,116],[30,13,115,3,116],[30,17,115,0,0],[30,17,115,1,116],[30,13,115,6,116],[30,12,121,7,122],[30,6,121,14,122],[30,17,122,4,123],[30,4,122,18,123],[30,20,117,4,118],[30,19,118,6,119]],
+M:[null,[10,1,16,0,0],[16,1,28,0,0],[26,1,44,0,0],[18,2,32,0,0],[24,2,43,0,0],[16,4,27,0,0],[18,4,31,0,0],[22,2,38,2,39],[22,3,36,2,37],[26,4,43,1,44],[30,1,50,4,51],[22,6,36,2,37],[22,8,37,1,38],[24,4,40,5,41],[24,5,41,5,42],[28,7,45,3,46],[28,10,46,1,47],[26,9,43,4,44],[26,3,44,11,45],[26,3,41,13,42],[26,17,42,0,0],[28,17,46,0,0],[28,4,47,14,48],[28,6,45,14,46],[28,8,47,13,48],[28,19,46,4,47],[28,22,45,3,46],[28,3,45,23,46],[28,21,45,7,46],[28,19,47,10,48],[28,2,46,29,47],[28,10,46,23,47],[28,14,46,21,47],[28,14,46,23,47],[28,12,47,26,48],[28,6,47,34,48],[28,29,46,14,47],[28,13,46,32,47],[28,40,47,7,48],[28,18,47,31,48]],
+Q:[null,[13,1,13,0,0],[22,1,22,0,0],[18,2,17,0,0],[26,2,24,0,0],[18,2,15,2,16],[24,4,19,0,0],[18,2,14,4,15],[22,4,18,2,19],[20,4,16,4,17],[24,6,19,2,20],[28,4,22,4,23],[26,4,20,6,21],[24,8,20,4,21],[20,11,16,5,17],[30,5,24,7,25],[24,15,19,2,20],[28,1,22,15,23],[28,17,22,1,23],[26,17,21,4,22],[30,15,24,5,25],[28,17,22,6,23],[30,7,24,16,25],[30,11,24,14,25],[30,11,24,16,25],[30,7,24,22,25],[28,28,22,6,23],[30,8,23,26,24],[30,4,24,31,25],[30,1,23,37,24],[30,15,24,25,25],[30,42,24,1,25],[30,10,24,35,25],[30,29,24,19,25],[30,44,24,7,25],[30,39,24,14,25],[30,46,24,10,25],[30,49,24,10,25],[30,48,24,14,25],[30,43,24,22,25],[30,34,24,34,25]],
+H:[null,[17,1,9,0,0],[28,1,16,0,0],[22,2,13,0,0],[16,4,9,0,0],[22,2,11,2,12],[28,4,15,0,0],[26,4,13,1,14],[26,4,14,2,15],[24,4,12,4,13],[28,6,15,2,16],[24,3,12,8,13],[28,7,14,4,15],[22,12,11,4,12],[24,11,12,5,13],[24,11,12,7,13],[30,3,15,13,16],[28,2,14,17,15],[28,2,14,19,15],[26,9,13,16,14],[28,15,15,10,16],[30,19,16,6,17],[24,34,13,0,0],[30,16,15,14,16],[30,30,16,2,17],[30,22,15,13,16],[30,33,16,4,17],[30,12,15,28,16],[30,11,15,31,16],[30,19,15,26,16],[30,23,15,25,16],[30,23,15,28,16],[30,19,15,35,16],[30,11,15,46,16],[30,59,16,1,17],[30,22,15,41,16],[30,2,15,64,16],[30,24,15,46,16],[30,42,15,32,16],[30,10,15,67,16],[30,20,15,61,16]]
+};
+const EC_LEVEL_BITS={L:0b01,M:0b00,Q:0b11,H:0b10};
+function dataCwForVL(v,level){const [,b1,d1,b2,d2]=BLOCK_TABLE[level][v];return b1*d1+b2*d2;}
+function charCountBits(v){return v<=9?8:16;}
+function chooseVersion(byteLen,level){
+  for(let v=1;v<=40;v++){
+    const headerBits=4+charCountBits(v);
+    const availBits=dataCwForVL(v,level)*8-headerBits;
+    if(availBits>=byteLen*8) return v;
+  }
+  return null;
+}
+function maxBytesForLevel(level){
+  // usable byte capacity at version 40 for this level (upper bound reference)
+  const v=40, headerBits=4+16;
+  return Math.floor((dataCwForVL(v,level)*8-headerBits)/8);
+}
+function encodeDataCodewords(bytes,version,level){
+  const totalDataCw=dataCwForVL(version,level);
+  const bits=[];
+  const push=(val,len)=>{for(let i=len-1;i>=0;i--)bits.push((val>>i)&1);};
+  push(0b0100,4);
+  push(bytes.length,charCountBits(version));
+  for(const b of bytes) push(b,8);
+  const totalBits=totalDataCw*8;
+  for(let i=0;i<4&&bits.length<totalBits;i++) bits.push(0);
+  while(bits.length%8!==0) bits.push(0);
+  const cw=[];
+  for(let i=0;i<bits.length;i+=8){let byte=0;for(let j=0;j<8;j++)byte=(byte<<1)|bits[i+j];cw.push(byte);}
+  const pad=[0xEC,0x11]; let pi=0;
+  while(cw.length<totalDataCw) cw.push(pad[pi++%2]);
+  return cw;
+}
+function buildBlocks(dataCw,version,level){
+  const [ecPerBlock,b1,d1,b2,d2]=BLOCK_TABLE[level][version];
+  const blocks=[]; let off=0;
+  for(let i=0;i<b1;i++){blocks.push(dataCw.slice(off,off+d1));off+=d1;}
+  for(let i=0;i<b2;i++){blocks.push(dataCw.slice(off,off+d2));off+=d2;}
+  const ecBlocks=blocks.map(b=>rsEncode(b,ecPerBlock));
+  return {blocks,ecBlocks};
+}
+function interleave(blocks,ecBlocks){
+  const out=[]; const maxLen=Math.max(...blocks.map(b=>b.length));
+  for(let i=0;i<maxLen;i++) for(const b of blocks) if(i<b.length) out.push(b[i]);
+  const ecLen=ecBlocks[0].length;
+  for(let i=0;i<ecLen;i++) for(const eb of ecBlocks) out.push(eb[i]);
+  return out;
+}
+function alignmentPositions(version){
+  if(version===1) return [];
+  const numAlign=Math.floor(version/7)+2;
+  const size=version*4+17;
+  let step;
+  if(version===32) step=26;
+  else step=Math.floor((version*4+numAlign*2+1)/(numAlign*2-2))*2;
+  let pos=size-7; const tmp=[];
+  for(let i=0;i<numAlign-1;i++){tmp.push(pos);pos-=step;}
+  tmp.reverse();
+  return [6,...tmp];
+}
+function formatInfoBits(ecLevelBits,maskPattern){
+  const data=(ecLevelBits<<3)|maskPattern;
+  let d=data<<10;
+  const g=0b10100110111;
+  for(let i=14;i>=10;i--) if(d&(1<<i)) d^=g<<(i-10);
+  const bch=(data<<10)|d;
+  return bch^0x5412;
+}
+function versionInfoBits(version){
+  let d=version<<12;
+  const g=0b1111100100101;
+  for(let i=17;i>=12;i--) if(d&(1<<i)) d^=g<<(i-12);
+  return (version<<12)|d;
+}
+function buildMatrix(version){
+  const size=version*4+17;
+  const mat=Array.from({length:size},()=>new Array(size).fill(null));
+  const isFn=Array.from({length:size},()=>new Array(size).fill(false));
+  const setFn=(r,c,v)=>{if(r>=0&&r<size&&c>=0&&c<size){mat[r][c]=v;isFn[r][c]=true;}};
+  function placeFinder(r,c){
+    for(let dr=-1;dr<=7;dr++)for(let dc=-1;dc<=7;dc++){
+      const rr=r+dr,cc=c+dc; if(rr<0||rr>=size||cc<0||cc>=size)continue;
+      let val=0;
+      if(dr>=0&&dr<=6&&dc>=0&&dc<=6){
+        if(dr===0||dr===6||dc===0||dc===6) val=1;
+        else if(dr>=2&&dr<=4&&dc>=2&&dc<=4) val=1;
+      }
+      setFn(rr,cc,val);
+    }
+  }
+  placeFinder(0,0); placeFinder(0,size-7); placeFinder(size-7,0);
+  for(let i=8;i<size-8;i++){
+    if(mat[6][i]===null) setFn(6,i,i%2===0?1:0);
+    if(mat[i][6]===null) setFn(i,6,i%2===0?1:0);
+  }
+  const aligns=alignmentPositions(version);
+  for(const r of aligns) for(const c of aligns){
+    if((r===6&&c===6)||(r===6&&c===size-1-6)||(r===size-1-6&&c===6)) continue;
+    for(let dr=-2;dr<=2;dr++)for(let dc=-2;dc<=2;dc++){
+      const val=(Math.max(Math.abs(dr),Math.abs(dc))%2===0)?1:0;
+      setFn(r+dr,c+dc,val);
+    }
+  }
+  setFn(size-8,8,1);
+  for(let i=0;i<=8;i++) if(i!==6){setFn(8,i,0);setFn(i,8,0);}
+  for(let i=0;i<8;i++){setFn(8,size-1-i,0);setFn(size-1-i,8,0);}
+  setFn(8,8,0);
+  if(version>=7){
+    for(let r=0;r<6;r++)for(let c=0;c<3;c++){setFn(r,size-11+c,0);setFn(size-11+c,r,0);}
+  }
+  return {mat,isFn,size};
+}
+function placeData(mat,isFn,size,codewords){
+  const bits=[];
+  for(const cw of codewords) for(let i=7;i>=0;i--) bits.push((cw>>i)&1);
+  let bitIndex=0,col=size-1,dir=-1;
+  while(col>0){
+    if(col===6) col--;
+    for(let i=0;i<size;i++){
+      const row=dir===-1?size-1-i:i;
+      for(const c of [col,col-1]){
+        if(!isFn[row][c]){
+          mat[row][c]=bitIndex<bits.length?bits[bitIndex]:0;
+          bitIndex++;
+        }
+      }
+    }
+    dir=-dir; col-=2;
+  }
+}
+function applyMask(value,r,c,pattern){
+  let invert;
+  switch(pattern){
+    case 0: invert=(r+c)%2===0; break;
+    case 1: invert=r%2===0; break;
+    case 2: invert=c%3===0; break;
+    case 3: invert=(r+c)%3===0; break;
+    case 4: invert=(Math.floor(r/2)+Math.floor(c/3))%2===0; break;
+    case 5: invert=((r*c)%2)+((r*c)%3)===0; break;
+    case 6: invert=(((r*c)%2)+((r*c)%3))%2===0; break;
+    case 7: invert=(((r+c)%2)+((r*c)%3))%2===0; break;
+  }
+  return invert?value^1:value;
+}
+function maskDataModules(mat,isFn,size,pattern){
+  const out=mat.map(row=>row.slice());
+  for(let r=0;r<size;r++)for(let c=0;c<size;c++) if(!isFn[r][c]) out[r][c]=applyMask(mat[r][c],r,c,pattern);
+  return out;
+}
+function penaltyScore(mat,size){
+  let score=0;
+  for(let r=0;r<size;r++){
+    let rc=mat[r][0],rl=1;
+    for(let c=1;c<size;c++){ if(mat[r][c]===rc) rl++; else {if(rl>=5)score+=3+(rl-5); rc=mat[r][c]; rl=1;} }
+    if(rl>=5) score+=3+(rl-5);
+  }
+  for(let c=0;c<size;c++){
+    let rc=mat[0][c],rl=1;
+    for(let r=1;r<size;r++){ if(mat[r][c]===rc) rl++; else {if(rl>=5)score+=3+(rl-5); rc=mat[r][c]; rl=1;} }
+    if(rl>=5) score+=3+(rl-5);
+  }
+  for(let r=0;r<size-1;r++)for(let c=0;c<size-1;c++){
+    const v=mat[r][c];
+    if(v===mat[r][c+1]&&v===mat[r+1][c]&&v===mat[r+1][c+1]) score+=3;
+  }
+  const p1=[1,0,1,1,1,0,1,0,0,0,0], p2=[0,0,0,0,1,0,1,1,1,0,1];
+  function matchAt(arr,idx,pat){ if(idx+pat.length>arr.length) return false; for(let i=0;i<pat.length;i++) if(arr[idx+i]!==pat[i]) return false; return true; }
+  for(let r=0;r<size;r++){ const row=mat[r]; for(let c=0;c<=size-11;c++){ if(matchAt(row,c,p1)||matchAt(row,c,p2)) score+=40; } }
+  for(let c=0;c<size;c++){ const col=mat.map(row=>row[c]); for(let r=0;r<=size-11;r++){ if(matchAt(col,r,p1)||matchAt(col,r,p2)) score+=40; } }
+  let dark=0; for(let r=0;r<size;r++)for(let c=0;c<size;c++) if(mat[r][c]) dark++;
+  const pct=(dark*100)/(size*size); const prev5=Math.floor(pct/5)*5;
+  const a=Math.abs(prev5-50)/5, b=Math.abs(prev5+5-50)/5;
+  score+=Math.min(a,b)*10;
+  return score;
+}
+function applyFormatInfo(mat,size,ecLevelBits,maskPattern){
+  const bits15=formatInfoBits(ecLevelBits,maskPattern);
+  const bit=i=>(bits15>>i)&1;
+  for(let i=0;i<=5;i++) mat[8][i]=bit(14-i);
+  mat[8][7]=bit(8);
+  mat[8][8]=bit(7);
+  mat[7][8]=bit(6);
+  for(let i=0;i<6;i++) mat[5-i][8]=bit(5-i);
+  for(let i=0;i<7;i++) mat[size-1-i][8]=bit(14-i);
+  for(let i=0;i<8;i++) mat[8][size-8+i]=bit(7-i);
+  mat[size-8][8]=1;
+}
+function applyVersionInfo(mat,size,version){
+  if(version<7) return;
+  const bits18=versionInfoBits(version);
+  const bit=i=>(bits18>>i)&1;
+  for(let i=0;i<18;i++){
+    const r=Math.floor(i/3), c=i%3;
+    mat[r][size-11+c]=bit(i);
+    mat[size-11+c][r]=bit(i);
+  }
+}
+function generateQR(bytes,level){
+  const version=chooseVersion(bytes.length,level);
+  if(version===null) return null;
+  const dataCw=encodeDataCodewords(bytes,version,level);
+  const {blocks,ecBlocks}=buildBlocks(dataCw,version,level);
+  const finalCw=interleave(blocks,ecBlocks);
+  const {mat:baseMat,isFn,size}=buildMatrix(version);
+  placeData(baseMat,isFn,size,finalCw);
+  let bestPattern=0,bestScore=Infinity,bestMat=null;
+  for(let p=0;p<8;p++){
+    const masked=maskDataModules(baseMat,isFn,size,p);
+    applyFormatInfo(masked,size,EC_LEVEL_BITS[level],p);
+    applyVersionInfo(masked,size,version);
+    const score=penaltyScore(masked,size);
+    if(score<bestScore){bestScore=score;bestPattern=p;bestMat=masked;}
+  }
+  return {matrix:bestMat,size,version,isFn,maskPattern:bestPattern};
+}
+
+/* =========================================================================
+   RENDERING — matrix -> SVG string with module/eye styling
+   ========================================================================= */
+function isEyeRegion(r,c,size){
+  return (r<=6&&c<=6) || (r<=6&&c>=size-7) || (r>=size-7&&c<=6);
+}
+function renderSVG(qr,opts){
+  const {matrix,size}=qr;
+  const scale=8, quiet=4;
+  const dim=(size+quiet*2)*scale;
+  const fg=opts.fg, bg=opts.bg, mStyle=opts.moduleStyle, eStyle=opts.eyeStyle;
+  let body='';
+  for(let r=0;r<size;r++){
+    for(let c=0;c<size;c++){
+      if(isEyeRegion(r,c,size)) continue;
+      if(!matrix[r][c]) continue;
+      const x=(c+quiet)*scale, y=(r+quiet)*scale;
+      if(mStyle==='dot'){
+        body+=`<circle cx="${x+scale/2}" cy="${y+scale/2}" r="${scale*0.42}" fill="${fg}"/>`;
+      } else if(mStyle==='rounded'){
+        body+=`<rect x="${x}" y="${y}" width="${scale}" height="${scale}" rx="${scale*0.28}" fill="${fg}"/>`;
+      } else {
+        body+=`<rect x="${x}" y="${y}" width="${scale}" height="${scale}" fill="${fg}"/>`;
+      }
+    }
+  }
+  function eyeShape(er,ec){
+    const ox=(ec+quiet)*scale, oy=(er+quiet)*scale;
+    const outer=scale*7, ring=scale, innerOff=scale*2, inner=scale*3;
+    if(eStyle==='circle'){
+      return `<circle cx="${ox+outer/2}" cy="${oy+outer/2}" r="${outer/2}" fill="none" stroke="${fg}" stroke-width="${ring}"/>`+
+             `<circle cx="${ox+outer/2}" cy="${oy+outer/2}" r="${inner/2}" fill="${fg}"/>`;
+    } else if(eStyle==='rounded'){
+      return `<rect x="${ox}" y="${oy}" width="${outer}" height="${outer}" rx="${scale*1.6}" fill="none" stroke="${fg}" stroke-width="${ring}"/>`+
+             `<rect x="${ox+innerOff}" y="${oy+innerOff}" width="${inner}" height="${inner}" rx="${scale*0.8}" fill="${fg}"/>`;
+    } else {
+      return `<rect x="${ox}" y="${oy}" width="${outer}" height="${outer}" fill="none" stroke="${fg}" stroke-width="${ring}"/>`+
+             `<rect x="${ox+innerOff}" y="${oy+innerOff}" width="${inner}" height="${inner}" fill="${fg}"/>`;
+    }
+  }
+  body+=eyeShape(0,0);
+  body+=eyeShape(0,size-7);
+  body+=eyeShape(size-7,0);
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${dim} ${dim}"><rect width="${dim}" height="${dim}" fill="${bg}"/>${body}</svg>`;
+}
+
+/* =========================================================================
+   CONTENT BUILDERS
+   ========================================================================= */
+function esc(s){return (s||'').replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));}
+function toUtf8Bytes(str){return Array.from(new TextEncoder().encode(str));}
+
+function buildUrl(f){ let v=(f.url||'').trim(); if(v && !/^[a-z]+:\/\//i.test(v)) v='https://'+v; return v; }
+function buildText(f){ return f.text||''; }
+function buildWifi(f){
+  const esc=s=>(s||'').replace(/([\\;,:"])/g,'\\$1');
+  return `WIFI:T:${f.wifiSec||'WPA'};S:${esc(f.wifiSsid)};P:${esc(f.wifiPass)};${f.wifiHidden?'H:true;':''};`;
+}
+function buildVcard(f){
+  const lines=['BEGIN:VCARD','VERSION:3.0'];
+  if(f.vName) lines.push(`N:${f.vName}`);
+  if(f.vOrg) lines.push(`ORG:${f.vOrg}`);
+  if(f.vTitle) lines.push(`TITLE:${f.vTitle}`);
+  if(f.vPhone) lines.push(`TEL:${f.vPhone}`);
+  if(f.vEmail) lines.push(`EMAIL:${f.vEmail}`);
+  if(f.vUrl) lines.push(`URL:${f.vUrl}`);
+  lines.push('END:VCARD');
+  return lines.join('\n');
+}
+const ICONS = {
+  none: null,
+  drop: `<path d="M50 15 C50 15 25 45 25 62 A25 25 0 0 0 75 62 C75 45 50 15 50 15 Z"/>`,
+  iron: `<path d="M15 70 L15 45 Q15 35 30 33 L70 25 Q85 25 85 45 L85 60 Q85 70 75 70 Z"/><line x1="30" y1="20" x2="45" y2="27"/>`,
+  flame: `<path d="M50 12 C35 30 30 42 30 55 A20 20 0 0 0 70 55 C70 45 62 40 60 48 C58 38 50 28 50 12 Z"/>`,
+  snow: `<line x1="50" y1="15" x2="50" y2="85"/><line x1="20" y1="50" x2="80" y2="50"/><line x1="28" y1="28" x2="72" y2="72"/><line x1="72" y1="28" x2="28" y2="72"/>`,
+  slash: `<circle cx="50" cy="50" r="38"/><line x1="24" y1="24" x2="76" y2="76"/>`
+};
+function buildCardSVG(f){
+  const w=380, h=Math.round(w*1.414); // A-ratio proportion
+  const title=esc(f.cardTitle||'');
+  const lines=(f.cardLines||'').split('\n').filter(l=>l.trim()!=='').slice(0,5);
+  const iconKey=f.cardIcon||'none';
+  let iconSvg='';
+  if(ICONS[iconKey]){
+    iconSvg=`<g transform="translate(${w/2-30},28) scale(0.6)" fill="none" stroke="#333" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">${ICONS[iconKey]}</g>`;
+    if(iconKey!=='slash' && f.cardSlash){
+      iconSvg+=`<g transform="translate(${w/2-30},28) scale(0.6)" fill="none" stroke="#333" stroke-width="4" stroke-linecap="round">${ICONS.slash}</g>`;
+    }
+  }
+  const titleY = iconKey!=='none' ? 130 : 60;
+  let textEls=`<text x="${w/2}" y="${titleY}" font-family="Georgia,serif" font-size="26" text-anchor="middle" fill="#222">${title}</text>`;
+  let ly=titleY+34;
+  for(const line of lines){
+    textEls+=`<text x="${w/2}" y="${ly}" font-family="Helvetica,Arial,sans-serif" font-size="15" text-anchor="middle" fill="#444">${esc(line)}</text>`;
+    ly+=22;
+  }
+  const border=`<rect x="6" y="6" width="${w-12}" height="${h-12}" fill="none" stroke="#999" stroke-width="2"/>`;
+  return `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 ${w} ${h}'><rect width='${w}' height='${h}' fill='#fdfcf7'/>${border}${iconSvg}${textEls}</svg>`;
+}
+function svgToDataUri(svg){
+  let s=svg.replace(/"/g,"'").replace(/>\s+</g,'><').trim();
+  s=s.replace(/[%#<>{}|\\^~\[\]`\r\n]/g,c=>'%'+c.charCodeAt(0).toString(16).toUpperCase().padStart(2,'0'));
+  s=s.replace(/[^\x00-\x7F]/g,c=>{
+    const bytes=new TextEncoder().encode(c);
+    return Array.from(bytes).map(b=>'%'+b.toString(16).toUpperCase().padStart(2,'0')).join('');
+  });
+  return 'data:image/svg+xml,'+s;
+}
+
+/* =========================================================================
+   UI WIRING
+   ========================================================================= */
+const state={ type:'url', ec:'M', moduleStyle:'square', eyeStyle:'square', fg:'#0b1220', bg:'#eef1e8' };
+
+const FIELD_TEMPLATES = {
+  url: () => `
+    <label>Destination URL</label>
+    <input type="text" id="f_url" placeholder="emeset7.github.io/main">`,
+  text: () => `
+    <label>Text content</label>
+    <textarea id="f_text" placeholder="Anything you want scanned as plain text"></textarea>`,
+  wifi: () => `
+    <label>Network name (SSID)</label>
+    <input type="text" id="f_wifiSsid">
+    <label>Password</label>
+    <input type="text" id="f_wifiPass">
+    <label>Security</label>
+    <select id="f_wifiSec">
+      <option value="WPA">WPA/WPA2</option>
+      <option value="WEP">WEP</option>
+      <option value="nopass">None (open)</option>
+    </select>
+    <div class="checkline"><input type="checkbox" id="f_wifiHidden"><label for="f_wifiHidden">Hidden network</label></div>`,
+  vcard: () => `
+    <label>Full name</label>
+    <input type="text" id="f_vName" placeholder="Silva;Tiago">
+    <div class="row">
+      <div><label>Phone</label><input type="text" id="f_vPhone"></div>
+      <div><label>Email</label><input type="text" id="f_vEmail"></div>
+    </div>
+    <label>Organization</label>
+    <input type="text" id="f_vOrg">
+    <label>Title</label>
+    <input type="text" id="f_vTitle">
+    <label>Website</label>
+    <input type="text" id="f_vUrl">`,
+  card: () => `
+    <label>Title</label>
+    <input type="text" id="f_cardTitle" placeholder="Teraponto">
+    <label>Instruction lines (one per line, up to 5)</label>
+    <textarea id="f_cardLines" placeholder="Lavar à mão&#10;Não passar a ferro&#10;Não secar na máquina"></textarea>
+    <label>Icon</label>
+    <div class="icon-grid" id="iconGrid"></div>
+    <div class="checkline"><input type="checkbox" id="f_cardSlash"><label for="f_cardSlash">Overlay prohibition slash</label></div>
+    <div class="hint">This renders as an SVG page embedded directly in the QR data — no hosting. Keep it short; it competes for the same byte budget as the QR code itself.</div>`
+};
+
+function renderFields(){
+  document.getElementById('fields').innerHTML = FIELD_TEMPLATES[state.type]();
+  if(state.type==='card'){
+    const grid=document.getElementById('iconGrid');
+    grid.innerHTML='';
+    const order=['none','drop','iron','flame','snow'];
+    for(const key of order){
+      const btn=document.createElement('div');
+      btn.className='icon-btn'+(key===(state.cardIcon||'none')?' active':'');
+      btn.dataset.icon=key;
+      btn.innerHTML = key==='none'
+        ? `<svg viewBox="0 0 100 100"><line x1="20" y1="20" x2="80" y2="80"/><line x1="80" y1="20" x2="20" y2="80"/></svg>`
+        : `<svg viewBox="0 0 100 100" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">${ICONS[key]}</svg>`;
+      btn.addEventListener('click',()=>{ state.cardIcon=key; renderFields(); regenerate(); });
+      grid.appendChild(btn);
+    }
+  }
+  document.querySelectorAll('#fields input,#fields textarea,#fields select').forEach(el=>{
+    el.addEventListener('input',regenerate);
+    el.addEventListener('change',regenerate);
+  });
+}
+
+function collectFields(){
+  const f={};
+  document.querySelectorAll('#fields input,#fields textarea,#fields select').forEach(el=>{
+    const key=el.id.replace('f_','');
+    f[key.charAt(0).toLowerCase()+key.slice(1)]= el.type==='checkbox'?el.checked:el.value;
+  });
+  // normalize keys back to expected names
+  const mapped={
+    url:f.url, text:f.text,
+    wifiSsid:f.wifiSsid, wifiPass:f.wifiPass, wifiSec:f.wifiSec, wifiHidden:f.wifiHidden,
+    vName:f.vName, vPhone:f.vPhone, vEmail:f.vEmail, vOrg:f.vOrg, vTitle:f.vTitle, vUrl:f.vUrl,
+    cardTitle:f.cardTitle, cardLines:f.cardLines, cardSlash:f.cardSlash, cardIcon: state.cardIcon||'none'
+  };
+  return mapped;
+}
+
+function buildContent(){
+  const f=collectFields();
+  switch(state.type){
+    case 'url': return buildUrl(f);
+    case 'text': return buildText(f);
+    case 'wifi': return buildWifi(f);
+    case 'vcard': return buildVcard(f);
+    case 'card': return svgToDataUri(buildCardSVG(f));
+    default: return '';
+  }
+}
+
+function regenerate(){
+  const content=buildContent();
+  const bytes=toUtf8Bytes(content);
+  const cap=maxBytesForLevel(state.ec);
+  const byteText=document.getElementById('byteText');
+  const fill=document.getElementById('meterFill');
+  const errMsg=document.getElementById('errorMsg');
+  const verNum=document.getElementById('verNum');
+  byteText.textContent=`${bytes.length} / ${cap} bytes`;
+  const pct=Math.min(100,(bytes.length/cap)*100);
+  fill.style.width=pct+'%';
+  fill.classList.toggle('warn', pct>=70 && pct<92);
+  fill.classList.toggle('danger', pct>=92);
+
+  const holder=document.getElementById('qrHolder');
+  if(bytes.length===0){
+    holder.innerHTML='';
+    errMsg.textContent='';
+    verNum.textContent='–';
+    document.getElementById('dlSvg').disabled=true;
+    document.getElementById('dlPng').disabled=true;
+    return;
+  }
+  const qr=generateQR(bytes,state.ec);
+  if(!qr){
+    errMsg.textContent=`Too large for a QR code at level ${state.ec} — over by ${bytes.length-cap} bytes. Shorten the content or lower the error-correction level.`;
+    holder.innerHTML='';
+    verNum.textContent='–';
+    document.getElementById('dlSvg').disabled=true;
+    document.getElementById('dlPng').disabled=true;
+    return;
+  }
+  errMsg.textContent='';
+  verNum.textContent=qr.version;
+  const svg=renderSVG(qr,{fg:state.fg,bg:state.bg,moduleStyle:state.moduleStyle,eyeStyle:state.eyeStyle});
+  holder.innerHTML=svg;
+  document.getElementById('dlSvg').disabled=false;
+  document.getElementById('dlPng').disabled=false;
+  window._lastSvg=svg;
+}
+
+// tab wiring
+document.querySelectorAll('#typeTabs .tab').forEach(tab=>{
+  tab.addEventListener('click',()=>{
+    document.querySelectorAll('#typeTabs .tab').forEach(t=>t.classList.remove('active'));
+    tab.classList.add('active');
+    state.type=tab.dataset.type;
+    renderFields();
+    regenerate();
+  });
+});
+document.querySelectorAll('#ecLevel .opt-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('#ecLevel .opt-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    state.ec=btn.dataset.ec;
+    regenerate();
+  });
+});
+document.querySelectorAll('#moduleStyle .opt-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('#moduleStyle .opt-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    state.moduleStyle=btn.dataset.style;
+    regenerate();
+  });
+});
+document.querySelectorAll('#eyeStyle .opt-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('#eyeStyle .opt-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    state.eyeStyle=btn.dataset.style;
+    regenerate();
+  });
+});
+document.getElementById('fgColor').addEventListener('input',e=>{state.fg=e.target.value;regenerate();});
+document.getElementById('bgColor').addEventListener('input',e=>{state.bg=e.target.value;regenerate();});
+
+document.getElementById('dlSvg').addEventListener('click',()=>{
+  if(!window._lastSvg) return;
+  const blob=new Blob([window._lastSvg],{type:'image/svg+xml'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download='qr-code.svg'; a.click();
+  URL.revokeObjectURL(url);
+});
+document.getElementById('dlPng').addEventListener('click',()=>{
+  if(!window._lastSvg) return;
+  const img=new Image();
+  const svgBlob=new Blob([window._lastSvg],{type:'image/svg+xml'});
+  const url=URL.createObjectURL(svgBlob);
+  img.onload=()=>{
+    const canvas=document.createElement('canvas');
+    canvas.width=1024; canvas.height=1024;
+    const ctx=canvas.getContext('2d');
+    ctx.drawImage(img,0,0,1024,1024);
+    URL.revokeObjectURL(url);
+    canvas.toBlob(blob=>{
+      const durl=URL.createObjectURL(blob);
+      const a=document.createElement('a'); a.href=durl; a.download='qr-code.png'; a.click();
+      URL.revokeObjectURL(durl);
+    });
+  };
+  img.src=url;
+});
+
+renderFields();
+regenerate();
+</script>
+</body>
+</html>

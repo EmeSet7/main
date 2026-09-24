@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Circuit Etch</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+  :root{
+    --paper: #f4f2ea;
+    --paper2: #ffffff;
+    --ink: #111111;
+    --line: #111111;
+    --dim: #7a7a72;
+    --red: #b3311a;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0; padding:0; min-height:100%;
+    background:
+      repeating-linear-gradient(0deg, rgba(0,0,0,0.028) 0px, rgba(0,0,0,0.028) 1px, transparent 1px, transparent 28px),
+      repeating-linear-gradient(90deg, rgba(0,0,0,0.028) 0px, rgba(0,0,0,0.028) 1px, transparent 1px, transparent 28px),
+      var(--paper);
+    color: var(--ink);
+    font-family:'IBM Plex Mono', monospace;
+  }
+  .wrap{
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 30px 18px 60px;
+  }
+  .titleblock{
+    display:flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    border-bottom: 3px solid var(--ink);
+    padding-bottom: 10px;
+    margin-bottom: 6px;
+  }
+  h1{
+    font-family:'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 32px;
+    letter-spacing: 0.5px;
+    margin: 0;
+    text-transform: uppercase;
+  }
+  .titleblock .rev{
+    font-size: 11px;
+    letter-spacing: 1px;
+    color: var(--dim);
+    text-align: right;
+    line-height: 1.5;
+  }
+  .sub{
+    color: var(--dim);
+    font-size: 11px;
+    letter-spacing: 0.5px;
+    margin-bottom: 22px;
+    border-bottom: 1px solid var(--ink);
+    padding-bottom: 14px;
+  }
+
+  .sheet{
+    position: relative;
+    background: var(--paper2);
+    border: 1.5px solid var(--ink);
+    padding: 20px;
+  }
+  .crop{
+    position:absolute;
+    width:16px; height:16px;
+    pointer-events:none;
+  }
+  .crop::before, .crop::after{
+    content:'';
+    position:absolute;
+    background: var(--ink);
+  }
+  .crop.tl{ top:-9px; left:-9px; }
+  .crop.tr{ top:-9px; right:-9px; }
+  .crop.bl{ bottom:-9px; left:-9px; }
+  .crop.br{ bottom:-9px; right:-9px; }
+  .crop::before{ width:16px; height:1.5px; top:8px; left:0; }
+  .crop::after{ width:1.5px; height:16px; top:0; left:8px; }
+
+  .board-holder{
+    background: var(--paper2);
+    border: 1px solid var(--ink);
+    padding: 8px;
+  }
+  #svgHost{
+    width: 100%;
+    max-width: 660px;
+    aspect-ratio: 1 / 1;
+    display:block;
+    margin: 0 auto;
+  }
+  #svgHost svg{ width:100%; height:100%; display:block; }
+
+  .controls{
+    display:flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 18px;
+  }
+  button{
+    font-family:'IBM Plex Mono', monospace;
+    font-weight:600;
+    font-size: 12px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    background: var(--paper2);
+    color: var(--ink);
+    border: 1.5px solid var(--ink);
+    padding: 13px 16px;
+    cursor: pointer;
+    flex: 1 1 auto;
+    min-width: 130px;
+    transition: background .12s, color .12s;
+  }
+  button:hover{ background: var(--ink); color: var(--paper2); }
+  button.primary{ background: var(--ink); color: var(--paper2); }
+  button.primary:hover{ background: var(--red); border-color: var(--red); color: var(--paper2); }
+
+  .meta{
+    display:flex;
+    justify-content: space-between;
+    margin-top: 14px;
+    font-size: 10.5px;
+    color: var(--dim);
+    letter-spacing: 0.5px;
+    border-top: 1px solid var(--ink);
+    padding-top: 10px;
+  }
+  .meta span b{ color: var(--ink); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="titleblock">
+    <h1>Circuit Etch</h1>
+    <div class="rev">FIG. 01<br>NOT TO SCALE</div>
+  </div>
+  <div class="sub">random trace layout // no schematic, no sense, just tracks</div>
+
+  <div class="sheet">
+    <div class="crop tl"></div><div class="crop tr"></div>
+    <div class="crop bl"></div><div class="crop br"></div>
+
+    <div class="board-holder">
+      <div id="svgHost"></div>
+    </div>
+    <div class="meta">
+      <span>DWG NO: <b id="seedName">—</b></span>
+      <span>SCALE 1:1</span>
+    </div>
+    <div class="controls">
+      <button class="primary" id="genBtn">Etch New Board</button>
+      <button id="pngBtn">Save PNG</button>
+      <button id="svgBtn">Save SVG</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const SIZE = 720;
+  const CELL = 24;
+  const COLS = SIZE / CELL;
+  const ROWS = SIZE / CELL;
+
+  const INK = '#111111';
+  const PAPER = '#ffffff';
+  const SILK = 'rgba(17,17,17,0.14)';
+
+  const svgNS = 'http://www.w3.org/2000/svg';
+  let currentSeed = 0;
+
+  function rnd(a,b){ return a + Math.random()*(b-a); }
+  function ri(a,b){ return Math.floor(rnd(a,b+1)); }
+  function choice(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+  function key(x,y){ return x+','+y; }
+
+  function makeEl(tag, attrs){
+    const el = document.createElementNS(svgNS, tag);
+    for(const k in attrs) el.setAttribute(k, attrs[k]);
+    return el;
+  }
+
+  function buildBoard(){
+    currentSeed = Math.floor(Math.random()*1e6);
+
+    const svg = makeEl('svg', {
+      viewBox: `0 0 ${SIZE} ${SIZE}`,
+      xmlns: svgNS
+    });
+
+    svg.appendChild(makeEl('rect', {x:0,y:0,width:SIZE,height:SIZE,fill:PAPER}));
+
+    const dots = makeEl('g', {});
+    for(let gx=1; gx<COLS; gx++){
+      for(let gy=1; gy<ROWS; gy++){
+        dots.appendChild(makeEl('circle', {
+          cx:gx*CELL, cy:gy*CELL, r:0.8, fill:SILK
+        }));
+      }
+    }
+    svg.appendChild(dots);
+
+    svg.appendChild(makeEl('rect', {
+      x:6, y:6, width:SIZE-12, height:SIZE-12, fill:'none',
+      stroke:INK, 'stroke-width':2
+    }));
+    [[26,26],[SIZE-26,26],[26,SIZE-26],[SIZE-26,SIZE-26]].forEach(([cx,cy])=>{
+      svg.appendChild(makeEl('circle',{cx,cy,r:9,fill:'none',stroke:INK,'stroke-width':2}));
+      svg.appendChild(makeEl('circle',{cx,cy,r:3,fill:INK}));
+    });
+
+    const reserved = new Set();
+    const tracesGroup = makeEl('g', {});
+    const visited = new Set();
+    const dirs = [[1,0],[-1,0],[0,1],[0,-1]];
+    const traceCount = ri(24, 38);
+
+    function freeCell(x,y){
+      return x>=1 && y>=1 && x<COLS-1 && y<ROWS-1 && !reserved.has(key(x,y));
+    }
+
+    const traces = [];
+
+    for(let t=0; t<traceCount; t++){
+      let sx, sy, attempts=0;
+      do { sx = ri(1,COLS-2); sy = ri(1,ROWS-2); attempts++; }
+      while(!freeCell(sx,sy) && attempts<60);
+      if(!freeCell(sx,sy)) continue;
+
+      const pts = [[sx,sy]];
+      visited.add(key(sx,sy));
+      let dir = choice(dirs);
+      const steps = ri(5, 16);
+
+      for(let s=0; s<steps; s++){
+        if(Math.random() > 0.7){
+          const opts = dirs.filter(d => !(d[0]===-dir[0] && d[1]===-dir[1]));
+          dir = choice(opts);
+        }
+        let [cx,cy] = pts[pts.length-1];
+        let nx = cx+dir[0], ny = cy+dir[1];
+
+        if(!freeCell(nx,ny) || visited.has(key(nx,ny))){
+          let placed = false;
+          for(const d of dirs){
+            const tx = cx+d[0], ty = cy+d[1];
+            if(freeCell(tx,ty) && !visited.has(key(tx,ty))){
+              dir = d; nx = tx; ny = ty; placed = true; break;
+            }
+          }
+          if(!placed) break;
+        }
+        pts.push([nx,ny]);
+        visited.add(key(nx,ny));
+      }
+
+      if(pts.length >= 2) traces.push(pts);
+    }
+
+    function toPx(p){ return [p[0]*CELL + CELL/2, p[1]*CELL + CELL/2]; }
+
+    function pathData(pts, chamfer){
+      const px = pts.map(toPx);
+      if(px.length === 2){
+        return `M ${px[0][0]},${px[0][1]} L ${px[1][0]},${px[1][1]}`;
+      }
+      let d = `M ${px[0][0]},${px[0][1]}`;
+      for(let i=1;i<px.length-1;i++){
+        const [x0,y0] = px[i-1], [x1,y1] = px[i], [x2,y2] = px[i+1];
+        const inX = x1-x0, inY = y1-y0;
+        const inLen = Math.hypot(inX,inY) || 1;
+        const outX = x2-x1, outY = y2-y1;
+        const outLen = Math.hypot(outX,outY) || 1;
+        const ax = x1 - (inX/inLen)*chamfer;
+        const ay = y1 - (inY/inLen)*chamfer;
+        const bx = x1 + (outX/outLen)*chamfer;
+        const by = y1 + (outY/outLen)*chamfer;
+        d += ` L ${ax},${ay} L ${bx},${by}`;
+      }
+      const last = px[px.length-1];
+      d += ` L ${last[0]},${last[1]}`;
+      return d;
+    }
+
+    traces.forEach(pts => {
+      const w = rnd(2, 4.5);
+      const d = pathData(pts, CELL*0.32);
+
+      tracesGroup.appendChild(makeEl('path', {
+        d, fill:'none', stroke:INK, 'stroke-width': w,
+        'stroke-linecap':'round', 'stroke-linejoin':'round'
+      }));
+
+      [pts[0], pts[pts.length-1]].forEach(p=>{
+        const [x,y] = toPx(p);
+        tracesGroup.appendChild(makeEl('circle',{cx:x,cy:y,r:6.5,fill:INK}));
+        tracesGroup.appendChild(makeEl('circle',{cx:x,cy:y,r:3,fill:PAPER}));
+      });
+    });
+
+    svg.appendChild(tracesGroup);
+
+    return { svg, seed: currentSeed };
+  }
+
+  function render(){
+    const { svg, seed } = buildBoard();
+    const host = document.getElementById('svgHost');
+    host.innerHTML = '';
+    host.appendChild(svg);
+    document.getElementById('seedName').textContent = seed.toString(16).toUpperCase();
+  }
+
+  function currentSvgEl(){
+    return document.querySelector('#svgHost svg');
+  }
+
+  function serializeSvg(svgEl){
+    const clone = svgEl.cloneNode(true);
+    clone.setAttribute('xmlns', svgNS);
+    return new XMLSerializer().serializeToString(clone);
+  }
+
+  function downloadBlob(blob, filename){
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 2000);
+  }
+
+  document.getElementById('genBtn').addEventListener('click', render);
+
+  document.getElementById('svgBtn').addEventListener('click', ()=>{
+    const svgEl = currentSvgEl();
+    if(!svgEl) return;
+    const str = serializeSvg(svgEl);
+    const blob = new Blob([str], {type:'image/svg+xml'});
+    downloadBlob(blob, `circuit-etch-${currentSeed.toString(16)}.svg`);
+  });
+
+  document.getElementById('pngBtn').addEventListener('click', ()=>{
+    const svgEl = currentSvgEl();
+    if(!svgEl) return;
+    const str = serializeSvg(svgEl);
+    const blob = new Blob([str], {type:'image/svg+xml'});
+    const url = URL.createObjectURL(blob);
+    const img = new Image();
+    img.onload = function(){
+      const scale = 2;
+      const canvas = document.createElement('canvas');
+      canvas.width = SIZE*scale;
+      canvas.height = SIZE*scale;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = PAPER;
+      ctx.fillRect(0,0,canvas.width,canvas.height);
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      URL.revokeObjectURL(url);
+      canvas.toBlob(pngBlob=>{
+        downloadBlob(pngBlob, `circuit-etch-${currentSeed.toString(16)}.png`);
+      }, 'image/png');
+    };
+    img.src = url;
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>

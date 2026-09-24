@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+<title>Tuner / Spectrum</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --body: #1c1c1e;
+    --panel: #232326;
+    --panel2: #2a2a2e;
+    --border: #3a3a3e;
+    --led-amber: #ffb020;
+    --led-green: #39ff6a;
+    --led-red: #ff3b4a;
+    --text: #e8e8ea;
+    --text-dim: #7a7a80;
+    --digital: 'Share Tech Mono', monospace;
+    --label: 'Rajdhani', sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { overflow-x: hidden; max-width: 100%; }
+  body {
+    background: radial-gradient(ellipse at top, #2a2a2e, #141416 70%);
+    color: var(--text);
+    font-family: var(--label);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+
+  .unit {
+    width: 100%;
+    max-width: 620px;
+    background: linear-gradient(180deg, #2c2c30, #1a1a1c);
+    border-radius: 18px;
+    border: 1px solid #050505;
+    box-shadow: 0 14px 40px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.05);
+    padding: 20px 22px 26px;
+  }
+
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .brand {
+    font-family: var(--label);
+    font-weight: 700;
+    font-size: 18px;
+    letter-spacing: 0.08em;
+    color: var(--text);
+  }
+  .brand span { color: var(--led-amber); }
+
+  .ref-pitch {
+    display: flex; align-items: center; gap: 6px;
+    font-family: var(--digital);
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+  .ref-pitch input {
+    width: 54px;
+    background: #0f0f10;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--led-amber);
+    font-family: var(--digital);
+    font-size: 12px;
+    padding: 4px 6px;
+    text-align: center;
+  }
+
+  .mic-btn {
+    font-family: var(--label);
+    font-weight: 600;
+    font-size: 13px;
+    letter-spacing: 0.04em;
+    background: var(--panel2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 9px 16px;
+    cursor: pointer;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .mic-btn .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--led-red); }
+  .mic-btn.active { background: #2a3a2c; border-color: #3d5a3f; }
+  .mic-btn.active .dot { background: var(--led-green); box-shadow: 0 0 8px var(--led-green); }
+
+  .tabs { display: flex; gap: 6px; background: #0f0f10; border-radius: 8px; padding: 4px; margin-bottom: 16px; }
+  .tab {
+    flex: 1;
+    text-align: center;
+    font-family: var(--label);
+    font-weight: 600;
+    font-size: 13px;
+    letter-spacing: 0.05em;
+    padding: 9px;
+    border-radius: 6px;
+    cursor: pointer;
+    color: var(--text-dim);
+  }
+  .tab.active { background: var(--panel2); color: var(--led-amber); }
+
+  .panel { background: #0f0f10; border-radius: 10px; border: 1px solid var(--border); padding: 16px; }
+  .hidden { display: none !important; }
+
+  /* ── TUNER ── */
+  .note-display {
+    text-align: center;
+    margin-bottom: 6px;
+  }
+  .note-letter {
+    font-family: var(--digital);
+    font-size: clamp(40px, 14vw, 64px);
+    line-height: 1;
+    color: var(--text-dim);
+    transition: color 0.15s;
+  }
+  .note-letter.in-tune { color: var(--led-green); text-shadow: 0 0 18px rgba(57,255,106,0.5); }
+  .note-letter.close { color: var(--led-amber); }
+  .note-octave { font-family: var(--digital); font-size: 20px; color: var(--text-dim); vertical-align: super; }
+  .cents-readout {
+    font-family: var(--digital);
+    font-size: 14px;
+    color: var(--text-dim);
+    margin-top: 2px;
+  }
+  .freq-readout { font-family: var(--digital); font-size: 12px; color: var(--text-dim); margin-top: 2px; }
+
+  /* Canvas wraps: fixed aspect ratio, full width of panel. The canvas fills
+     the wrap via CSS and its backing-store resolution + draw geometry are
+     recomputed in JS from the wrap's actual rendered size, so the gauge and
+     spectrum never overflow the panel on narrow screens. */
+  .gauge-wrap { width: 100%; aspect-ratio: 360 / 200; margin: 10px 0 4px; }
+  .gauge-wrap canvas { width: 100%; height: 100%; display: block; }
+
+  .led-row { display: flex; justify-content: center; gap: 8px; margin-top: 10px; }
+  .led {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: #2a2a2e;
+    border: 1px solid #050505;
+  }
+  .led.on-flat { background: var(--led-red); box-shadow: 0 0 6px var(--led-red); }
+  .led.on-tune { background: var(--led-green); box-shadow: 0 0 8px var(--led-green); }
+  .led.on-sharp { background: var(--led-red); box-shadow: 0 0 6px var(--led-red); }
+
+  .status-line { text-align: center; font-family: var(--digital); font-size: 11px; color: var(--text-dim); margin-top: 12px; }
+
+  /* ── SPECTRUM ── */
+  .spectrum-wrap { width: 100%; aspect-ratio: 600 / 240; }
+  .spectrum-wrap canvas { width: 100%; height: 100%; display: block; }
+
+  .spectrum-readout {
+    display: flex; justify-content: space-between;
+    font-family: var(--digital); font-size: 12px; color: var(--text-dim);
+    margin-top: 10px;
+  }
+  .spectrum-readout b { color: var(--led-amber); font-weight: 400; }
+
+  @media (max-width: 420px) {
+    body { padding: 10px; }
+    .unit { padding: 14px 14px 18px; border-radius: 14px; }
+    header { gap: 8px; }
+    .brand { font-size: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="unit">
+  <header>
+    <div class="brand">PITCH<span>LAB</span></div>
+    <div class="ref-pitch">
+      A4 = <input type="number" id="ref-pitch-input" value="440" min="415" max="466" step="1"> Hz
+    </div>
+    <button class="mic-btn" id="mic-btn"><span class="dot"></span><span id="mic-btn-label">START MIC</span></button>
+  </header>
+
+  <div class="tabs">
+    <div class="tab active" id="tab-tuner" onclick="switchTab('tuner')">TUNER</div>
+    <div class="tab" id="tab-spectrum" onclick="switchTab('spectrum')">SPECTRUM</div>
+  </div>
+
+  <div class="panel" id="panel-tuner">
+    <div class="gauge-wrap"><canvas id="gauge-canvas"></canvas></div>
+    <div class="note-display">
+      <span class="note-letter" id="note-letter">—</span><span class="note-octave" id="note-octave"></span>
+      <div class="cents-readout" id="cents-readout">— cents</div>
+      <div class="freq-readout" id="freq-readout">— Hz</div>
+    </div>
+    <div class="led-row">
+      <div class="led" id="led-flat"></div>
+      <div class="led" id="led-tune"></div>
+      <div class="led" id="led-sharp"></div>
+    </div>
+    <div class="status-line" id="tuner-status">Start the mic and play a note</div>
+  </div>
+
+  <div class="panel hidden" id="panel-spectrum">
+    <div class="spectrum-wrap"><canvas id="spectrum-canvas"></canvas></div>
+    <div class="spectrum-readout">
+      <span>PEAK <b id="peak-freq">— Hz</b></span>
+      <span>NOTE <b id="peak-note">—</b></span>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── AUDIO SETUP ─────────────────────────────────────────────────────────
+// echoCancellation/autoGainControl/noiseSuppression are turned off deliberately:
+// the browser's speech-optimized audio processing distorts pitch and spectral
+// content, which wrecks both the autocorrelation pitch detector and the FFT.
+let audioCtx = null, analyser = null, micStream = null, timeBuf = null, freqBuf = null;
+let micActive = false;
+let activeTab = 'tuner';
+let refPitch = 440;
+
+document.getElementById('ref-pitch-input').addEventListener('change', e => {
+  const v = parseFloat(e.target.value);
+  refPitch = (v && v > 300 && v < 500) ? v : 440;
+});
+
+document.getElementById('mic-btn').addEventListener('click', toggleMic);
+
+async function toggleMic() {
+  if (micActive) { stopMic(); return; }
+  try {
+    micStream = await navigator.mediaDevices.getUserMedia({
+      audio: { echoCancellation: false, autoGainControl: false, noiseSuppression: false }
+    });
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    await audioCtx.resume(); // required on iOS Safari — must happen inside the user gesture
+    const source = audioCtx.createMediaStreamSource(micStream);
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 4096;
+    analyser.minDecibels = -100;
+    analyser.maxDecibels = -10;
+    analyser.smoothingTimeConstant = 0.8;
+    source.connect(analyser); // deliberately NOT connected to destination — no mic monitoring/feedback
+
+    timeBuf = new Float32Array(analyser.fftSize);
+    freqBuf = new Uint8Array(analyser.frequencyBinCount);
+
+    micActive = true;
+    document.getElementById('mic-btn').classList.add('active');
+    document.getElementById('mic-btn-label').textContent = 'STOP MIC';
+    document.getElementById('tuner-status').textContent = 'Listening…';
+    requestAnimationFrame(loop);
+  } catch (err) {
+    document.getElementById('tuner-status').textContent = 'Mic access denied or unavailable';
+  }
+}
+
+function stopMic() {
+  micActive = false;
+  if (micStream) micStream.getTracks().forEach(t => t.stop());
+  if (audioCtx) audioCtx.close();
+  document.getElementById('mic-btn').classList.remove('active');
+  document.getElementById('mic-btn-label').textContent = 'START MIC';
+  document.getElementById('tuner-status').textContent = 'Mic stopped';
+  resetTunerDisplay();
+}
+
+// ─── PITCH DETECTION (autocorrelation, ACF2+ style) ─────────────────────
+function autoCorrelate(buf, sampleRate) {
+  const SIZE = buf.length;
+  let rms = 0;
+  for (let i = 0; i < SIZE; i++) rms += buf[i] * buf[i];
+  rms = Math.sqrt(rms / SIZE);
+  if (rms < 0.01) return -1; // too quiet — treat as silence
+
+  let r1 = 0, r2 = SIZE - 1;
+  const thresh = 0.2;
+  for (let i = 0; i < SIZE / 2; i++) { if (Math.abs(buf[i]) >= thresh) { r1 = i; break; } }
+  for (let i = 1; i < SIZE / 2; i++) { if (Math.abs(buf[SIZE - i]) >= thresh) { r2 = SIZE - i; break; } }
+  const trimmed = buf.slice(r1, r2);
+  const n = trimmed.length;
+  if (n < 8) return -1;
+
+  const c = new Float32Array(n);
+  for (let lag = 0; lag < n; lag++) {
+    let sum = 0;
+    for (let i = 0; i < n - lag; i++) sum += trimmed[i] * trimmed[i + lag];
+    c[lag] = sum;
+  }
+
+  let d = 0;
+  while (d < n - 1 && c[d] > c[d + 1]) d++;
+  let maxVal = -1, maxPos = -1;
+  for (let i = d; i < n; i++) { if (c[i] > maxVal) { maxVal = c[i]; maxPos = i; } }
+  if (maxPos <= 0) return -1;
+
+  let T0 = maxPos;
+  const x1 = c[T0 - 1] || c[T0], x2 = c[T0], x3 = c[T0 + 1] || c[T0];
+  const a = (x1 + x3 - 2 * x2) / 2;
+  const b = (x3 - x1) / 2;
+  if (a) T0 = T0 - b / (2 * a);
+
+  return sampleRate / T0;
+}
+
+const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+function noteNumberFromPitch(freq, ref) { return 12 * Math.log2(freq / ref) + 69; }
+function freqFromNoteNumber(note, ref) { return ref * Math.pow(2, (note - 69) / 12); }
+function noteInfo(freq, ref) {
+  const noteNum = Math.round(noteNumberFromPitch(freq, ref));
+  const cents = Math.round(1200 * Math.log2(freq / freqFromNoteNumber(noteNum, ref)));
+  const name = NOTE_NAMES[((noteNum % 12) + 12) % 12];
+  const octave = Math.floor(noteNum / 12) - 1;
+  return { name, octave, cents };
+}
+
+// ─── RESPONSIVE CANVAS SIZING ────────────────────────────────────────────
+// Both canvases live in an aspect-ratio-locked wrap div. On every draw we
+// check the wrap's actual rendered CSS size and, if it changed (resize,
+// rotation, or first layout), resize the canvas backing store to match at
+// full device pixel ratio and reset the transform. Draw geometry below is
+// computed from the *current* CSS size each time, not a hardcoded constant,
+// so nothing overflows the panel on a narrow phone.
+function fitCanvas(canvas, ctx, cache) {
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  if (w === 0 || h === 0) return cache;
+  if (w === cache.W && h === cache.H) return cache;
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = Math.round(w * dpr);
+  canvas.height = Math.round(h * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  return { W: w, H: h };
+}
+
+// ─── TUNER RENDER ────────────────────────────────────────────────────────
+const gaugeCanvasEl = document.getElementById('gauge-canvas');
+const gaugeCtx = gaugeCanvasEl.getContext('2d');
+let gaugeDims = { W: 0, H: 0 };
+let smoothedCents = 0;
+
+function resetTunerDisplay() {
+  document.getElementById('note-letter').textContent = '—';
+  document.getElementById('note-letter').className = 'note-letter';
+  document.getElementById('note-octave').textContent = '';
+  document.getElementById('cents-readout').textContent = '— cents';
+  document.getElementById('freq-readout').textContent = '— Hz';
+  ['led-flat', 'led-tune', 'led-sharp'].forEach(id => document.getElementById(id).className = 'led');
+  drawGauge(0, false);
+}
+
+function drawGauge(cents, active) {
+  gaugeDims = fitCanvas(gaugeCanvasEl, gaugeCtx, gaugeDims);
+  const ctx = gaugeCtx, W = gaugeDims.W, H = gaugeDims.H;
+  if (!W || !H) return;
+  const cx = W / 2, cy = H * 0.95, r = H * 0.75;
+  ctx.clearRect(0, 0, W, H);
+
+  const zones = [
+    { from: -50, to: -25, color: '#5a2530' },
+    { from: -25, to: -5, color: '#5a4520' },
+    { from: -5, to: 5, color: active && Math.abs(cents) <= 5 ? '#1f5a30' : '#1f3a26' },
+    { from: 5, to: 25, color: '#5a4520' },
+    { from: 25, to: 50, color: '#5a2530' }
+  ];
+  zones.forEach(z => {
+    const a0 = Math.PI - ((z.from + 50) / 100) * Math.PI;
+    const a1 = Math.PI - ((z.to + 50) / 100) * Math.PI;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, a0, a1, true);
+    ctx.lineWidth = r * 0.1467;
+    ctx.strokeStyle = z.color;
+    ctx.stroke();
+  });
+
+  ctx.strokeStyle = '#55555a';
+  ctx.lineWidth = Math.max(1, r * 0.0133);
+  for (let c = -50; c <= 50; c += 10) {
+    const a = Math.PI - ((c + 50) / 100) * Math.PI;
+    const x1 = cx + Math.cos(a) * (r * 0.9067), y1 = cy - Math.sin(a) * (r * 0.9067);
+    const x2 = cx + Math.cos(a) * (r * 1.0133), y2 = cy - Math.sin(a) * (r * 1.0133);
+    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+  }
+
+  const clamped = Math.max(-50, Math.min(50, cents));
+  const a = Math.PI - ((clamped + 50) / 100) * Math.PI;
+  const nx = cx + Math.cos(a) * (r * 0.8667), ny = cy - Math.sin(a) * (r * 0.8667);
+  ctx.strokeStyle = active ? (Math.abs(cents) <= 5 ? '#39ff6a' : '#ffb020') : '#4a4a4e';
+  ctx.lineWidth = Math.max(1.5, r * 0.02);
+  ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(nx, ny); ctx.stroke();
+  ctx.fillStyle = ctx.strokeStyle;
+  ctx.beginPath(); ctx.arc(cx, cy, Math.max(3, r * 0.04), 0, Math.PI * 2); ctx.fill();
+}
+
+function updateTuner(freq) {
+  if (freq === -1 || !freq) {
+    document.getElementById('tuner-status').textContent = 'Listening…';
+    drawGauge(smoothedCents * 0.9, false);
+    ['led-flat', 'led-tune', 'led-sharp'].forEach(id => document.getElementById(id).className = 'led');
+    return;
+  }
+  const info = noteInfo(freq, refPitch);
+  smoothedCents += (info.cents - smoothedCents) * 0.35;
+
+  const letterEl = document.getElementById('note-letter');
+  letterEl.textContent = info.name;
+  letterEl.className = 'note-letter ' + (Math.abs(info.cents) <= 5 ? 'in-tune' : (Math.abs(info.cents) <= 20 ? 'close' : ''));
+  document.getElementById('note-octave').textContent = info.octave;
+  document.getElementById('cents-readout').textContent = (info.cents > 0 ? '+' : '') + info.cents + ' cents';
+  document.getElementById('freq-readout').textContent = freq.toFixed(1) + ' Hz';
+  document.getElementById('tuner-status').textContent = Math.abs(info.cents) <= 5 ? 'In tune' : (info.cents < 0 ? 'Flat — tune up' : 'Sharp — tune down');
+
+  document.getElementById('led-flat').className = 'led' + (info.cents < -5 ? ' on-flat' : '');
+  document.getElementById('led-tune').className = 'led' + (Math.abs(info.cents) <= 5 ? ' on-tune' : '');
+  document.getElementById('led-sharp').className = 'led' + (info.cents > 5 ? ' on-sharp' : '');
+
+  drawGauge(smoothedCents, true);
+}
+
+// ─── SPECTRUM RENDER ─────────────────────────────────────────────────────
+const specCanvasEl = document.getElementById('spectrum-canvas');
+const specCtx = specCanvasEl.getContext('2d');
+let specDims = { W: 0, H: 0 };
+const FREQ_MIN = 30, FREQ_MAX = 12000;
+let peakHold = null;
+let peakHoldWidth = 0;
+
+function freqToX(f, w) {
+  const lf = Math.log10(f), lmin = Math.log10(FREQ_MIN), lmax = Math.log10(FREQ_MAX);
+  return ((lf - lmin) / (lmax - lmin)) * w;
+}
+
+function drawSpectrum() {
+  specDims = fitCanvas(specCanvasEl, specCtx, specDims);
+  const w = specDims.W, h = specDims.H;
+  if (!w || !h) return;
+  specCtx.fillStyle = '#0f0f10';
+  specCtx.fillRect(0, 0, w, h);
+
+  const wInt = Math.round(w);
+  if (!peakHold || peakHoldWidth !== wInt) { peakHold = new Float32Array(wInt).fill(0); peakHoldWidth = wInt; }
+
+  const sampleRate = audioCtx ? audioCtx.sampleRate : 44100;
+  const nyquist = sampleRate / 2;
+  const bins = freqBuf ? freqBuf.length : 0;
+
+  specCtx.strokeStyle = '#26262a';
+  specCtx.fillStyle = '#5a5a60';
+  specCtx.font = '10px "Share Tech Mono", monospace';
+  [50, 100, 200, 500, 1000, 2000, 5000, 10000].forEach(f => {
+    const x = freqToX(f, w);
+    specCtx.beginPath(); specCtx.moveTo(x, 0); specCtx.lineTo(x, h - 16); specCtx.stroke();
+    const label = f >= 1000 ? (f / 1000) + 'k' : f;
+    specCtx.fillText(label, x + 3, h - 4);
+  });
+
+  if (micActive && analyser) {
+    analyser.getByteFrequencyData(freqBuf);
+    let bestBin = 0, bestVal = 0;
+
+    for (let x = 0; x < wInt; x++) {
+      const lf = Math.log10(FREQ_MIN) + (x / w) * (Math.log10(FREQ_MAX) - Math.log10(FREQ_MIN));
+      const f = Math.pow(10, lf);
+      const binIndex = Math.round((f / nyquist) * bins);
+      const val = (binIndex >= 0 && binIndex < bins) ? freqBuf[binIndex] : 0;
+      if (val > bestVal) { bestVal = val; bestBin = binIndex; }
+
+      const barH = (val / 255) * (h - 16);
+      const grad = specCtx.createLinearGradient(0, h - 16 - barH, 0, h - 16);
+      grad.addColorStop(0, '#ffb020');
+      grad.addColorStop(1, '#7a4a10');
+      specCtx.fillStyle = grad;
+      specCtx.fillRect(x, h - 16 - barH, 1, barH);
+
+      if (barH > peakHold[x]) peakHold[x] = barH;
+      else peakHold[x] = Math.max(0, peakHold[x] - 0.6);
+      specCtx.fillStyle = '#ffe98a';
+      specCtx.fillRect(x, h - 16 - peakHold[x], 1, 2);
+    }
+
+    const peakFreq = (bestBin / bins) * nyquist;
+    if (bestVal > 40) {
+      document.getElementById('peak-freq').textContent = peakFreq.toFixed(0) + ' Hz';
+      const info = noteInfo(peakFreq, refPitch);
+      document.getElementById('peak-note').textContent = info.name + info.octave + ' (' + (info.cents > 0 ? '+' : '') + info.cents + 'c)';
+    } else {
+      document.getElementById('peak-freq').textContent = '— Hz';
+      document.getElementById('peak-note').textContent = '—';
+    }
+  }
+}
+
+// ─── MAIN LOOP ───────────────────────────────────────────────────────────
+function loop() {
+  if (!micActive) return;
+  if (activeTab === 'tuner') {
+    analyser.getFloatTimeDomainData(timeBuf);
+    const freq = autoCorrelate(timeBuf, audioCtx.sampleRate);
+    updateTuner(freq);
+  } else {
+    drawSpectrum();
+  }
+  requestAnimationFrame(loop);
+}
+
+// ─── TABS ────────────────────────────────────────────────────────────────
+function switchTab(tab) {
+  activeTab = tab;
+  document.getElementById('tab-tuner').classList.toggle('active', tab === 'tuner');
+  document.getElementById('tab-spectrum').classList.toggle('active', tab === 'spectrum');
+  document.getElementById('panel-tuner').classList.toggle('hidden', tab !== 'tuner');
+  document.getElementById('panel-spectrum').classList.toggle('hidden', tab !== 'spectrum');
+  // panel just became visible, so its canvas had clientWidth 0 until now — force a refit
+  if (tab === 'tuner') { gaugeDims = { W: 0, H: 0 }; drawGauge(smoothedCents, micActive); }
+  else { specDims = { W: 0, H: 0 }; drawSpectrum(); }
+}
+
+// refit + redraw on resize/rotation even while the mic is off (the render
+// loop above only runs while listening)
+let resizeTimer = null;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => {
+    if (!document.getElementById('panel-tuner').classList.contains('hidden')) {
+      gaugeDims = { W: 0, H: 0 }; drawGauge(smoothedCents, micActive);
+    }
+    if (!document.getElementById('panel-spectrum').classList.contains('hidden')) {
+      specDims = { W: 0, H: 0 }; drawSpectrum();
+    }
+  }, 100);
+});
+
+drawGauge(0, false);
+</script>
+</body>
+</html>

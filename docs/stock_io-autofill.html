@@ -1,3 +1,4 @@
+<!-- STOCK.IO — v5 — fixed labor-field/print button race that could blank the printout -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -838,7 +839,20 @@
      hides everything else on the page so only the
      invoice content ends up on paper.
      ─────────────────────────────────────────────── */
-  #print-area { display: none; }
+  #print-area { display: none; position: relative; }
+  /* Watermark: a fresh random PCB trace board (same generator as the
+     standalone Circuit Etch app) drawn full-bleed behind every printed work
+     order. Regenerated on every print — never seeded/stored. Opacity is the
+     one knob meant to be tuned by eye; everything else sits on top at z-index 1. */
+  .print-watermark {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    opacity: 0.04;
+    pointer-events: none;
+  }
+  .print-watermark svg { width: 100%; height: 100%; display: block; }
+  .print-content { position: relative; z-index: 1; }
   .inv-header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #000; padding-bottom: 14px; margin-bottom: 18px; }
   .inv-title { font-family: var(--mono); font-size: 22px; font-weight: 600; letter-spacing: 0.04em; }
   .inv-meta { text-align: right; font-size: 12px; }
@@ -857,16 +871,25 @@
   .inv-footer { margin-top: 30px; font-size: 11px; color: #555; text-align: center; }
 
   @media print {
+    @page { size: A4 portrait; margin: 0; }
     body * { visibility: hidden; }
     #print-area, #print-area * { visibility: visible; }
     #print-area {
       display: block;
       position: absolute;
       top: 0; left: 0;
-      width: 100%;
+      width: 100%;   /* not a fixed 210mm: if the browser's own print-margin
+                         setting still reserves space outside our @page rule,
+                         a hardcoded 210mm overflows the real printable width
+                         and gets shrunk-to-fit, which is what left the page
+                         looking narrow with blank space around it */
+      min-height: 100vh; /* fills a full page height even when the invoice
+                             content itself is short, so the watermark
+                             (inset:0 on this element) still covers the
+                             whole sheet */
       color: #000;
       background: #fff;
-      padding: 20px;
+      padding: 15mm;
     }
   }
 
@@ -2325,15 +2348,39 @@ function getCustomerHistory(wo) {
     .sort((a, b) => b.number - a.number);
 }
 
+// Builds just the cost-summary stat grid for a work order — pulled out into
+// its own function so a field that only affects these numbers (Labor Cost)
+// can refresh THIS block alone instead of rebuilding the whole detail panel.
+// Rebuilding the whole panel on every keystroke/blur was destroying and
+// recreating the action buttons (Print, Delete, etc.) — if that happened at
+// the exact moment a button was being clicked (editing Labor Cost, then
+// immediately clicking Print is a completely normal flow), the click landed
+// on a button that no longer existed and silently did nothing. See saveWoLabor().
+function buildWoCostSummaryHtml(wo) {
+  const { subtotal, tax, total, retentionRate, retention, amountDue, paid, cashPaid, transferPaid, balance, estIrsDue } = computeWoTotals(wo);
+  const isBusiness = wo.clientType === 'business';
+  return `
+      <div class="stat"><div class="stat-value">€${subtotal.toFixed(2)}</div><div class="stat-label">Subtotal</div></div>
+      ${wo.invoiced && !wo.warranty ? `<div class="stat"><div class="stat-value">€${tax.toFixed(2)}</div><div class="stat-label">VAT Due (23%)</div></div>` : ''}
+      <div class="stat"><div class="stat-value">€${total.toFixed(2)}</div><div class="stat-label">Total Cost</div></div>
+      ${isBusiness ? `<div class="stat"><div class="stat-value">€${retention.toFixed(2)}</div><div class="stat-label">Retention (${retentionRate}%)</div></div>
+      <div class="stat"><div class="stat-value">€${amountDue.toFixed(2)}</div><div class="stat-label">Due From Client</div></div>` : ''}
+      ${wo.invoiced ? `<div class="stat"><div class="stat-value">€${estIrsDue.toFixed(2)}</div><div class="stat-label">Est. IRS on Profit (${estIrsRate}%)</div></div>` : ''}
+      <div class="stat"><div class="stat-value">€${paid.toFixed(2)}</div><div class="stat-label">Paid</div></div>
+      <div class="stat"><div class="stat-value ${balance > 0 ? 'due' : 'settled'}">€${Math.max(0,balance).toFixed(2)}</div><div class="stat-label">Balance Due</div></div>
+      <div class="stat"><div class="stat-value" style="font-size:14px;">€${cashPaid.toFixed(2)} cash / €${transferPaid.toFixed(2)} transfer</div><div class="stat-label">Payment Split</div></div>
+  `;
+}
+
 function selectWo(id) {
   selectedWoId = id;
   const wo = workOrders.find(w => w.id === id);
   if (!wo) return;
   renderWoList();
 
-  const { partsTotal, miscTotal, subtotal, tax, total, retentionRate, retention, amountDue, paid, cashPaid, transferPaid, balance, presumedProfit, estIrsDue } = computeWoTotals(wo);
-  const isBusiness = wo.clientType === 'business';
   const custHistory = getCustomerHistory(wo);
+  const isBusiness = wo.clientType === 'business';
+  const { partsTotal, miscTotal } = computeWoTotals(wo);
 
   document.getElementById('wo-detail').innerHTML = `
     <div class="detail-header">
@@ -2386,20 +2433,11 @@ function selectWo(id) {
     </div>
     ` : ''}
 
-    <div class="cost-summary">
-      <div class="stat"><div class="stat-value">€${subtotal.toFixed(2)}</div><div class="stat-label">Subtotal</div></div>
-      ${wo.invoiced && !wo.warranty ? `<div class="stat"><div class="stat-value">€${tax.toFixed(2)}</div><div class="stat-label">VAT Due (23%)</div></div>` : ''}
-      <div class="stat"><div class="stat-value">€${total.toFixed(2)}</div><div class="stat-label">Total Cost</div></div>
-      ${isBusiness ? `<div class="stat"><div class="stat-value">€${retention.toFixed(2)}</div><div class="stat-label">Retention (${retentionRate}%)</div></div>
-      <div class="stat"><div class="stat-value">€${amountDue.toFixed(2)}</div><div class="stat-label">Due From Client</div></div>` : ''}
-      ${wo.invoiced ? `<div class="stat"><div class="stat-value">€${estIrsDue.toFixed(2)}</div><div class="stat-label">Est. IRS on Profit (${estIrsRate}%)</div></div>` : ''}
-      <div class="stat"><div class="stat-value">€${paid.toFixed(2)}</div><div class="stat-label">Paid</div></div>
-      <div class="stat"><div class="stat-value ${balance > 0 ? 'due' : 'settled'}">€${Math.max(0,balance).toFixed(2)}</div><div class="stat-label">Balance Due</div></div>
-      <div class="stat"><div class="stat-value" style="font-size:14px;">€${cashPaid.toFixed(2)} cash / €${transferPaid.toFixed(2)} transfer</div><div class="stat-label">Payment Split</div></div>
-    </div>
+    <div class="cost-summary" id="wo-cost-summary">${buildWoCostSummaryHtml(wo)}</div>
 
     <div>
       <div class="section-title">Customer & Unit</div>
+
       <div class="fields-grid">
         <div class="field">
           <label>Customer Name</label>
@@ -2517,6 +2555,103 @@ function selectWo(id) {
   `;
 }
 
+// ─── PRINT WATERMARK ─────────────────────────────────────────────────────
+// Generates a fresh random circuit-trace board every time a work order is
+// printed — same random-walk trace algorithm as the standalone Circuit Etch
+// app, stripped down (no border, crop marks, or dot grid — just traces and
+// pads) and sized to an A4 page. A new board every print, never reused or
+// seeded to the work order.
+function generatePcbWatermarkSvg() {
+  const svgNS = 'http://www.w3.org/2000/svg';
+  const CELL = 26;
+  const W = 794, H = 1123; // A4 @ 96dpi
+  const COLS = Math.floor(W / CELL);
+  const ROWS = Math.floor(H / CELL);
+  const INK = '#000000';
+
+  const rnd = (a, b) => a + Math.random() * (b - a);
+  const ri = (a, b) => Math.floor(rnd(a, b + 1));
+  const choice = arr => arr[Math.floor(Math.random() * arr.length)];
+  const key = (x, y) => x + ',' + y;
+  const makeEl = (tag, attrs) => {
+    const el = document.createElementNS(svgNS, tag);
+    for (const k in attrs) el.setAttribute(k, attrs[k]);
+    return el;
+  };
+
+  const svg = makeEl('svg', { viewBox: `0 0 ${W} ${H}`, xmlns: svgNS, preserveAspectRatio: 'xMidYMid slice' });
+  const tracesGroup = makeEl('g', {});
+  const visited = new Set();
+  const dirs = [[1,0],[-1,0],[0,1],[0,-1]];
+  const traceCount = ri(50, 72);
+  const freeCell = (x, y) => x >= 1 && y >= 1 && x < COLS - 1 && y < ROWS - 1;
+
+  const traces = [];
+  for (let t = 0; t < traceCount; t++) {
+    let sx, sy, attempts = 0;
+    do { sx = ri(1, COLS - 2); sy = ri(1, ROWS - 2); attempts++; }
+    while (visited.has(key(sx, sy)) && attempts < 60);
+    if (visited.has(key(sx, sy))) continue;
+
+    const pts = [[sx, sy]];
+    visited.add(key(sx, sy));
+    let dir = choice(dirs);
+    const steps = ri(5, 16);
+
+    for (let s = 0; s < steps; s++) {
+      if (Math.random() > 0.7) {
+        const opts = dirs.filter(d => !(d[0] === -dir[0] && d[1] === -dir[1]));
+        dir = choice(opts);
+      }
+      let [cx, cy] = pts[pts.length - 1];
+      let nx = cx + dir[0], ny = cy + dir[1];
+      if (!freeCell(nx, ny) || visited.has(key(nx, ny))) {
+        let placed = false;
+        for (const d of dirs) {
+          const tx = cx + d[0], ty = cy + d[1];
+          if (freeCell(tx, ty) && !visited.has(key(tx, ty))) { dir = d; nx = tx; ny = ty; placed = true; break; }
+        }
+        if (!placed) break;
+      }
+      pts.push([nx, ny]);
+      visited.add(key(nx, ny));
+    }
+    if (pts.length >= 2) traces.push(pts);
+  }
+
+  const toPx = p => [p[0] * CELL + CELL / 2, p[1] * CELL + CELL / 2];
+  function pathData(pts, chamfer) {
+    const px = pts.map(toPx);
+    if (px.length === 2) return `M ${px[0][0]},${px[0][1]} L ${px[1][0]},${px[1][1]}`;
+    let d = `M ${px[0][0]},${px[0][1]}`;
+    for (let i = 1; i < px.length - 1; i++) {
+      const [x0, y0] = px[i-1], [x1, y1] = px[i], [x2, y2] = px[i+1];
+      const inX = x1-x0, inY = y1-y0, inLen = Math.hypot(inX, inY) || 1;
+      const outX = x2-x1, outY = y2-y1, outLen = Math.hypot(outX, outY) || 1;
+      const ax = x1 - (inX/inLen)*chamfer, ay = y1 - (inY/inLen)*chamfer;
+      const bx = x1 + (outX/outLen)*chamfer, by = y1 + (outY/outLen)*chamfer;
+      d += ` L ${ax},${ay} L ${bx},${by}`;
+    }
+    const last = px[px.length - 1];
+    d += ` L ${last[0]},${last[1]}`;
+    return d;
+  }
+
+  traces.forEach(pts => {
+    const w = rnd(2, 4.5);
+    const d = pathData(pts, CELL * 0.32);
+    tracesGroup.appendChild(makeEl('path', { d, fill: 'none', stroke: INK, 'stroke-width': w, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }));
+    [pts[0], pts[pts.length - 1]].forEach(p => {
+      const [x, y] = toPx(p);
+      tracesGroup.appendChild(makeEl('circle', { cx: x, cy: y, r: 6.5, fill: INK }));
+      tracesGroup.appendChild(makeEl('circle', { cx: x, cy: y, r: 3, fill: '#ffffff' }));
+    });
+  });
+
+  svg.appendChild(tracesGroup);
+  return new XMLSerializer().serializeToString(svg);
+}
+
 // Builds a clean invoice layout for a work order into the hidden #print-area,
 // then triggers the browser's print dialog. @media print rules (see <style>)
 // hide the rest of the app so only the invoice ends up on paper / as PDF.
@@ -2555,54 +2690,57 @@ function printWo(id) {
     `).join('') : '<div class="inv-row"><span>No payments recorded</span><span></span></div>';
 
   document.getElementById('print-area').innerHTML = `
-    <div class="inv-header">
-      <div class="inv-title">STOCK.io — Work Order</div>
-      <div class="inv-meta">
-        <div class="inv-number">${woNumberLabel(wo.number)}</div>
-        <div>${new Date(wo.createdAt).toLocaleDateString([], { month:'long', day:'numeric', year:'numeric' })}</div>
-        <div>Status: ${statusLabel(wo.status)}</div>
+    <div class="print-watermark">${generatePcbWatermarkSvg()}</div>
+    <div class="print-content">
+      <div class="inv-header">
+        <div class="inv-title">STOCK.io — Work Order</div>
+        <div class="inv-meta">
+          <div class="inv-number">${woNumberLabel(wo.number)}</div>
+          <div>${new Date(wo.createdAt).toLocaleDateString([], { month:'long', day:'numeric', year:'numeric' })}</div>
+          <div>Status: ${statusLabel(wo.status)}</div>
+        </div>
       </div>
-    </div>
 
-    <div class="inv-section">
-      <div class="inv-section-title">Customer</div>
-      <div class="inv-row"><span>${wo.customer.name}</span><span>${wo.customer.phone||''}</span></div>
-    </div>
+      <div class="inv-section">
+        <div class="inv-section-title">Customer</div>
+        <div class="inv-row"><span>${wo.customer.name}</span><span>${wo.customer.phone||''}</span></div>
+      </div>
 
-    <div class="inv-section">
-      <div class="inv-section-title">Unit</div>
-      <div class="inv-row"><span>${[wo.unit.make, wo.unit.model].filter(Boolean).join(' ') || '—'}</span><span>${wo.unit.serial ? 'SN ' + wo.unit.serial : ''}</span></div>
-      ${wo.problem ? `<div class="inv-row"><span>${wo.problem}</span><span></span></div>` : ''}
-    </div>
+      <div class="inv-section">
+        <div class="inv-section-title">Unit</div>
+        <div class="inv-row"><span>${[wo.unit.make, wo.unit.model].filter(Boolean).join(' ') || '—'}</span><span>${wo.unit.serial ? 'SN ' + wo.unit.serial : ''}</span></div>
+        ${wo.problem ? `<div class="inv-row"><span>${wo.problem}</span><span></span></div>` : ''}
+      </div>
 
-    <div class="inv-section">
-      <div class="inv-section-title">Items & Labor</div>
-      <table class="inv-table">
-        <thead><tr><th>Description</th><th class="num">Qty</th><th class="num">Unit</th><th class="num">Total</th></tr></thead>
-        <tbody>${rows || '<tr><td colspan="4">No items</td></tr>'}</tbody>
-      </table>
-    </div>
+      <div class="inv-section">
+        <div class="inv-section-title">Items & Labor</div>
+        <table class="inv-table">
+          <thead><tr><th>Description</th><th class="num">Qty</th><th class="num">Unit</th><th class="num">Total</th></tr></thead>
+          <tbody>${rows || '<tr><td colspan="4">No items</td></tr>'}</tbody>
+        </table>
+      </div>
 
-    <div class="inv-section">
-      <div class="inv-section-title">Payments</div>
-      ${paymentRows}
-    </div>
+      <div class="inv-section">
+        <div class="inv-section-title">Payments</div>
+        ${paymentRows}
+      </div>
 
-    <div class="inv-totals">
-      <div class="inv-row"><span>Parts</span><span>€${partsTotal.toFixed(2)}</span></div>
-      <div class="inv-row"><span>Other Items</span><span>€${miscTotal.toFixed(2)}</span></div>
-      <div class="inv-row"><span>Labor</span><span>€${(wo.laborCost||0).toFixed(2)}</span></div>
-      <div class="inv-row"><span>Subtotal</span><span>€${subtotal.toFixed(2)}</span></div>
-      ${wo.invoiced && !wo.warranty ? `<div class="inv-row"><span>Tax (23%)</span><span>€${tax.toFixed(2)}</span></div>` : ''}
-      <div class="inv-row grand"><span>Total</span><span>€${total.toFixed(2)}</span></div>
-      ${isBusiness ? `<div class="inv-row"><span>Retenção na Fonte (${retentionRate}%)</span><span>−€${retention.toFixed(2)}</span></div>
-      <div class="inv-row"><span>Net Due</span><span>€${amountDue.toFixed(2)}</span></div>` : ''}
-      <div class="inv-row"><span>Paid (cash)</span><span>€${cashPaid.toFixed(2)}</span></div>
-      <div class="inv-row"><span>Paid (transfer)</span><span>€${transferPaid.toFixed(2)}</span></div>
-      <div class="inv-row ${balance > 0 ? 'due' : ''}"><span>${balance > 0 ? 'Balance Due' : 'Paid in Full'}</span><span>€${Math.max(0,balance).toFixed(2)}</span></div>
-    </div>
+      <div class="inv-totals">
+        <div class="inv-row"><span>Parts</span><span>€${partsTotal.toFixed(2)}</span></div>
+        <div class="inv-row"><span>Other Items</span><span>€${miscTotal.toFixed(2)}</span></div>
+        <div class="inv-row"><span>Labor</span><span>€${(wo.laborCost||0).toFixed(2)}</span></div>
+        <div class="inv-row"><span>Subtotal</span><span>€${subtotal.toFixed(2)}</span></div>
+        ${wo.invoiced && !wo.warranty ? `<div class="inv-row"><span>Tax (23%)</span><span>€${tax.toFixed(2)}</span></div>` : ''}
+        <div class="inv-row grand"><span>Total</span><span>€${total.toFixed(2)}</span></div>
+        ${isBusiness ? `<div class="inv-row"><span>Retenção na Fonte (${retentionRate}%)</span><span>−€${retention.toFixed(2)}</span></div>
+        <div class="inv-row"><span>Net Due</span><span>€${amountDue.toFixed(2)}</span></div>` : ''}
+        <div class="inv-row"><span>Paid (cash)</span><span>€${cashPaid.toFixed(2)}</span></div>
+        <div class="inv-row"><span>Paid (transfer)</span><span>€${transferPaid.toFixed(2)}</span></div>
+        <div class="inv-row ${balance > 0 ? 'due' : ''}"><span>${balance > 0 ? 'Balance Due' : 'Paid in Full'}</span><span>€${Math.max(0,balance).toFixed(2)}</span></div>
+      </div>
 
-    <div class="inv-footer">Not valid invoice.</div>
+      <div class="inv-footer">Not valid invoice.</div>
+    </div>
   `;
 
   window.print();
@@ -2680,7 +2818,13 @@ function saveWoLabor(id, value) {
   wo.laborCost = Math.max(0, parseFloat(value) || 0);
   woBackup();
   renderWoList();
-  selectWo(id);
+  // Update only the totals box — NOT selectWo(id)/full panel rebuild. This
+  // field's onchange fires on blur, which happens the instant you click any
+  // other button in this panel (e.g. Print); rebuilding the whole panel at
+  // that exact moment used to destroy and recreate the button you were
+  // clicking out from under your cursor, so the click silently did nothing.
+  const summaryEl = document.getElementById('wo-cost-summary');
+  if (summaryEl) summaryEl.innerHTML = buildWoCostSummaryHtml(wo);
 }
 
 // Adding a part looks it up in the shared `parts` stock array, deducts the
