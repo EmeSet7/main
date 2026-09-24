@@ -848,7 +848,7 @@
     position: absolute;
     inset: 0;
     z-index: 0;
-    opacity: 0.04;
+    opacity: 0.05;
     pointer-events: none;
   }
   .print-watermark svg { width: 100%; height: 100%; display: block; }
@@ -876,14 +876,14 @@
     #print-area, #print-area * { visibility: visible; }
     #print-area {
       display: block;
-      position: absolute;
+      position: fixed;
       top: 0; left: 0;
       width: 100%;   /* not a fixed 210mm: if the browser's own print-margin
                          setting still reserves space outside our @page rule,
                          a hardcoded 210mm overflows the real printable width
                          and gets shrunk-to-fit, which is what left the page
                          looking narrow with blank space around it */
-      min-height: 100vh; /* fills a full page height even when the invoice
+      min-height: 150vh; /* fills a full page height even when the invoice
                              content itself is short, so the watermark
                              (inset:0 on this element) still covers the
                              whole sheet */
