@@ -2693,7 +2693,7 @@ function printWo(id) {
     <div class="print-watermark">${generatePcbWatermarkSvg()}</div>
     <div class="print-content">
       <div class="inv-header">
-        <div class="inv-title">STOCK.io — Work Order</div>
+        <div class="inv-title">JPservice — Work Order</div>
         <div class="inv-meta">
           <div class="inv-number">${woNumberLabel(wo.number)}</div>
           <div>${new Date(wo.createdAt).toLocaleDateString([], { month:'long', day:'numeric', year:'numeric' })}</div>
@@ -2739,7 +2739,7 @@ function printWo(id) {
         <div class="inv-row ${balance > 0 ? 'due' : ''}"><span>${balance > 0 ? 'Balance Due' : 'Paid in Full'}</span><span>€${Math.max(0,balance).toFixed(2)}</span></div>
       </div>
 
-      <div class="inv-footer">Not valid invoice.</div>
+      <div class="inv-footer">Not a valid invoice.</div>
     </div>
   `;
 
