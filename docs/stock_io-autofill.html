@@ -2693,7 +2693,7 @@ function printWo(id) {
     <div class="print-watermark">${generatePcbWatermarkSvg()}</div>
     <div class="print-content">
       <div class="inv-header">
-        <div class="inv-title">JPservice — Work Order</div>
+        <div class="inv-title">STOCK.io — Work Order</div>
         <div class="inv-meta">
           <div class="inv-number">${woNumberLabel(wo.number)}</div>
           <div>${new Date(wo.createdAt).toLocaleDateString([], { month:'long', day:'numeric', year:'numeric' })}</div>
@@ -3069,7 +3069,7 @@ function renderList() {
   }
 
   list.innerHTML = filtered.map(p => {
-    const needsOrder = (p.minStock || 0) > 0 && p.qty <= p.minStock;
+    const needsOrder = (p.minStock || 0) > 0 && p.qty < p.minStock;
     const badgeClass = p.qty === 0 ? 'zero' : (needsOrder ? 'low' : 'ok');
     return `
     <div class="part-item ${p.id === selectedId ? 'active' : ''}" onclick="selectPart('${p.id}')">
@@ -3098,7 +3098,7 @@ function updateStats() {
 // Sorted most-urgent first: out of stock, then furthest below minimum.
 function getPartsToOrder() {
   return parts
-    .filter(p => (p.minStock || 0) > 0 && p.qty <= p.minStock)
+    .filter(p => (p.minStock || 0) > 0 && p.qty < p.minStock)
     .sort((a, b) => (a.qty - a.minStock) - (b.qty - b.minStock));
 }
 
@@ -3186,7 +3186,7 @@ function selectPart(id) {
         <button class="qty-btn minus" onclick="adjustQty('${p.id}', -1)">−</button>
       </div>
       <div class="qty-display ${qtyDisplayClass(p)}" id="qty-display">${p.qty}</div>
-      <div id="qty-warning" style="font-size:11px;color:var(--yellow);margin-top:4px;font-family:var(--mono);${(p.minStock||0) > 0 && p.qty <= p.minStock ? '' : 'display:none;'}">⚠ At or below min stock (${p.minStock})</div>
+      <div id="qty-warning" style="font-size:11px;color:var(--yellow);margin-top:4px;font-family:var(--mono);${(p.minStock||0) > 0 && p.qty < p.minStock ? '' : 'display:none;'}">⚠ Below min stock (${p.minStock})</div>
       <div class="qty-meta">
         <div class="qty-price-label">Sale Price</div>
         <div class="qty-price">${p.price ? '€' + parseFloat(p.price).toFixed(2) : '—'}</div>
@@ -3253,7 +3253,7 @@ function selectPart(id) {
 // red when out of stock, yellow when at/under a set minimum, green otherwise.
 function qtyDisplayClass(p) {
   if (p.qty === 0) return 'zero';
-  if ((p.minStock || 0) > 0 && p.qty <= p.minStock) return 'low';
+  if ((p.minStock || 0) > 0 && p.qty < p.minStock) return 'low';
   return 'ok';
 }
 
@@ -3267,9 +3267,9 @@ function refreshQtyDisplay(p) {
   }
   const w = document.getElementById('qty-warning');
   if (w) {
-    const warn = (p.minStock || 0) > 0 && p.qty <= p.minStock;
+    const warn = (p.minStock || 0) > 0 && p.qty < p.minStock;
     w.style.display = warn ? '' : 'none';
-    w.textContent = `⚠ At or below min stock (${p.minStock})`;
+    w.textContent = `⚠ Below min stock (${p.minStock})`;
   }
 }
 
