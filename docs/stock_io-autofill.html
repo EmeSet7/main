@@ -886,7 +886,7 @@
                          a hardcoded 210mm overflows the real printable width
                          and gets shrunk-to-fit, which is what left the page
                          looking narrow with blank space around it */
-      min-height: 150vh; /* fills a full page height even when the invoice
+      min-height: 200vh; /* fills a full page height even when the invoice
                              content itself is short, so the watermark
                              (inset:0 on this element) still covers the
                              whole sheet */
@@ -1496,7 +1496,7 @@ function printBrandHtml() {
   const b = settings.business;
   const line2 = [b.phone, b.email].filter(Boolean).map(escHtml).join(' · ');
   const contact = [b.address ? escHtml(b.address) : '', line2].filter(Boolean).join('\n');
-  return `<div class="inv-brand">${b.logo ? `<img class="inv-logo" src="${b.logo}" alt="">` : ''}<div><div class="inv-title">STOCK.io — Work Order</div>${contact ? `<div class="inv-contact">${contact}</div>` : ''}</div></div>`;
+  return `<div class="inv-brand">${b.logo ? `<img class="inv-logo" src="${b.logo}" alt="">` : ''}<div><div class="inv-title">JPservice — Work Order</div>${contact ? `<div class="inv-contact">${contact}</div>` : ''}</div></div>`;
 }
 
 function markUnsaved() {
