@@ -1,4 +1,3 @@
-<!-- STOCK.IO — v5 — fixed labor-field/print button race that could blank the printout -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -855,6 +854,10 @@
   .print-content { position: relative; z-index: 1; }
   .inv-header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #000; padding-bottom: 14px; margin-bottom: 18px; }
   .inv-title { font-family: var(--mono); font-size: 22px; font-weight: 600; letter-spacing: 0.04em; }
+  .inv-brand { display: flex; align-items: center; gap: 14px; }
+  .inv-logo { max-height: 56px; max-width: 120px; object-fit: contain; display: block; }
+  .inv-contact { font-size: 11px; color: #333; margin-top: 4px; line-height: 1.4; white-space: pre-line; }
+  .prefs-logo-preview { width: 64px; height: 64px; object-fit: contain; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 4px; }
   .inv-meta { text-align: right; font-size: 12px; }
   .inv-meta .inv-number { font-family: var(--mono); font-size: 16px; font-weight: 600; }
   .inv-section { margin-bottom: 16px; }
@@ -1032,6 +1035,25 @@
   }
   .finance-declared-badge.pending { background: var(--red-dim); color: var(--red); }
   .finance-declared-badge.done { background: var(--green-dim); color: var(--green); }
+
+  /* ── TAX SIMULATOR (inside Finance tab) ───────────── */
+  .tax-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 18px; }
+  .tax-card summary { cursor: pointer; font-family: var(--mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); }
+  .tax-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; margin-top: 14px; }
+  .tax-group-title { grid-column: 1 / -1; font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); border-bottom: 1px solid var(--border); padding-bottom: 4px; margin-top: 4px; }
+  .tax-field label { display: block; font-size: 11px; color: var(--text-dim); margin-bottom: 4px; }
+  .tax-field input { width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text); font-family: var(--mono); font-size: 13px; padding: 7px 8px; border-radius: 6px; outline: none; }
+  .tax-input { width: 90px; background: var(--bg); border: 1px solid var(--border); color: var(--text); font-family: var(--mono); font-size: 12px; padding: 4px 6px; border-radius: 6px; outline: none; text-align: right; }
+  .tax-note { font-size: 11px; color: var(--text-dim); }
+  .tax-table td { vertical-align: top; }
+  .finance-table tr.total td { font-weight: 700; border-top: 1px solid var(--border); }
+  .finance-table tr.tax-due td.num { color: var(--red); }
+  .finance-table tr.tax-refund td.num { color: var(--green); }
+
+  /* ── CONTACTS TAB ─────────────────────────────────── */
+  .ct-form { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+  .ct-field label { display: block; font-size: 11px; color: var(--text-dim); margin-bottom: 4px; }
+  .ct-field input { width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text); font-family: var(--mono); font-size: 13px; padding: 7px 8px; border-radius: 6px; outline: none; }
 </style>
 </head>
 <body>
@@ -1050,11 +1072,13 @@
       <button class="nav-tab active" id="tab-stock" onclick="switchTab('stock')">Stock</button>
       <button class="nav-tab" id="tab-wo" onclick="switchTab('wo')">Work Orders</button>
       <button class="nav-tab" id="tab-finance" onclick="switchTab('finance')">Finance</button>
+      <button class="nav-tab" id="tab-contacts" onclick="switchTab('contacts')">Contacts</button>
       <button class="nav-tab" id="tab-toorder" onclick="switchTab('toorder')">To Order<span class="nav-tab-badge hidden" id="toorder-nav-badge">0</span></button>
     </div>
     <div style="display:flex;align-items:center;gap:10px;">
       <div class="save-status"><span class="save-dot" id="save-dot"></span><span id="save-label">No file loaded</span></div>
       <button class="btn secondary" onclick="openHistory()" >History</button>
+      <button class="btn secondary" onclick="openPrefs()" >Preferences</button>
       <button class="btn secondary" onclick="loadFile()" >Load</button>
       <button class="btn success" onclick="saveFile()" >Save</button>
       <button class="btn secondary" id="auto-save-btn" onclick="toggleAutoSave()" >Auto-Save: Off</button>
@@ -1079,6 +1103,12 @@
       <div class="stat">
         <div class="stat-value" id="stat-finance-balance">€0</div>
         <div class="stat-label">Balance Due</div>
+      </div>
+    </div>
+    <div class="header-stats hidden" id="contacts-stats">
+      <div class="stat">
+        <div class="stat-value" id="stat-contacts">0</div>
+        <div class="stat-label">Contacts</div>
       </div>
     </div>
     <div class="header-stats hidden" id="toorder-stats">
@@ -1169,6 +1199,11 @@
     <div class="detail" id="toorder-detail" style="max-width:700px; margin:0 auto; width:100%;"></div>
   </div>
 
+  <!-- CONTACTS MAIN VIEW -->
+  <div class="main hidden" id="contacts-main">
+    <div class="detail" id="contacts-detail" style="max-width:900px; margin:0 auto; width:100%;"></div>
+  </div>
+
   <!-- FINANCE MAIN VIEW -->
   <div class="main hidden" id="finance-main">
     <div class="detail" id="finance-detail" style="max-width:1100px; margin:0 auto; width:100%;"></div>
@@ -1243,6 +1278,41 @@
     <div id="history-list" style="max-height:50vh; overflow-y:auto; display:flex; flex-direction:column; gap:6px;"></div>
     <div class="modal-actions" style="margin-top:14px;">
       <button class="btn secondary" onclick="closeHistory()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- PREFERENCES MODAL -->
+<div class="modal-overlay hidden" id="prefs-modal">
+  <div class="modal">
+    <h2>Preferences</h2>
+    <p>Your business info appears on printed work orders only. It is stored in stock.json (Save/Load), never in the page itself.</p>
+    <div class="fields-grid">
+      <div class="field full">
+        <label>Logo</label>
+        <div style="display:flex; align-items:center; gap:10px;">
+          <img class="prefs-logo-preview" id="prefs-logo-preview" alt="logo">
+          <button class="btn secondary" type="button" onclick="document.getElementById('prefs-logo-file').click()">Choose image…</button>
+          <button class="btn danger" type="button" onclick="clearPrefsLogo()">Remove</button>
+          <input type="file" id="prefs-logo-file" accept="image/*" class="hidden" onchange="onPrefsLogoPicked(this)">
+        </div>
+      </div>
+      <div class="field full">
+        <label>Phone</label>
+        <input id="prefs-phone" placeholder="+351 ..." autocomplete="off">
+      </div>
+      <div class="field full">
+        <label>Email</label>
+        <input id="prefs-email" type="email" placeholder="you@example.com" autocomplete="off">
+      </div>
+      <div class="field full">
+        <label>Address</label>
+        <textarea id="prefs-address" placeholder="Street, postcode, city"></textarea>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closePrefs()">Cancel</button>
+      <button class="btn" onclick="savePrefs()">Save</button>
     </div>
   </div>
 </div>
@@ -1335,6 +1405,100 @@ function rememberPart(p) {
   partCatalogBackup();
 }
 
+// ─── PREFERENCES (business info + logo) ─────────────────────────────────────
+// Personal info that must NOT be hardcoded (this file is public on GitHub).
+// Lives in localStorage and inside stock.json (key: "settings"), so loading
+// your backup on any device brings it back. Only used on printed work orders
+// (contact lines) and for the header logo. Add future options (theme, etc.)
+// under `settings` — it's merged over defaults on load.
+const SETTINGS_KEY = 'stockio_settings';
+const DEFAULT_SETTINGS = { business: { phone: '', email: '', address: '', logo: '' } };
+let settings = (() => {
+  try { return normalizeSettings(JSON.parse(localStorage.getItem(SETTINGS_KEY))); }
+  catch { return normalizeSettings(null); }
+})();
+function normalizeSettings(s) {
+  const b = (s && typeof s === 'object' && s.business && typeof s.business === 'object') ? s.business : {};
+  return { ...(s && typeof s === 'object' ? s : {}), business: { ...DEFAULT_SETTINGS.business, ...b } };
+}
+function settingsBackup() {
+  try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch {}
+}
+function escHtml(v) {
+  return String(v == null ? '' : v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+let DEFAULT_LOGO_SRC = '';
+function applySettings() {
+  const img = document.getElementById('brand-logo');
+  if (!img) return;
+  if (!DEFAULT_LOGO_SRC) DEFAULT_LOGO_SRC = img.getAttribute('src');
+  img.src = settings.business.logo || DEFAULT_LOGO_SRC;
+}
+let prefsPendingLogo = '';
+function openPrefs() {
+  const b = settings.business;
+  document.getElementById('prefs-phone').value = b.phone || '';
+  document.getElementById('prefs-email').value = b.email || '';
+  document.getElementById('prefs-address').value = b.address || '';
+  prefsPendingLogo = b.logo || '';
+  refreshPrefsLogoPreview();
+  document.getElementById('prefs-modal').classList.remove('hidden');
+}
+function closePrefs() {
+  document.getElementById('prefs-modal').classList.add('hidden');
+  if (activeTab === 'stock') scanInput.focus();
+}
+function refreshPrefsLogoPreview() {
+  document.getElementById('prefs-logo-preview').src = prefsPendingLogo || DEFAULT_LOGO_SRC;
+}
+function clearPrefsLogo() { prefsPendingLogo = ''; refreshPrefsLogoPreview(); }
+// Shrinks the chosen image to max 256px on its longest side (keeps PNG
+// transparency) so the logo stays a few KB inside stock.json.
+function onPrefsLogoPicked(input) {
+  const file = input.files && input.files[0];
+  input.value = '';
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const img = new Image();
+    img.onload = () => {
+      const MAX = 256;
+      const scale = Math.min(1, MAX / Math.max(img.width, img.height));
+      const c = document.createElement('canvas');
+      c.width = Math.max(1, Math.round(img.width * scale));
+      c.height = Math.max(1, Math.round(img.height * scale));
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      prefsPendingLogo = c.toDataURL('image/png');
+      refreshPrefsLogoPreview();
+    };
+    img.onerror = () => alert('Could not read that image.');
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+function savePrefs() {
+  settings.business = {
+    phone: document.getElementById('prefs-phone').value.trim(),
+    email: document.getElementById('prefs-email').value.trim(),
+    address: document.getElementById('prefs-address').value.trim(),
+    logo: prefsPendingLogo
+  };
+  settingsBackup();
+  applySettings();
+  markUnsaved();
+  closePrefs();
+}
+document.getElementById('prefs-modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('prefs-modal')) closePrefs();
+});
+// Header block of the printed work order: logo + title + contact lines
+function printBrandHtml() {
+  const b = settings.business;
+  const line2 = [b.phone, b.email].filter(Boolean).map(escHtml).join(' · ');
+  const contact = [b.address ? escHtml(b.address) : '', line2].filter(Boolean).join('\n');
+  return `<div class="inv-brand">${b.logo ? `<img class="inv-logo" src="${b.logo}" alt="">` : ''}<div><div class="inv-title">STOCK.io — Work Order</div>${contact ? `<div class="inv-contact">${contact}</div>` : ''}</div></div>`;
+}
+
 function markUnsaved() {
   unsaved = true;
   document.getElementById('save-dot').className = 'save-dot unsaved';
@@ -1353,7 +1517,7 @@ function backupToLocal() {
 }
 
 function currentSnapshotJson() {
-  return JSON.stringify({ version: 2, parts, history, workOrders, woCounter, ivaDeclared, estIrsRate, customerNotes, partCatalog }, null, 2);
+  return JSON.stringify({ version: 2, parts, history, workOrders, woCounter, ivaDeclared, estIrsRate, customerNotes, partCatalog, settings, contacts }, null, 2);
 }
 
 function saveFile() {
@@ -1408,6 +1572,10 @@ function loadFile() {
         estIrsRate = typeof data.estIrsRate === 'number' ? data.estIrsRate : estIrsRate;
         customerNotes = data.customerNotes && typeof data.customerNotes === 'object' ? data.customerNotes : customerNotes; // back-compat for files saved before customer notes existed
         partCatalog = data.partCatalog && typeof data.partCatalog === 'object' ? data.partCatalog : partCatalog; // back-compat for files saved before autofill catalog existed
+        contacts = Array.isArray(data.contacts) ? normalizeContacts(data.contacts) : contacts; // back-compat for files saved before contacts existed
+        contactsBackup();
+        updateContactsStat();
+        if (data.settings && typeof data.settings === 'object') settings = normalizeSettings(data.settings); // back-compat for files saved before preferences existed
         save_local();
         try { localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(history)); } catch {}
         woBackup();
@@ -1415,6 +1583,8 @@ function loadFile() {
         customerNotesBackup();
         partCatalogBackup();
         try { localStorage.setItem(IRS_RATE_KEY, String(estIrsRate)); } catch {}
+        settingsBackup();
+        applySettings();
         markSaved('Loaded: ' + file.name);
         selectedId = null;
         selectedWoId = null;
@@ -1424,6 +1594,7 @@ function loadFile() {
         renderList();
         renderWoList();
         if (activeTab === 'finance') renderFinance();
+        if (activeTab === 'contacts') renderContacts();
         document.getElementById('detail').innerHTML = `
           <div class="no-selection">
             <div class="no-selection-icon">◫</div>
@@ -1704,6 +1875,9 @@ function switchTab(tab) {
   document.getElementById('tab-wo').classList.toggle('active', tab === 'wo');
   document.getElementById('tab-finance').classList.toggle('active', tab === 'finance');
   document.getElementById('tab-toorder').classList.toggle('active', tab === 'toorder');
+  document.getElementById('tab-contacts').classList.toggle('active', tab === 'contacts');
+  document.getElementById('contacts-main').classList.toggle('hidden', tab !== 'contacts');
+  document.getElementById('contacts-stats').classList.toggle('hidden', tab !== 'contacts');
   document.getElementById('stock-main').classList.toggle('hidden', tab !== 'stock');
   document.getElementById('wo-main').classList.toggle('hidden', tab !== 'wo');
   document.getElementById('finance-main').classList.toggle('hidden', tab !== 'finance');
@@ -1720,6 +1894,8 @@ function switchTab(tab) {
     renderFinance();
   } else if (tab === 'toorder') {
     renderToOrder();
+  } else if (tab === 'contacts') {
+    renderContacts();
   }
 }
 
@@ -1759,6 +1935,300 @@ function ivaDueDateLabel(year, q) {
 
 function setFinanceYear(y) { financeYear = parseInt(y) || new Date().getFullYear(); renderFinance(); }
 function setFinanceQuarter(q) { financeQuarter = q; renderFinance(); }
+
+// ─── TAX SIMULATOR (IRS Category B · regime simplificado) ───────────────────
+// All legal parameters live in TAX_COMMON / TAX_CONFIG below — update them once
+// a year (new IAS, new brackets, new deduction limits) and nothing else changes.
+// Everything the user types (other income, household deductions, deductible
+// IVA) lives in settings.tax, so it is saved in stock.json with everything else.
+// This is a planning estimate, not a substitute for the real Modelo 3.
+//
+// Not modelled: IRS Jovem, joint filing (quociente conjugal), the global cap on
+// deductions (only bites at higher incomes), Madeira/Açores rates, ascendant
+// deductions, other IVA regimes/exemptions.
+const TAX_COMMON = {
+  coefServices: 0.75,        // prestações de serviços (activities in art. 151 CIRS table)
+  coefGoods: 0.15,           // vendas de mercadorias
+  specificDeductionIasFactor: 8.54, // specific deduction = 8.54 × IAS (also the automatic part of the 15% expense test)
+  expenseTestRate: 0.15,     // must justify 15% of services income (coef. 0.75/0.35)
+  ssExcessThreshold: 0.10,   // SS paid above 10% of services income is deducted from taxable income
+  ssRate: 0.214,             // trabalhadores independentes (regime simplificado)
+  ssRelevantServices: 0.70,  // relevant income = 70% of services…
+  ssRelevantGoods: 0.20,     // …or 20% of goods sold
+  ssMinMonthly: 20,          // minimum monthly contribution (€)
+  ssMaxBaseIas: 12,          // monthly base capped at 12 × IAS
+  catAContribRate: 0.11,     // employee SS (only used for the Category A specific deduction)
+  dependentDeduction: 600,   // per dependent
+  dependentUnder3Extra: 126, // extra per dependent aged ≤ 3
+  generalFamilyRate: 0.35, generalFamilyCap: 250,
+  healthRate: 0.15, healthCap: 1000,
+  educationRate: 0.30, educationCap: 800,
+  housingRate: 0.15,
+  ivaExpRate: 0.15, ivaExpCap: 250
+};
+// Per income-year values. Brackets are [upper limit, normal rate] (art. 68 CIRS).
+// A year without its own entry uses the closest earlier one (2027 → 2026).
+const TAX_CONFIG = {
+  2025: {
+    ias: 522.50, housingRentCap: 800,
+    brackets: [[8059, 0.125], [12160, 0.16], [17233, 0.215], [22306, 0.244], [28400, 0.314], [41629, 0.349], [44987, 0.431], [83696, 0.446], [Infinity, 0.48]]
+  },
+  2026: {
+    ias: 537.13, housingRentCap: 900,
+    brackets: [[8342, 0.125], [12587, 0.157], [17838, 0.212], [23089, 0.241], [29397, 0.311], [43090, 0.349], [46566, 0.431], [86634, 0.446], [Infinity, 0.48]]
+  }
+};
+function taxCfg(year) {
+  const ys = Object.keys(TAX_CONFIG).map(Number).sort((a, b) => a - b);
+  let use = ys[0];
+  ys.forEach(y => { if (y <= year) use = y; });
+  return { ...TAX_COMMON, ...TAX_CONFIG[use], year: use };
+}
+
+const TAX_YEAR_DEFAULTS = {
+  otherIncomeA: 0, otherRetentionA: 0, monthsA: 0,
+  expensesDocumented: 0, ssPaidOverride: '', paymentsOnAccount: 0,
+  dependents: 0, dependentsUnder3: 0,
+  famExpenses: 0, healthExpenses: 0, educationExpenses: 0, rentExpenses: 0, ivaExpenses: 0
+};
+let taxFormOpen = false;
+
+function taxStore() {
+  if (!settings.tax || typeof settings.tax !== 'object') settings.tax = {};
+  if (!settings.tax.years || typeof settings.tax.years !== 'object') settings.tax.years = {};
+  if (!settings.tax.ivaDeductible || typeof settings.tax.ivaDeductible !== 'object') settings.tax.ivaDeductible = {};
+  return settings.tax;
+}
+function taxYearInputs(year) { return { ...TAX_YEAR_DEFAULTS, ...(taxStore().years[year] || {}) }; }
+function ivaDeductibleFor(key) { return Math.max(0, parseFloat(taxStore().ivaDeductible[key]) || 0); }
+
+function setTaxField(year, field, value) {
+  const t = taxStore();
+  const cur = t.years[year] || (t.years[year] = {});
+  if (field === 'ssPaidOverride') cur[field] = value === '' ? '' : Math.max(0, parseFloat(value) || 0);
+  else if (field === 'monthsA') cur[field] = Math.min(12, Math.max(0, Math.round(parseFloat(value) || 0)));
+  else if (field === 'dependents' || field === 'dependentsUnder3') cur[field] = Math.max(0, Math.round(parseFloat(value) || 0));
+  else cur[field] = Math.max(0, parseFloat(value) || 0);
+  settingsBackup();
+  markUnsaved();
+  const el = document.getElementById('tax-results');
+  if (el) el.innerHTML = taxResultsHtml(year); // form stays untouched so focus isn't lost
+}
+function setIvaDeductible(key, value) {
+  taxStore().ivaDeductible[key] = Math.max(0, parseFloat(value) || 0);
+  settingsBackup();
+  markUnsaved();
+  renderFinance();
+}
+
+const r2 = n => Math.round(n * 100) / 100;
+
+// Invoiced revenue (ex-IVA) per quarter of a year: services = labor, goods = parts/misc.
+function taxYearRevenue(year) {
+  const q = [0, 1, 2, 3].map(() => ({ services: 0, goods: 0, retention: 0 }));
+  workOrders.forEach(wo => {
+    const d = new Date(wo.createdAt);
+    if (d.getFullYear() !== year || !wo.invoiced) return;
+    const t = computeWoTotals(wo);
+    const i = quarterOf(d) - 1;
+    q[i].services += t.laborTotal;
+    q[i].goods += t.goodsTotal;
+    q[i].retention += t.retention;
+  });
+  return q;
+}
+
+// Social Security for one quarter's income → contribution for the NEXT 3 months.
+function ssQuarter(cfg, services, goods) {
+  const relevant = services * cfg.ssRelevantServices + goods * cfg.ssRelevantGoods;
+  if (relevant <= 0) return { relevant: 0, monthly: 0, quarterly: 0 };
+  const base = Math.min(relevant / 3, cfg.ssMaxBaseIas * cfg.ias);
+  const monthly = r2(Math.max(cfg.ssMinMonthly, base * cfg.ssRate));
+  return { relevant: r2(relevant), monthly, quarterly: r2(monthly * 3) };
+}
+
+function bracketTax(cfg, income) {
+  let tax = 0, prev = 0;
+  for (const [limit, rate] of cfg.brackets) {
+    if (income <= prev) break;
+    tax += (Math.min(income, limit) - prev) * rate;
+    prev = limit;
+  }
+  return tax;
+}
+function marginalRate(cfg, income) {
+  for (const [limit, rate] of cfg.brackets) if (income <= limit) return rate;
+  return cfg.brackets[cfg.brackets.length - 1][1];
+}
+
+function calcAnnualIrs(year, includeBusiness = true) {
+  const cfg = taxCfg(year), inp = taxYearInputs(year);
+  const rev = taxYearRevenue(year);
+  const sum = k => rev.reduce((s, q) => s + q[k], 0);
+  const services = includeBusiness ? sum('services') : 0;
+  const goods = includeBusiness ? sum('goods') : 0;
+  const retentionB = includeBusiness ? sum('retention') : 0;
+
+  // Social Security paid in the year: your own figure, or the quarterly estimate.
+  const ssEst = rev.reduce((s, q) => s + ssQuarter(cfg, q.services, q.goods).quarterly, 0);
+  const ssOverride = inp.ssPaidOverride !== '' && inp.ssPaidOverride != null;
+  const ssPaid = includeBusiness ? (ssOverride ? inp.ssPaidOverride : ssEst) : 0;
+
+  // 15% expense test (services only): the automatic credit is the Category A
+  // specific deduction (8.54 × IAS) or your SS contributions if higher, reduced
+  // for months with Category A/H income; documented expenses add to it.
+  const autoCredit = Math.max(cfg.specificDeductionIasFactor * cfg.ias * ((12 - inp.monthsA) / 12), ssPaid);
+  const justified = services > 0 ? autoCredit + inp.expensesDocumented : 0;
+  const required = cfg.expenseTestRate * services;
+  const shortfall = Math.max(0, required - justified);
+
+  const presumed = services * cfg.coefServices + goods * cfg.coefGoods;
+  const beforeSs = presumed + shortfall;
+
+  // SS above 10% of services income reduces taxable income (services share of SS only).
+  const relS = services * cfg.ssRelevantServices, relG = goods * cfg.ssRelevantGoods;
+  const ssServicesShare = (relS + relG) > 0 ? ssPaid * relS / (relS + relG) : 0;
+  const ssDeduction = services > 0 ? Math.min(beforeSs, Math.max(0, ssServicesShare - cfg.ssExcessThreshold * services)) : 0;
+  const taxableB = beforeSs - ssDeduction;
+
+  // Other household income (Category A/H) with its own specific deduction.
+  const catA = inp.otherIncomeA;
+  const taxableA = Math.max(0, catA - Math.min(catA, Math.max(cfg.specificDeductionIasFactor * cfg.ias, catA * cfg.catAContribRate)));
+
+  const taxable = taxableB + taxableA;
+  const coleta = bracketTax(cfg, taxable);
+
+  const ded = {
+    dependents: inp.dependents * cfg.dependentDeduction + Math.min(inp.dependentsUnder3, inp.dependents) * cfg.dependentUnder3Extra,
+    general: Math.min(cfg.generalFamilyCap, inp.famExpenses * cfg.generalFamilyRate),
+    health: Math.min(cfg.healthCap, inp.healthExpenses * cfg.healthRate),
+    education: Math.min(cfg.educationCap, inp.educationExpenses * cfg.educationRate),
+    housing: Math.min(cfg.housingRentCap, inp.rentExpenses * cfg.housingRate),
+    iva: Math.min(cfg.ivaExpCap, inp.ivaExpenses * cfg.ivaExpRate)
+  };
+  ded.total = Object.values(ded).reduce((s, v) => s + v, 0);
+  const coletaNet = Math.max(0, coleta - ded.total);
+
+  const credits = retentionB + inp.otherRetentionA + inp.paymentsOnAccount;
+  const result = coletaNet - credits; // > 0 to pay, < 0 refund
+
+  let businessIrs = 0, effectiveRate = 0;
+  if (includeBusiness) {
+    businessIrs = Math.max(0, coletaNet - calcAnnualIrs(year, false).coletaNet);
+    effectiveRate = presumed > 0 ? (businessIrs / presumed) * 100 : 0;
+  }
+  return { cfg, inp, services, goods, retentionB, ssEst, ssOverride, ssPaid, autoCredit, justified, required, shortfall,
+    presumed, ssDeduction, taxableB, taxableA, taxable, coleta, marginal: marginalRate(cfg, taxable), ded, coletaNet,
+    credits, result, businessIrs, effectiveRate };
+}
+
+function taxFormHtml(year) {
+  const inp = taxYearInputs(year);
+  const f = (field, label, opts = {}) => {
+    const v = inp[field];
+    return `<div class="tax-field"><label>${label}</label><input type="number" min="0" step="${opts.step || '0.01'}" value="${v === '' || v === 0 ? '' : v}" placeholder="${opts.ph || '0'}" onchange="setTaxField(${year},'${field}',this.value)"></div>`;
+  };
+  return `
+    <details class="tax-card" ${taxFormOpen ? 'open' : ''} ontoggle="taxFormOpen = this.open">
+      <summary>Tax profile — ${year} (saved in stock.json)</summary>
+      <div class="tax-grid">
+        <div class="tax-group-title">Other income (employment / pensions)</div>
+        ${f('otherIncomeA', 'Gross income (€)')}
+        ${f('otherRetentionA', 'Tax withheld on it (€)')}
+        ${f('monthsA', 'Months with that income', { step: '1' })}
+        <div class="tax-group-title">Business</div>
+        ${f('expensesDocumented', 'Documented expenses (e-fatura, €)')}
+        ${f('ssPaidOverride', 'Social Security paid (€)', { ph: 'auto' })}
+        ${f('paymentsOnAccount', 'Payments on account paid (€)')}
+        <div class="tax-group-title">Household deductions</div>
+        ${f('dependents', 'Dependents', { step: '1' })}
+        ${f('dependentsUnder3', '…of which aged ≤ 3', { step: '1' })}
+        ${f('famExpenses', 'General family expenses (€)')}
+        ${f('healthExpenses', 'Health expenses (€)')}
+        ${f('educationExpenses', 'Education expenses (€)')}
+        ${f('rentExpenses', 'Rent, main home (€)')}
+        ${f('ivaExpenses', 'IVA on e-fatura sectors (€)')}
+      </div>
+    </details>`;
+}
+
+function taxResultsHtml(year) {
+  const r = calcAnnualIrs(year), c = r.cfg, inp = r.inp;
+  const E = n => (n < 0 ? '−' : '') + '€' + Math.abs(n).toFixed(2);
+  const row = (label, val, cls = '', note = '') =>
+    `<tr class="${cls}"><td>${label}${note ? `<div class="tax-note">${note}</div>` : ''}</td><td class="num">${val}</td></tr>`;
+  if (r.services + r.goods + inp.otherIncomeA <= 0) {
+    return `<div class="tax-note">No invoiced work orders in ${year}, so there is nothing to estimate yet.</div>`;
+  }
+  const dedParts = [['Dependents', r.ded.dependents], ['General', r.ded.general], ['Health', r.ded.health],
+    ['Education', r.ded.education], ['Rent', r.ded.housing], ['IVA', r.ded.iva]]
+    .filter(p => p[1] > 0).map(p => `${p[0]} ${E(p[1])}`).join(' · ');
+  const due = r.result;
+  return `
+    <table class="finance-table tax-table">
+      <tbody>
+        ${row('Services income (invoiced labor, ex-IVA)', E(r.services))}
+        ${row('Goods income (invoiced parts, ex-IVA)', E(r.goods))}
+        ${row('Presumed taxable income', E(r.presumed), '', `services × ${c.coefServices} + goods × ${c.coefGoods}`)}
+        ${row('+ Expense-test shortfall', E(r.shortfall), '',
+          r.services > 0 ? `Required ${E(r.required)} (15% of services) · justified ${E(r.justified)} (automatic ${E(r.autoCredit)} + documented ${E(inp.expensesDocumented)})` : '')}
+        ${row('− Social Security above 10% of services', E(-r.ssDeduction), '', `SS ${r.ssOverride ? 'paid' : 'estimated'}: ${E(r.ssPaid)}`)}
+        ${row('= Category B taxable income', E(r.taxableB), 'total')}
+        ${inp.otherIncomeA > 0 ? row('+ Other income, taxable part', E(r.taxableA), '', 'after specific deduction') : ''}
+        ${row('= Taxable income', E(r.taxable), 'total')}
+        ${row('Tax from brackets', E(r.coleta), '', `marginal rate ${(r.marginal * 100).toFixed(1)}%`)}
+        ${row('− Deductions', E(-r.ded.total), '', dedParts || 'none entered')}
+        ${row('= Tax after deductions', E(r.coletaNet), 'total')}
+        ${row('− Tax withheld by business clients', E(-r.retentionB))}
+        ${inp.otherRetentionA > 0 ? row('− Tax withheld on other income', E(-inp.otherRetentionA)) : ''}
+        ${inp.paymentsOnAccount > 0 ? row('− Payments on account', E(-inp.paymentsOnAccount)) : ''}
+        ${row(due >= 0 ? '= IRS to pay' : '= IRS refund', E(Math.abs(due)), 'total ' + (due >= 0 ? 'tax-due' : 'tax-refund'))}
+      </tbody>
+    </table>
+    <div class="tax-note" style="margin-top:8px;">
+      IRS caused by the business: ${E(r.businessIrs)} · effective rate ${r.effectiveRate.toFixed(1)}% of presumed profit
+      ${r.effectiveRate > 0 ? `<button class="btn secondary" style="margin-left:8px; padding:3px 8px; font-size:11px;" onclick="setEstIrsRate(${r.effectiveRate.toFixed(1)})">Use as Est. IRS Rate</button>` : ''}
+    </div>
+    <div class="tax-note" style="margin-top:6px;">
+      Parameters: ${c.year} (IAS €${c.ias})${c.year !== year ? ` — no ${year} table yet, using ${c.year}` : ''}. Planning estimate only — not modelled: joint filing, IRS Jovem, global deduction cap, regional rates.
+    </div>`;
+}
+
+function ssTableHtml(year) {
+  const cfg = taxCfg(year), rev = taxYearRevenue(year);
+  const declBy = ['30 Apr', '31 Jul', '31 Oct', '31 Jan ' + (year + 1)];
+  let totalQ = 0;
+  const rows = rev.map((q, i) => {
+    const s = ssQuarter(cfg, q.services, q.goods);
+    totalQ += s.quarterly;
+    return `<tr>
+      <td>Q${i + 1} ${year}</td>
+      <td class="num">€${q.services.toFixed(2)}</td>
+      <td class="num">€${q.goods.toFixed(2)}</td>
+      <td class="num">€${s.relevant.toFixed(2)}</td>
+      <td class="num">€${s.monthly.toFixed(2)}</td>
+      <td>${declBy[i]}</td>
+    </tr>`;
+  }).join('');
+  return `
+    <div>
+      <div class="section-title">Social Security — ${year}</div>
+      <table class="finance-table">
+        <thead><tr><th>Quarter</th><th class="num">Services</th><th class="num">Goods</th><th class="num">Relevant income</th><th class="num">Monthly SS (next 3 mo.)</th><th>Declare by</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+      <div class="tax-note" style="margin-top:6px;">${(cfg.ssRate * 100).toFixed(1)}% on ${cfg.ssRelevantServices * 100}% of services / ${cfg.ssRelevantGoods * 100}% of goods, min €${cfg.ssMinMonthly}/month, base capped at ${cfg.ssMaxBaseIas}× IAS. Invoiced work orders only. Year total (estimate): €${totalQ.toFixed(2)}.</div>
+    </div>`;
+}
+
+function taxSectionHtml(year) {
+  return `
+    <div>
+      <div class="section-title">Annual IRS estimate — ${year} (full year)</div>
+      ${taxFormHtml(year)}
+      <div id="tax-results" style="margin-top:12px;">${taxResultsHtml(year)}</div>
+    </div>`;
+}
 
 function renderFinance() {
   const el = document.getElementById('finance-detail');
@@ -1847,8 +2317,12 @@ function renderFinance() {
     });
     const qTax = qWos.reduce((s, wo) => s + computeWoTotals(wo).tax, 0);
     const key = `${financeYear}-Q${q}`;
-    return { q, qTax, key, due: ivaDueDateLabel(financeYear, q), declared: !!ivaDeclared[key] };
+    const ded = ivaDeductibleFor(key);
+    return { q, qTax, ded, net: qTax - ded, key, due: ivaDueDateLabel(financeYear, q), declared: !!ivaDeclared[key] };
   });
+  const periodIvaDeductible = quarters
+    .filter(qr => financeQuarter === 'all' || qr.q === parseInt(financeQuarter))
+    .reduce((sum, qr) => sum + qr.ded, 0);
 
   el.innerHTML = `
     <div class="finance-filters">
@@ -1876,9 +2350,9 @@ function renderFinance() {
       <div class="stat"><div class="stat-value">€${totalInvoiced.toFixed(2)}</div><div class="stat-label">Total Invoiced</div></div>
       <div class="stat"><div class="stat-value">€${periodCollected.toFixed(2)}</div><div class="stat-label">Total Collected</div></div>
       <div class="stat"><div class="stat-value" style="font-size:14px;">€${periodCash.toFixed(2)} cash / €${periodTransfer.toFixed(2)} transfer</div><div class="stat-label">Payment Split</div></div>
-      <div class="stat"><div class="stat-value">€${totalTax.toFixed(2)}</div><div class="stat-label">IVA to Pay</div></div>
+      <div class="stat"><div class="stat-value">€${(totalTax - periodIvaDeductible).toFixed(2)}</div><div class="stat-label">IVA to Pay${periodIvaDeductible > 0 ? ' (net)' : ''}</div></div>
       <div class="stat"><div class="stat-value">€${totalRetention.toFixed(2)}</div><div class="stat-label">Retention Held</div></div>
-      <div class="stat"><div class="stat-value">€${totalEstIrs.toFixed(2)}</div><div class="stat-label">Est. IRS Due</div></div>
+      <div class="stat"><div class="stat-value">€${totalEstIrs.toFixed(2)}</div><div class="stat-label">Est. IRS (flat rate)</div></div>
       <div class="stat"><div class="stat-value">€${avgWoValue.toFixed(2)}</div><div class="stat-label">Avg. Invoiced Value</div></div>
       <div class="stat"><div class="stat-value">€${totalProfit.toFixed(2)}</div><div class="stat-label">Est. Profit (Ready/Delivered)</div></div>
       <div class="stat"><div class="stat-value">€${totalLaborProfit.toFixed(2)}</div><div class="stat-label">Total Labor Profit (Ready/Delivered)</div></div>
@@ -1913,12 +2387,14 @@ function renderFinance() {
     <div>
       <div class="section-title">Quarterly IVA Declarations — ${financeYear}</div>
       <table class="finance-table">
-        <thead><tr><th>Quarter</th><th class="num">IVA Collected</th><th>Declaration Due</th><th>Status</th></tr></thead>
+        <thead><tr><th>Quarter</th><th class="num">IVA Collected</th><th class="num">IVA Deductible</th><th class="num">IVA to Pay</th><th>Declaration Due</th><th>Status</th></tr></thead>
         <tbody>
           ${quarters.map(qr => `
             <tr>
               <td>Q${qr.q} ${financeYear}</td>
               <td class="num">€${qr.qTax.toFixed(2)}</td>
+              <td class="num"><input class="tax-input" type="number" min="0" step="0.01" value="${qr.ded || ''}" placeholder="0.00" onchange="setIvaDeductible('${qr.key}', this.value)"></td>
+              <td class="num">€${qr.net.toFixed(2)}</td>
               <td>${qr.due}</td>
               <td><span class="finance-declared-badge ${qr.declared ? 'done' : 'pending'}" onclick="toggleIvaDeclared('${qr.key}')">${qr.declared ? '✓ Declared' : 'Pending'}</span></td>
             </tr>
@@ -1926,6 +2402,10 @@ function renderFinance() {
         </tbody>
       </table>
     </div>
+
+    ${ssTableHtml(financeYear)}
+
+    ${taxSectionHtml(financeYear)}
   `;
 }
 
@@ -2128,6 +2608,276 @@ function getCustomersList() {
     }, 0);
     return { key: c.key, name: c.name, phone: c.phone, woCount: c.wos.length, totalPaid, balanceDue, lastVisit: sorted[0].createdAt, wos: sorted };
   });
+}
+
+
+// ─── CONTACTS (Thunderbird-compatible address book) ────────────────────────
+// Deliberately basic: name, phone, email. Saved in stock.json like everything
+// else (plus a localStorage crash backup). Import/export uses vCard (.vcf) and
+// CSV, the two formats Thunderbird's Address Book reads and writes natively.
+const CONTACTS_KEY = 'stockio_contacts';
+let contacts = (() => {
+  try { const v = JSON.parse(localStorage.getItem(CONTACTS_KEY)); return Array.isArray(v) ? v : []; }
+  catch { return []; }
+})();
+function contactsBackup() {
+  try { localStorage.setItem(CONTACTS_KEY, JSON.stringify(contacts)); } catch {}
+}
+let contactsSearch = '';
+let contactEditId = null; // null = no form, 'new' = adding, otherwise the id being edited
+
+function normalizeContacts(arr) {
+  if (!Array.isArray(arr)) return [];
+  return arr.filter(c => c && typeof c === 'object').map(c => ({
+    id: typeof c.id === 'string' && c.id ? c.id : crypto.randomUUID(),
+    name: String(c.name || '').trim(),
+    phone: String(c.phone || '').trim(),
+    email: String(c.email || '').trim()
+  }));
+}
+function updateContactsStat() {
+  const el = document.getElementById('stat-contacts');
+  if (el) el.textContent = contacts.length;
+}
+function contactPhoneKey(p) {
+  const d = String(p || '').replace(/\D/g, '');
+  return d.length >= 9 ? d.slice(-9) : d; // ignore +351 / 00351 prefixes when comparing
+}
+function findDuplicateContact(c) {
+  const mail = c.email.toLowerCase(), pk = contactPhoneKey(c.phone), nm = c.name.toLowerCase();
+  return contacts.find(x =>
+    (mail && x.email && x.email.toLowerCase() === mail) ||
+    (pk.length >= 6 && contactPhoneKey(x.phone) === pk) ||
+    (!c.phone && !c.email && nm && x.name.toLowerCase() === nm));
+}
+// Adds one contact unless it duplicates an existing one. Returns true if added.
+function addContactIfNew(raw) {
+  const c = { id: crypto.randomUUID(), name: String(raw.name || '').trim(), phone: String(raw.phone || '').trim(), email: String(raw.email || '').trim() };
+  if (!c.name) c.name = c.email || c.phone;
+  if (!c.name) return false;
+  if (findDuplicateContact(c)) return false;
+  contacts.push(c);
+  return true;
+}
+function contactsChanged() {
+  contactsBackup();
+  updateContactsStat();
+  markUnsaved();
+  renderContacts();
+}
+
+// ── Form ──
+function openContactForm(id) { contactEditId = id; renderContacts(); const n = document.getElementById('ct-name'); if (n) n.focus(); }
+function cancelContactForm() { contactEditId = null; renderContacts(); }
+function saveContactForm() {
+  const name = document.getElementById('ct-name').value.trim();
+  const phone = document.getElementById('ct-phone').value.trim();
+  const email = document.getElementById('ct-email').value.trim();
+  if (!name && !email && !phone) { alert('Enter at least a name, phone or email'); return; }
+  if (email && !/^\S+@\S+\.\S+$/.test(email)) { alert('That email address doesn\'t look right'); return; }
+  const finalName = name || email || phone;
+  if (contactEditId === 'new') {
+    contacts.push({ id: crypto.randomUUID(), name: finalName, phone, email });
+  } else {
+    const c = contacts.find(x => x.id === contactEditId);
+    if (c) { c.name = finalName; c.phone = phone; c.email = email; }
+  }
+  contactEditId = null;
+  contactsChanged();
+}
+function deleteContact(id) {
+  const c = contacts.find(x => x.id === id);
+  if (!c || !confirm(`Delete contact "${c.name}"?`)) return;
+  contacts = contacts.filter(x => x.id !== id);
+  contactsChanged();
+}
+function setContactsSearch(v) { contactsSearch = v; renderContacts(); const el = document.getElementById('ct-search'); if (el) { el.focus(); el.setSelectionRange(v.length, v.length); } }
+
+// ── vCard ──
+function vcfEscape(v) { return String(v || '').replace(/\\/g, '\\\\').replace(/\n/g, '\\n').replace(/,/g, '\\,').replace(/;/g, '\\;'); }
+function vcfUnescape(v) { return String(v || '').replace(/\\([nN,;\\])/g, (m, c) => (c === 'n' || c === 'N') ? '\n' : c); }
+function splitName(name) {
+  const t = String(name || '').trim().split(/\s+/).filter(Boolean);
+  if (t.length < 2) return { first: t[0] || '', last: '' };
+  return { first: t.slice(0, -1).join(' '), last: t[t.length - 1] };
+}
+function contactsToVcf(list) {
+  return list.map(c => {
+    const n = splitName(c.name);
+    const lines = ['BEGIN:VCARD', 'VERSION:3.0', `N:${vcfEscape(n.last)};${vcfEscape(n.first)};;;`, `FN:${vcfEscape(c.name)}`];
+    if (c.phone) lines.push(`TEL;TYPE=CELL:${vcfEscape(c.phone)}`);
+    if (c.email) lines.push(`EMAIL;TYPE=INTERNET:${vcfEscape(c.email)}`);
+    lines.push('END:VCARD');
+    return lines.join('\r\n');
+  }).join('\r\n') + '\r\n';
+}
+function parseVcf(text) {
+  const unfolded = String(text).replace(/\r\n|\r/g, '\n').replace(/\n[ \t]/g, ''); // un-fold wrapped lines
+  const out = [];
+  unfolded.split(/BEGIN:VCARD/i).slice(1).forEach(block => {
+    const body = block.split(/END:VCARD/i)[0];
+    let fn = '', nm = '', email = '';
+    const tels = [];
+    body.split('\n').forEach(line => {
+      const idx = line.indexOf(':');
+      if (idx < 0) return;
+      const parts = line.slice(0, idx).split(';');
+      const prop = parts[0].replace(/^.*\./, '').toUpperCase(); // drop "item1." group prefixes
+      const params = parts.slice(1).join(';').toUpperCase();
+      const val = line.slice(idx + 1);
+      if (prop === 'FN') fn = vcfUnescape(val).trim();
+      else if (prop === 'N') { const p = val.split(';'); nm = [vcfUnescape(p[1] || ''), vcfUnescape(p[0] || '')].filter(Boolean).join(' ').trim(); }
+      else if (prop === 'EMAIL' && !email) email = vcfUnescape(val).trim();
+      else if (prop === 'TEL') tels.push({ v: vcfUnescape(val).replace(/^tel:/i, '').trim(), cell: /CELL/.test(params) });
+    });
+    const tel = (tels.find(t => t.cell && t.v) || tels.find(t => t.v) || { v: '' }).v;
+    const name = fn || nm;
+    if (name || email || tel) out.push({ name, phone: tel, email });
+  });
+  return out;
+}
+
+// ── CSV ──
+function csvCell(v) { return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"'; }
+function contactsToCsv(list) {
+  const header = ['First Name', 'Last Name', 'Display Name', 'Primary Email', 'Mobile Number'];
+  const rows = list.map(c => { const n = splitName(c.name); return [n.first, n.last, c.name, c.email, c.phone]; });
+  return [header, ...rows].map(r => r.map(csvCell).join(',')).join('\r\n') + '\r\n';
+}
+function parseCsvRows(text, delim) {
+  const rows = []; let row = [], cell = '', q = false;
+  const s = String(text).replace(/^\uFEFF/, '');
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+    if (q) {
+      if (ch === '"') { if (s[i + 1] === '"') { cell += '"'; i++; } else q = false; }
+      else cell += ch;
+    } else if (ch === '"') q = true;
+    else if (ch === delim) { row.push(cell); cell = ''; }
+    else if (ch === '\n' || ch === '\r') {
+      if (ch === '\r' && s[i + 1] === '\n') i++;
+      row.push(cell); cell = '';
+      if (row.some(c => c.trim() !== '')) rows.push(row);
+      row = [];
+    } else cell += ch;
+  }
+  row.push(cell);
+  if (row.some(c => c.trim() !== '')) rows.push(row);
+  return rows;
+}
+function parseCsvContacts(text) {
+  const firstLine = String(text).replace(/^\uFEFF/, '').split(/\r?\n/)[0] || '';
+  const delim = [',', ';', '\t'].map(d => [d, firstLine.split(d).length]).sort((a, b) => b[1] - a[1])[0][0]; // Excel in PT uses ';'
+  const rows = parseCsvRows(text, delim);
+  if (rows.length < 2) return [];
+  const head = rows[0].map(h => h.trim().toLowerCase());
+  const col = names => { for (const n of names) { const i = head.indexOf(n); if (i >= 0) return i; } return -1; };
+  const iDisplay = col(['display name', 'name', 'nome', 'full name']);
+  const iFirst = col(['first name', 'given name', 'nome próprio']);
+  const iLast = col(['last name', 'family name', 'surname', 'apelido']);
+  const iMail = col(['primary email', 'e-mail address', 'email address', 'email', 'e-mail', 'mail', 'correio eletrónico']);
+  const iPhones = ['mobile number', 'mobile phone', 'mobile', 'telemóvel', 'telemovel', 'phone', 'telefone', 'primary phone', 'home phone', 'work phone'].map(n => head.indexOf(n)).filter(i => i >= 0);
+  if (iDisplay < 0 && iFirst < 0 && iMail < 0 && !iPhones.length) return null; // headers not recognised
+  const at = (r, i) => (i >= 0 && r[i] != null ? r[i].trim() : '');
+  return rows.slice(1).map(r => {
+    const name = at(r, iDisplay) || [at(r, iFirst), at(r, iLast)].filter(Boolean).join(' ');
+    const phone = iPhones.map(i => at(r, i)).find(Boolean) || '';
+    return { name, phone, email: at(r, iMail) };
+  }).filter(c => c.name || c.phone || c.email);
+}
+
+// ── Import / export actions ──
+function downloadText(filename, mime, text) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([text], { type: mime + ';charset=utf-8' }));
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+function exportContacts(kind) {
+  if (!contacts.length) { alert('No contacts to export yet'); return; }
+  const list = contacts.slice().sort((a, b) => a.name.localeCompare(b.name, 'pt'));
+  if (kind === 'csv') downloadText('contacts.csv', 'text/csv', contactsToCsv(list));
+  else downloadText('contacts.vcf', 'text/vcard', contactsToVcf(list));
+}
+function importContacts() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.vcf,.vcard,.csv,text/vcard,text/csv';
+  input.onchange = e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const text = String(ev.target.result || '');
+      const found = /BEGIN:VCARD/i.test(text) ? parseVcf(text) : parseCsvContacts(text);
+      if (found === null) { alert('Could not recognise the CSV columns. Export from Thunderbird as CSV or vCard and try again.'); return; }
+      if (!found.length) { alert('No contacts found in that file'); return; }
+      let added = 0;
+      found.forEach(c => { if (addContactIfNew(c)) added++; });
+      contactsChanged();
+      alert(`Imported ${added} contact${added === 1 ? '' : 's'}` + (found.length - added ? `, skipped ${found.length - added} duplicate${found.length - added === 1 ? '' : 's'}` : ''));
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+function importContactsFromCustomers() {
+  let added = 0;
+  getCustomersList().forEach(c => { if (addContactIfNew({ name: c.name, phone: c.phone, email: '' })) added++; });
+  if (!added) { alert('Every work-order customer is already in your contacts'); return; }
+  contactsChanged();
+  alert(`Added ${added} customer${added === 1 ? '' : 's'} from work orders`);
+}
+
+// ── Render ──
+function renderContacts() {
+  const el = document.getElementById('contacts-detail');
+  if (!el) return;
+  const q = contactsSearch.trim().toLowerCase();
+  const list = contacts
+    .filter(c => !q || c.name.toLowerCase().includes(q) || c.phone.toLowerCase().includes(q) || c.email.toLowerCase().includes(q))
+    .sort((a, b) => a.name.localeCompare(b.name, 'pt'));
+  const editing = contactEditId && contactEditId !== 'new' ? contacts.find(c => c.id === contactEditId) : null;
+  const form = contactEditId ? `
+    <div class="tax-card">
+      <div class="ct-form" onkeydown="if(event.key==='Enter'){saveContactForm();}">
+        <div class="ct-field"><label>Name</label><input id="ct-name" value="${escHtml(editing ? editing.name : '')}" autocomplete="off"></div>
+        <div class="ct-field"><label>Phone</label><input id="ct-phone" type="tel" value="${escHtml(editing ? editing.phone : '')}" autocomplete="off"></div>
+        <div class="ct-field"><label>Email</label><input id="ct-email" type="email" value="${escHtml(editing ? editing.email : '')}" autocomplete="off"></div>
+      </div>
+      <div style="display:flex; gap:8px; margin-top:12px;">
+        <button class="btn success" onclick="saveContactForm()">Save</button>
+        <button class="btn secondary" onclick="cancelContactForm()">Cancel</button>
+      </div>
+    </div>` : '';
+  const rows = list.map(c => `
+    <tr>
+      <td>${escHtml(c.name)}</td>
+      <td class="num">${escHtml(c.phone)}</td>
+      <td>${escHtml(c.email)}</td>
+      <td style="text-align:right; white-space:nowrap;">
+        <button class="btn secondary" style="padding:3px 8px; font-size:11px;" onclick="openContactForm('${c.id}')">Edit</button>
+        <button class="btn danger" style="padding:3px 8px; font-size:11px;" onclick="deleteContact('${c.id}')">Delete</button>
+      </td>
+    </tr>`).join('');
+  el.innerHTML = `
+    <div class="finance-filters">
+      <input class="search-input" id="ct-search" placeholder="Search name, phone, email…" value="${escHtml(contactsSearch)}" oninput="setContactsSearch(this.value)" style="flex:1; min-width:180px;">
+      <button class="btn" onclick="openContactForm('new')">+ Add</button>
+      <button class="btn secondary" onclick="importContacts()">Import</button>
+      <button class="btn secondary" onclick="exportContacts('vcf')">Export .vcf</button>
+      <button class="btn secondary" onclick="exportContacts('csv')">Export CSV</button>
+      <button class="btn secondary" onclick="importContactsFromCustomers()">+ From customers</button>
+    </div>
+    ${form}
+    <div>
+      <table class="finance-table">
+        <thead><tr><th>Name</th><th class="num">Phone</th><th>Email</th><th></th></tr></thead>
+        <tbody>${rows || `<tr><td colspan="4" class="tax-note" style="padding:16px;">${contacts.length ? 'No matches.' : 'No contacts yet — add one, import a file, or pull in your work-order customers.'}</td></tr>`}</tbody>
+      </table>
+      <div class="tax-note" style="margin-top:8px;">Thunderbird: Address Book → Tools → Import to load a .vcf or .csv, and Tools → Export to get one back. Duplicates (same email or phone) are skipped on import.</div>
+    </div>`;
 }
 
 function toggleWoMode() {
@@ -2693,7 +3443,7 @@ function printWo(id) {
     <div class="print-watermark">${generatePcbWatermarkSvg()}</div>
     <div class="print-content">
       <div class="inv-header">
-        <div class="inv-title">JPservice — Work Order</div>
+        ${printBrandHtml()}
         <div class="inv-meta">
           <div class="inv-number">${woNumberLabel(wo.number)}</div>
           <div>${new Date(wo.createdAt).toLocaleDateString([], { month:'long', day:'numeric', year:'numeric' })}</div>
@@ -2739,11 +3489,13 @@ function printWo(id) {
         <div class="inv-row ${balance > 0 ? 'due' : ''}"><span>${balance > 0 ? 'Balance Due' : 'Paid in Full'}</span><span>€${Math.max(0,balance).toFixed(2)}</span></div>
       </div>
 
-      <div class="inv-footer">Not a valid invoice.</div>
+      <div class="inv-footer">Not valid invoice.</div>
     </div>
   `;
 
-  window.print();
+  // wait for the logo to decode so it can't be missing from the printout
+  const imgs = [...document.querySelectorAll('#print-area img')];
+  Promise.all(imgs.map(i => i.decode ? i.decode().catch(() => {}) : null)).then(() => window.print());
 }
 
 function updateWoStatus(id, status) {
@@ -3532,7 +4284,7 @@ document.getElementById('wo-modal').addEventListener('click', e => {
 // + button in header area — keyboard shortcut N (stock tab only, so it doesn't fire while typing a WO)
 document.addEventListener('keydown', e => {
   if (activeTab === 'stock' && e.key === 'n' && document.activeElement !== scanInput && document.activeElement.tagName !== 'INPUT') openModal('');
-  if (e.key === 'Escape') { closeModal(); closeWoModal(); closeHistory(); }
+  if (e.key === 'Escape') { closeModal(); closeWoModal(); closeHistory(); closePrefs(); }
   if (e.key === 's' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); saveFile(); }
 });
 
@@ -3625,10 +4377,12 @@ document.addEventListener('keyup', e => {
 });
 
 // ─── INIT ──────────────────────────────────────────────────────────────────
+applySettings();
 renderList();
 renderLocationChips();
 syncWoModeUI();
 renderWoList();
+updateContactsStat();
 scanInput.focus();
 </script>
 </body>

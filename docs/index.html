@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>My Web Apps</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpolygon points='6,2 30,2 30,30 2,30 2,6' fill='%232b2b2b'/%3E%3Crect x='8' y='4' width='16' height='9' fill='%23c8c8c8'/%3E%3Crect x='18' y='6' width='4' height='5' fill='%232b2b2b'/%3E%3Crect x='6' y='18' width='20' height='10' fill='%23ff3b3b'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
 <style>
@@ -37,55 +38,6 @@
     flex-direction: column;
   }
 
-  /* ---------- Desktop icons ---------- */
-  .desktop-icons {
-    padding: 18px;
-    display: flex;
-    flex-direction: column;
-    gap: 22px;
-    width: 90px;
-  }
-
-  .desktop-icon {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
-    cursor: default;
-  }
-
-  .desktop-icon .glyph {
-    width: 38px;
-    height: 32px;
-    background: var(--face);
-    border: 2px outset var(--face-light);
-    position: relative;
-  }
-
-  .desktop-icon .glyph.bin::before {
-    content: '';
-    position: absolute;
-    inset: 6px 8px 3px;
-    background: repeating-linear-gradient(90deg, var(--face-darker) 0 2px, var(--face) 2px 5px);
-  }
-
-  .desktop-icon .glyph.pc {
-    background: #005a9e;
-    border-color: #7fc7ff #003a6b #003a6b #7fc7ff;
-  }
-  .desktop-icon .glyph.pc::before {
-    content:'';
-    position:absolute;
-    inset: 5px;
-    background: #001830;
-  }
-
-  .desktop-icon span {
-    font-family: 'VT323', monospace;
-    font-size: 15px;
-    color: #fff;
-    text-shadow: 1px 1px 1px rgba(0,0,0,0.8);
-  }
 
   /* ---------- Main window ---------- */
   main {
@@ -93,7 +45,7 @@
     display: flex;
     align-items: flex-start;
     justify-content: center;
-    padding: 30px 16px 90px;
+    padding: 20px 16px 90px;
   }
 
   .window {
@@ -396,17 +348,6 @@
 </style>
 </head>
 <body>
-
-<div class="desktop-icons">
-  <div class="desktop-icon">
-    <div class="glyph pc"></div>
-    <span>My Computer</span>
-  </div>
-  <div class="desktop-icon">
-    <div class="glyph bin"></div>
-    <span>Recycle Bin</span>
-  </div>
-</div>
 
 <main>
   <div class="window">
