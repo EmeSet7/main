@@ -1054,6 +1054,78 @@
   .ct-form { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
   .ct-field label { display: block; font-size: 11px; color: var(--text-dim); margin-bottom: 4px; }
   .ct-field input { width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text); font-family: var(--mono); font-size: 13px; padding: 7px 8px; border-radius: 6px; outline: none; }
+
+  /* ── HEADER MENU / MOBILE BASICS (desktop defaults) ───────────────── */
+  .hdr-actions { display: flex; align-items: center; gap: 10px; }
+  .hdr-menu-btn { display: none; align-items: center; gap: 8px; }
+  .mobile-back { display: none; align-self: flex-start; }
+
+  /* ── WORK ORDER SCAN MODAL ───────────────────────── */
+  .scan-log-row {
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 7px 10px;
+    border-radius: 6px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    margin-top: 6px;
+  }
+  .scan-log-row.ok  { border-color: var(--green); color: var(--green); }
+  .scan-log-row.err { border-color: var(--red);   color: var(--red); }
+  .scan-log-row.warn { border-color: var(--yellow); color: var(--yellow); }
+
+  /* ── MOBILE LAYOUT ──────────────────────────────────
+     Below 820px the Stock and Work Orders screens become a two-step flow:
+     list first, tap an item → detail with a ← Back button. Header buttons
+     collapse behind the "⋯" menu (its dot still shows the save state).
+     ─────────────────────────────────────────────────── */
+  @media (max-width: 820px) {
+    .app { height: 100vh; height: 100dvh; }
+
+    header { flex-wrap: wrap; padding: 10px 12px; gap: 8px; }
+    .brand { order: 1; flex: 1; min-width: 0; }
+    .hdr-menu-btn { order: 2; display: flex; }
+    .nav-tabs { order: 3; width: 100%; overflow-x: auto; }
+    .nav-tab { flex: 1 0 auto; white-space: nowrap; padding: 9px 12px; }
+    .hdr-actions { order: 4; display: none; width: 100%; flex-wrap: wrap; padding-top: 4px; }
+    .hdr-actions.open { display: flex; }
+    .header-stats { display: none !important; }
+
+    #stock-main .sidebar, #wo-main .sidebar { width: 100%; flex: 1; border-right: none; }
+    #stock-main .detail, #wo-main .detail { display: none; }
+    #stock-main.show-detail .sidebar, #wo-main.show-detail .sidebar { display: none; }
+    #stock-main.show-detail .detail, #wo-main.show-detail .detail { display: flex; }
+    .mobile-back { display: inline-flex; }
+
+    .detail { padding: 16px 14px; gap: 18px; overflow-x: auto; }
+    .detail-header { flex-direction: column; gap: 12px; }
+    .detail-actions { flex-wrap: wrap; }
+    .detail-code { font-size: 22px; }
+
+    .qty-control { flex-wrap: wrap; padding: 16px; gap: 14px; }
+    .qty-display { font-size: 44px; min-width: 64px; }
+    .qty-btn { width: 52px; height: 52px; }
+    .fields-grid { grid-template-columns: 1fr; }
+    .cost-summary { grid-template-columns: repeat(2, 1fr); padding: 14px; }
+
+    .parts-list, #wo-list.parts-list { grid-template-columns: 1fr; }
+    #view-toggle-btn, #wo-view-toggle-btn { display: none; }
+    .parts-list.list-view .part-item, #wo-list.list-view .part-item { display: block; }
+    .part-item { padding: 12px; }
+    .part-item-code { font-size: 15px; }
+    .part-item-name { font-size: 13px; }
+    .qty-badge, .loc-badge { font-size: 11px; }
+
+    .loc-chips { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; }
+    .loc-chip { flex: 0 0 auto; padding: 6px 11px; }
+
+    .btn { padding: 11px 14px; }
+    /* 16px stops iOS Safari zooming the page when an input gets focus */
+    input, select, textarea { font-size: 16px !important; }
+    .modal { padding: 16px; }
+    .finance-table { min-width: 520px; }
+    .finance-rate-setting { margin-left: 0; }
+  }
 </style>
 </head>
 <body>
@@ -1075,7 +1147,8 @@
       <button class="nav-tab" id="tab-contacts" onclick="switchTab('contacts')">Contacts</button>
       <button class="nav-tab" id="tab-toorder" onclick="switchTab('toorder')">To Order<span class="nav-tab-badge hidden" id="toorder-nav-badge">0</span></button>
     </div>
-    <div style="display:flex;align-items:center;gap:10px;">
+    <button class="btn secondary hdr-menu-btn" id="hdr-menu-btn" onclick="toggleHdrMenu()" aria-label="Menu"><span class="save-dot" id="menu-dot"></span>⋯</button>
+    <div class="hdr-actions" id="hdr-actions">
       <div class="save-status"><span class="save-dot" id="save-dot"></span><span id="save-label">No file loaded</span></div>
       <button class="btn secondary" onclick="openHistory()" >History</button>
       <button class="btn secondary" onclick="openPrefs()" >Preferences</button>
@@ -1127,7 +1200,7 @@
       <div class="scan-zone">
         <div class="scan-label">Scan / Enter Code</div>
         <div class="scan-input-wrap">
-          <input class="scan-input" id="scan-input" placeholder="Scan or type code…" autocomplete="off" autofocus>
+          <input class="scan-input" id="scan-input" placeholder="Scan or type code…" autocomplete="off">
           <button class="btn secondary" onclick="toggleCamera()" id="cam-btn" >WebC</button>
           <button class="btn" onclick="handleScan()">GO</button>
         </div>
@@ -1286,7 +1359,7 @@
 <div class="modal-overlay hidden" id="prefs-modal">
   <div class="modal">
     <h2>Preferences</h2>
-    <p>Your business info appears on printed work orders only. It is stored in stock.json (Save/Load), never in the page itself.</p>
+    <p>Your business info is used on printed work orders and WhatsApp messages. It is stored in stock.json (Save/Load), never in the page itself.</p>
     <div class="fields-grid">
       <div class="field full">
         <label>Logo</label>
@@ -1309,10 +1382,42 @@
         <label>Address</label>
         <textarea id="prefs-address" placeholder="Street, postcode, city"></textarea>
       </div>
+      <div class="field">
+        <label>Default country code</label>
+        <input id="prefs-wa-country" placeholder="351" inputmode="numeric" autocomplete="off">
+      </div>
+      <div class="field full">
+        <label>WhatsApp "ready" message</label>
+        <textarea id="prefs-wa-template"></textarea>
+        <span style="font-size:11px;color:var(--text-dim)">Placeholders: {name} {unit} {wo} {balance}</span>
+      </div>
     </div>
     <div class="modal-actions">
       <button class="btn secondary" onclick="closePrefs()">Cancel</button>
       <button class="btn" onclick="savePrefs()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- WORK ORDER SCAN MODAL — lives outside the WO detail panel so the camera
+     survives the panel re-rendering every time a part is added -->
+<div class="modal-overlay hidden" id="wo-scan-modal">
+  <div class="modal">
+    <h2>Scan parts — <span id="wo-scan-title"></span></h2>
+    <p>Each scan takes 1 unit (or the Qty below) out of stock and adds it to this work order. Camera or USB scanner both work.</p>
+    <div id="wo-scan-cam" style="display:none;margin-bottom:10px;position:relative;">
+      <video id="wo-scan-video" style="width:100%;border-radius:6px;border:1px solid var(--border);" autoplay muted playsinline></video>
+      <div style="position:absolute;inset:0;border:2px solid var(--accent);border-radius:6px;pointer-events:none;opacity:0.5;"></div>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <input class="scan-input" id="wo-scan-input" placeholder="Scan or type code…" autocomplete="off" onkeydown="if(event.key==='Enter') woScanSubmitFromInput()">
+      <input class="scan-input" id="wo-scan-qty" type="number" min="1" step="1" value="1" style="flex:0 0 64px;" title="Qty per scan">
+      <button class="btn" onclick="woScanSubmitFromInput()">Add</button>
+    </div>
+    <div id="wo-scan-log" style="margin-top:6px;max-height:30vh;overflow-y:auto;"></div>
+    <div class="modal-actions" style="margin-top:14px;">
+      <button class="btn secondary" id="wo-scan-cam-btn" onclick="toggleWoScanCamera()">Camera</button>
+      <button class="btn" onclick="closeWoScan()">Done</button>
     </div>
   </div>
 </div>
@@ -1412,7 +1517,8 @@ function rememberPart(p) {
 // (contact lines) and for the header logo. Add future options (theme, etc.)
 // under `settings` — it's merged over defaults on load.
 const SETTINGS_KEY = 'stockio_settings';
-const DEFAULT_SETTINGS = { business: { phone: '', email: '', address: '', logo: '' } };
+const DEFAULT_WA_TEMPLATE = 'Olá {name}! O seu {unit} ({wo}) já está pronto para levantar.{balance} Obrigado!';
+const DEFAULT_SETTINGS = { business: { phone: '', email: '', address: '', logo: '', waCountry: '351', waTemplate: DEFAULT_WA_TEMPLATE } };
 let settings = (() => {
   try { return normalizeSettings(JSON.parse(localStorage.getItem(SETTINGS_KEY))); }
   catch { return normalizeSettings(null); }
@@ -1440,13 +1546,15 @@ function openPrefs() {
   document.getElementById('prefs-phone').value = b.phone || '';
   document.getElementById('prefs-email').value = b.email || '';
   document.getElementById('prefs-address').value = b.address || '';
+  document.getElementById('prefs-wa-country').value = b.waCountry || '';
+  document.getElementById('prefs-wa-template').value = b.waTemplate || DEFAULT_WA_TEMPLATE;
   prefsPendingLogo = b.logo || '';
   refreshPrefsLogoPreview();
   document.getElementById('prefs-modal').classList.remove('hidden');
 }
 function closePrefs() {
   document.getElementById('prefs-modal').classList.add('hidden');
-  if (activeTab === 'stock') scanInput.focus();
+  if (activeTab === 'stock') focusScan();
 }
 function refreshPrefsLogoPreview() {
   document.getElementById('prefs-logo-preview').src = prefsPendingLogo || DEFAULT_LOGO_SRC;
@@ -1481,7 +1589,9 @@ function savePrefs() {
     phone: document.getElementById('prefs-phone').value.trim(),
     email: document.getElementById('prefs-email').value.trim(),
     address: document.getElementById('prefs-address').value.trim(),
-    logo: prefsPendingLogo
+    logo: prefsPendingLogo,
+    waCountry: document.getElementById('prefs-wa-country').value.replace(/\D/g, ''),
+    waTemplate: document.getElementById('prefs-wa-template').value.trim() || DEFAULT_WA_TEMPLATE
   };
   settingsBackup();
   applySettings();
@@ -1502,12 +1612,14 @@ function printBrandHtml() {
 function markUnsaved() {
   unsaved = true;
   document.getElementById('save-dot').className = 'save-dot unsaved';
+  const md1 = document.getElementById('menu-dot'); if (md1) md1.className = 'save-dot unsaved';
   document.getElementById('save-label').textContent = 'Unsaved changes';
   scheduleAutoSave();
 }
 function markSaved(label) {
   unsaved = false;
   document.getElementById('save-dot').className = 'save-dot saved';
+  const md2 = document.getElementById('menu-dot'); if (md2) md2.className = 'save-dot saved';
   document.getElementById('save-label').textContent = label || 'Saved';
 }
 
@@ -1589,6 +1701,7 @@ function loadFile() {
         selectedId = null;
         selectedWoId = null;
         selectedCustomerKey = null;
+        backToList();
         woViewMode = 'orders';
         syncWoModeUI();
         renderList();
@@ -1732,7 +1845,7 @@ function openHistory() {
 
 function closeHistory() {
   document.getElementById('history-modal').classList.add('hidden');
-  if (activeTab === 'stock') scanInput.focus();
+  if (activeTab === 'stock') focusScan();
 }
 
 function formatHistoryTime(iso) {
@@ -1868,6 +1981,16 @@ window.addEventListener('beforeunload', e => {
 
 function newPart_shortcut() { openModal(''); }
 
+// ─── MOBILE NAVIGATION + HEADER MENU ────────────────────────────────────────
+// On narrow screens (see @media in <style>) Stock and Work Orders show either the
+// list or the detail. Selecting something adds .show-detail; ← Back removes it.
+// On desktop these classes do nothing.
+function showDetailPane(mainId) { document.getElementById(mainId).classList.add('show-detail'); }
+function backToList() {
+  ['stock-main', 'wo-main'].forEach(id => document.getElementById(id).classList.remove('show-detail'));
+}
+function toggleHdrMenu() { document.getElementById('hdr-actions').classList.toggle('open'); }
+
 // ─── TAB SWITCHING ──────────────────────────────────────────────────────────
 function switchTab(tab) {
   activeTab = tab;
@@ -1887,7 +2010,7 @@ function switchTab(tab) {
   document.getElementById('finance-stats').classList.toggle('hidden', tab !== 'finance');
   document.getElementById('toorder-stats').classList.toggle('hidden', tab !== 'toorder');
   if (tab === 'stock') {
-    scanInput.focus();
+    focusScan();
   } else if (tab === 'wo') {
     renderWoList();
   } else if (tab === 'finance') {
@@ -2881,6 +3004,7 @@ function renderContacts() {
 }
 
 function toggleWoMode() {
+  backToList();
   woViewMode = woViewMode === 'orders' ? 'customers' : 'orders';
   selectedCustomerKey = null;
   selectedWoId = null;
@@ -2937,8 +3061,10 @@ function selectCustomer(key) {
   const c = getCustomersList().find(x => x.key === key);
   if (!c) return;
   const note = customerNotes[key] || '';
+  showDetailPane('wo-main');
 
   document.getElementById('wo-detail').innerHTML = `
+    <button class="btn secondary mobile-back" onclick="backToList()">← Back</button>
     <div class="detail-header">
       <div>
         <div class="detail-code">${c.name || 'Unknown Customer'}</div>
@@ -3127,12 +3253,14 @@ function selectWo(id) {
   const wo = workOrders.find(w => w.id === id);
   if (!wo) return;
   renderWoList();
+  showDetailPane('wo-main');
 
   const custHistory = getCustomerHistory(wo);
   const isBusiness = wo.clientType === 'business';
   const { partsTotal, miscTotal } = computeWoTotals(wo);
 
   document.getElementById('wo-detail').innerHTML = `
+    <button class="btn secondary mobile-back" onclick="backToList()">← Back</button>
     <div class="detail-header">
       <div>
         <div class="detail-code">${woNumberLabel(wo.number)}</div>
@@ -3145,6 +3273,7 @@ function selectWo(id) {
         <button class="btn ${wo.invoiced ? 'success' : 'secondary'}" onclick="toggleWoInvoice('${wo.id}')" >${wo.invoiced ? 'Invoice' : 'No Invoice'}</button>
         <button class="btn ${wo.warranty ? 'success' : 'secondary'}" onclick="toggleWoWarranty('${wo.id}')" >${wo.warranty ? 'Warranty (No VAT)' : 'Not Warranty'}</button>
         <button class="btn ${isBusiness ? 'success' : 'secondary'}" onclick="toggleWoClientType('${wo.id}')" >${isBusiness ? 'Withholding Tax' : 'No 11,5% Withhold'}</button>
+        <button class="btn ${wo.status === 'ready' ? 'success' : 'secondary'}" onclick="openWoWhatsApp('${wo.id}')" title="Open WhatsApp with a ready-for-pickup message">WhatsApp</button>
         <button class="btn secondary" onclick="printWo('${wo.id}')" >Print</button>
         <button class="btn danger" onclick="deleteWo('${wo.id}')">Delete</button>
       </div>
@@ -3225,6 +3354,7 @@ function selectWo(id) {
         <input id="wo-part-code" placeholder="Type part code" style="flex:1;" onkeydown="if(event.key==='Enter') addWoPart('${wo.id}')">
         <input id="wo-part-qty" type="number" min="1" step="1" value="1" style="width:70px;">
         <button class="btn" onclick="addWoPart('${wo.id}')">Add</button>
+        <button class="btn secondary" onclick="openWoScan('${wo.id}')" title="Scan parts with camera or USB scanner">Scan</button>
       </div>
       <div style="margin-top:10px;">
         ${wo.partsUsed.length ? wo.partsUsed.map(l => `
@@ -3579,41 +3709,214 @@ function saveWoLabor(id, value) {
   if (summaryEl) summaryEl.innerHTML = buildWoCostSummaryHtml(wo);
 }
 
-// Adding a part looks it up in the shared `parts` stock array, deducts the
-// quantity from stock immediately, records the cost line on the work order,
-// and logs it once in the shared history log so it's traceable from both sides.
-function addWoPart(woId) {
-  const wo = workOrders.find(w => w.id === woId);
-  if (!wo) return;
-  const codeInput = document.getElementById('wo-part-code');
-  const code = codeInput.value.trim();
-  if (!code) return;
-  const qty = Math.max(1, parseInt(document.getElementById('wo-part-qty').value) || 1);
-  const part = parts.find(p => p.code.toLowerCase() === code.toLowerCase());
-  if (!part) { alert(`No part in stock with code "${code}"`); return; }
-  if (part.qty < qty) {
-    if (!confirm(`Only ${part.qty} in stock for ${part.code}. Use anyway? (stock will go to 0)`)) return;
-  }
+// Finds a part by its live code, or by a discontinued code it replaces.
+function findPartByCode(code) {
+  const c = String(code || '').trim().toLowerCase();
+  if (!c) return null;
+  return parts.find(p => p.code.toLowerCase() === c) ||
+         parts.find(p => (p.oldCodes || []).some(o => o.toLowerCase() === c)) || null;
+}
+
+// Core of "use a part on a work order": deducts stock, adds the cost line
+// (merging into an existing line for the same part + price, so scanning the
+// same part three times gives one line of 3), and logs it once in history.
+function applyPartToWo(wo, part, qty) {
   const before = part.qty;
   part.qty = Math.max(0, part.qty - qty);
   save();
-  const line = {
-    id: crypto.randomUUID(),
-    partId: part.id,
-    code: part.code,
-    description: part.description || '',
-    qty,
-    unitPrice: part.price || 0,
-    lineTotal: Math.round((part.price || 0) * qty * 100) / 100
-  };
-  wo.partsUsed.push(line);
+  const existing = wo.partsUsed.find(l => l.partId === part.id && l.unitPrice === (part.price || 0));
+  if (existing) {
+    existing.qty += qty;
+    existing.lineTotal = Math.round(existing.unitPrice * existing.qty * 100) / 100;
+  } else {
+    wo.partsUsed.push({
+      id: crypto.randomUUID(),
+      partId: part.id,
+      code: part.code,
+      description: part.description || '',
+      qty,
+      unitPrice: part.price || 0,
+      lineTotal: Math.round((part.price || 0) * qty * 100) / 100
+    });
+  }
   woBackup();
   logEvent('qty', part.code, `used ${qty} on ${woNumberLabel(wo.number)} (${before} → ${part.qty})`);
-  codeInput.value = '';
-  document.getElementById('wo-part-qty').value = '1';
+}
+
+// Typed / USB-scanner path: code field + Add (or Enter) in the Parts Used row.
+function addWoPart(woId) {
+  const wo = workOrders.find(w => w.id === woId);
+  if (!wo) return;
+  const code = document.getElementById('wo-part-code').value.trim();
+  if (!code) return;
+  const qty = Math.max(1, parseInt(document.getElementById('wo-part-qty').value) || 1);
+  const part = findPartByCode(code);
+  if (!part) { alert(`No part in stock with code "${code}"`); return; }
+  if (part.qty < qty && !confirm(`Only ${part.qty} in stock for ${part.code}. Use anyway? (stock will go to 0)`)) return;
+  applyPartToWo(wo, part, qty);
   renderList();
-  selectWo(woId);
-  codeInput.focus();
+  selectWo(woId); // rebuilds the panel, so the code field must be looked up again
+  const fresh = document.getElementById('wo-part-code');
+  if (fresh && !IS_TOUCH) fresh.focus(); // ready for the next scan
+}
+
+// ─── SCAN PARTS INTO A WORK ORDER ───────────────────────────────────────────
+// "Scan" button in Parts Used opens a modal that stays open for multiple scans.
+// Camera (ZXing) and USB scanner (types into the field + Enter) both feed
+// woScanSubmit(). The modal is separate from the WO panel on purpose: the panel
+// re-renders after every change, which would kill a camera living inside it.
+let woScanId = null;
+let woScanReader = null;
+let woScanLast = { code: '', t: 0 };
+const WO_SCAN_CAM_KEY = 'stockio_wo_scan_cam';
+let woScanCamPref = (() => { try { return localStorage.getItem(WO_SCAN_CAM_KEY) !== '0'; } catch { return true; } })();
+let audioCtx = null;
+
+function scanFeedback(ok) {
+  try {
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o.frequency.value = ok ? 880 : 220;
+    g.gain.value = 0.05;
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start(); o.stop(audioCtx.currentTime + (ok ? 0.08 : 0.25));
+  } catch {}
+  try { if (navigator.vibrate) navigator.vibrate(ok ? 30 : [60, 40, 60]); } catch {}
+}
+
+function woScanLog(kind, html) {
+  const el = document.getElementById('wo-scan-log');
+  const row = document.createElement('div');
+  row.className = 'scan-log-row ' + kind;
+  row.innerHTML = html;
+  el.prepend(row);
+  while (el.children.length > 30) el.lastChild.remove();
+}
+
+function openWoScan(woId) {
+  const wo = workOrders.find(w => w.id === woId);
+  if (!wo) return;
+  if (cameraActive) stopCamera(); // the sidebar camera and this one can't share the webcam
+  woScanId = woId;
+  document.getElementById('wo-scan-title').textContent = woNumberLabel(wo.number);
+  document.getElementById('wo-scan-log').innerHTML = '';
+  document.getElementById('wo-scan-qty').value = '1';
+  document.getElementById('wo-scan-input').value = '';
+  document.getElementById('wo-scan-modal').classList.remove('hidden');
+  syncWoScanCamBtn();
+  if (woScanCamPref) startWoScanCamera();
+  else if (!IS_TOUCH) document.getElementById('wo-scan-input').focus();
+}
+
+function closeWoScan() {
+  if (!woScanId) return; // also called by the Escape handler, so it must be a no-op when closed
+  stopWoScanCamera();
+  document.getElementById('wo-scan-modal').classList.add('hidden');
+  const id = woScanId;
+  woScanId = null;
+  renderList();
+  if (workOrders.some(w => w.id === id)) selectWo(id);
+}
+
+function syncWoScanCamBtn() {
+  const btn = document.getElementById('wo-scan-cam-btn');
+  if (btn) btn.textContent = woScanReader ? 'Camera: On' : 'Camera: Off';
+}
+
+async function startWoScanCamera() {
+  if (woScanReader) return;
+  if (typeof ZXing === 'undefined') { woScanLog('err', 'Camera scanner not loaded (offline?). Use the field above.'); return; }
+  const wrap = document.getElementById('wo-scan-cam');
+  const video = document.getElementById('wo-scan-video');
+  try {
+    wrap.style.display = 'block';
+    woScanReader = new ZXing.BrowserMultiFormatReader();
+    syncWoScanCamBtn();
+    await woScanReader.decodeFromConstraints({ video: { facingMode: 'environment' } }, video, result => {
+      if (result) woScanSubmit(result.getText(), true);
+    });
+  } catch (err) {
+    woScanLog('err', 'Could not access camera: ' + escHtml(err.message));
+    stopWoScanCamera();
+  }
+}
+
+function stopWoScanCamera() {
+  if (woScanReader) { try { woScanReader.reset(); } catch {} woScanReader = null; }
+  const wrap = document.getElementById('wo-scan-cam');
+  if (wrap) wrap.style.display = 'none';
+  syncWoScanCamBtn();
+}
+
+function toggleWoScanCamera() {
+  if (woScanReader) { woScanCamPref = false; stopWoScanCamera(); }
+  else { woScanCamPref = true; startWoScanCamera(); }
+  try { localStorage.setItem(WO_SCAN_CAM_KEY, woScanCamPref ? '1' : '0'); } catch {}
+}
+
+function woScanSubmitFromInput() {
+  const input = document.getElementById('wo-scan-input');
+  const code = input.value.trim();
+  input.value = '';
+  if (code) woScanSubmit(code, false);
+  if (!IS_TOUCH) input.focus();
+}
+
+function woScanSubmit(rawCode, fromCamera) {
+  const code = String(rawCode || '').trim();
+  const wo = workOrders.find(w => w.id === woScanId);
+  if (!code || !wo) return;
+  // The camera reports the same barcode many times a second while it's in view:
+  // ignore repeats of the same code until it has been out of view for ~2.5s.
+  // (Need two of the same part? Use the Qty box instead.)
+  const now = Date.now();
+  if (fromCamera && code === woScanLast.code && now - woScanLast.t < 2500) { woScanLast.t = now; return; }
+  woScanLast = { code, t: now };
+
+  const part = findPartByCode(code);
+  if (!part) { scanFeedback(false); woScanLog('err', `Not in stock: ${escHtml(code)}`); return; }
+  const qtyInput = document.getElementById('wo-scan-qty');
+  const qty = Math.max(1, parseInt(qtyInput.value) || 1);
+  if (part.qty < qty && !confirm(`Only ${part.qty} in stock for ${part.code}. Use anyway? (stock will go to 0)`)) return;
+  applyPartToWo(wo, part, qty);
+  qtyInput.value = '1'; // never let a one-off quantity leak into the next scan
+  scanFeedback(true);
+  const low = (part.minStock || 0) > 0 && part.qty < part.minStock;
+  woScanLog(low || part.qty === 0 ? 'warn' : 'ok',
+    `+${qty} ${escHtml(part.code)}${part.description ? ' — ' + escHtml(part.description) : ''} · ${part.qty} left${part.qty === 0 ? ' (out of stock)' : low ? ' (below min)' : ''}`);
+}
+
+// ─── WHATSAPP "READY" MESSAGE ───────────────────────────────────────────────
+// Opens a wa.me link pre-filled with the customer's number and your template
+// (Preferences → WhatsApp message). Nothing is sent until you press send in WhatsApp.
+function waNumber(raw) {
+  let d = String(raw || '').trim();
+  if (d.startsWith('+')) return d.replace(/\D/g, '');
+  d = d.replace(/\D/g, '');
+  if (d.startsWith('00')) return d.slice(2);
+  if (d.length >= 11) return d; // already carries a country code
+  const cc = String(settings.business.waCountry || '').replace(/\D/g, '');
+  return cc + d.replace(/^0+/, '');
+}
+
+function buildWoWhatsAppText(wo) {
+  const t = computeWoTotals(wo);
+  const unit = [wo.unit.make, wo.unit.model].filter(Boolean).join(' ') || 'equipamento';
+  const balance = t.balance > 0 ? ` Valor a pagar: €${t.balance.toFixed(2)}.` : '';
+  return (settings.business.waTemplate || DEFAULT_WA_TEMPLATE)
+    .replace(/\{name\}/g, wo.customer.name || '')
+    .replace(/\{unit\}/g, unit)
+    .replace(/\{wo\}/g, woNumberLabel(wo.number))
+    .replace(/\{balance\}/g, balance);
+}
+
+function openWoWhatsApp(id) {
+  const wo = workOrders.find(w => w.id === id);
+  if (!wo) return;
+  const num = waNumber(wo.customer.phone);
+  if (!num) { alert('This work order has no phone number. Add one under Customer & Unit and save.'); return; }
+  window.open('https://wa.me/' + num + '?text=' + encodeURIComponent(buildWoWhatsAppText(wo)), '_blank', 'noopener');
+  logEvent('wo', woNumberLabel(wo.number), 'WhatsApp message opened');
 }
 
 // Removing a used part puts the quantity back into stock — keeps stock accurate
@@ -3725,6 +4028,7 @@ function deleteWo(id) {
   if (wo.partsUsed.length) save();
   workOrders = workOrders.filter(w => w.id !== id);
   selectedWoId = null;
+  backToList();
   woBackup();
   logEvent('wo', woNumberLabel(wo.number), 'work order deleted');
   renderList();
@@ -3741,6 +4045,10 @@ function deleteWo(id) {
 // If code exists → opens that part in the detail panel
 // If code is new → opens the "New Part" modal with the code pre-filled
 const scanInput = document.getElementById('scan-input');
+// On phones/tablets focusing an input pops the on-screen keyboard over the list,
+// so auto-focus only happens on devices with a real pointer (PC + USB scanner).
+const IS_TOUCH = window.matchMedia('(pointer: coarse)').matches;
+function focusScan() { if (!IS_TOUCH) scanInput.focus(); }
 
 scanInput.addEventListener('keydown', e => {
   if (e.key === 'Enter') handleScan();
@@ -3750,7 +4058,7 @@ function handleScan() {
   const code = scanInput.value.trim().toUpperCase();
   if (!code) return;
   scanInput.value = '';
-  scanInput.focus();
+  focusScan();
 
   const part = parts.find(p => p.code.toLowerCase() === code.toLowerCase());
   if (part) {
@@ -3915,8 +4223,10 @@ function selectPart(id) {
   const p = parts.find(x => x.id === id);
   if (!p) return;
   renderList();
+  showDetailPane('stock-main');
 
   document.getElementById('detail').innerHTML = `
+    <button class="btn secondary mobile-back" onclick="backToList()">← Back</button>
     <div class="detail-header">
       <div>
         <div class="detail-code">${p.code}</div>
@@ -4075,6 +4385,7 @@ function deletePart(id) {
   const p = parts.find(x => x.id === id);
   parts = parts.filter(x => x.id !== id);
   selectedId = null;
+  backToList();
   save();
   if (p) { rememberPart(p); logEvent('delete', p.code, `removed (had ${p.qty} units)`); }
   renderList();
@@ -4245,7 +4556,7 @@ function openModal(code) {
 
 function closeModal() {
   document.getElementById('modal').classList.add('hidden');
-  scanInput.focus();
+  focusScan();
 }
 
 function saveNewPart() {
@@ -4284,7 +4595,7 @@ document.getElementById('wo-modal').addEventListener('click', e => {
 // + button in header area — keyboard shortcut N (stock tab only, so it doesn't fire while typing a WO)
 document.addEventListener('keydown', e => {
   if (activeTab === 'stock' && e.key === 'n' && document.activeElement !== scanInput && document.activeElement.tagName !== 'INPUT') openModal('');
-  if (e.key === 'Escape') { closeModal(); closeWoModal(); closeHistory(); closePrefs(); }
+  if (e.key === 'Escape') { closeModal(); closeWoModal(); closeHistory(); closePrefs(); closeWoScan(); }
   if (e.key === 's' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); saveFile(); }
 });
 
@@ -4349,7 +4660,7 @@ function stopCamera() {
   document.getElementById('cam-btn').textContent = '📷';
   document.getElementById('cam-btn').title = 'Scan with webcam';
   cameraActive = false;
-  scanInput.focus();
+  focusScan();
 }
 
 // ─── SCAN FOCUS ────────────────────────────────────────────────────────────
@@ -4364,7 +4675,7 @@ document.addEventListener('click', e => {
   if (isModalOpen) return;
   const tag = e.target.tagName;
   if (tag === 'INPUT' || tag === 'BUTTON' || tag === 'TEXTAREA') return;
-  scanInput.focus();
+  focusScan();
 });
 
 // Also refocus after any button click that isn't inside the modal or detail fields
@@ -4373,17 +4684,21 @@ document.addEventListener('keyup', e => {
   const modal = document.getElementById('modal');
   const isModalOpen = !modal.classList.contains('hidden');
   if (isModalOpen) return;
-  if (document.activeElement === document.body) scanInput.focus();
+  if (document.activeElement === document.body) focusScan();
 });
 
 // ─── INIT ──────────────────────────────────────────────────────────────────
+document.getElementById('hdr-actions').addEventListener('click', e => {
+  const b = e.target.closest('button');
+  if (b && b.id !== 'auto-save-btn') document.getElementById('hdr-actions').classList.remove('open');
+});
 applySettings();
 renderList();
 renderLocationChips();
 syncWoModeUI();
 renderWoList();
 updateContactsStat();
-scanInput.focus();
+focusScan();
 </script>
 </body>
 </html>
