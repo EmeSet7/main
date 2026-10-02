@@ -1156,16 +1156,6 @@
       <button class="btn success" onclick="saveFile()" >Save</button>
       <button class="btn secondary" id="auto-save-btn" onclick="toggleAutoSave()" >Auto-Save: Off</button>
     </div>
-    <div class="header-stats" id="stock-stats">
-      <div class="stat">
-        <div class="stat-value" id="stat-parts">0</div>
-        <div class="stat-label">Parts</div>
-      </div>
-      <div class="stat">
-        <div class="stat-value" id="stat-units">0</div>
-        <div class="stat-label">Total Units</div>
-      </div>
-    </div>
     <div class="header-stats hidden" id="wo-stats">
       <div class="stat">
         <div class="stat-value" id="stat-wo-open">0</div>
@@ -2005,7 +1995,6 @@ function switchTab(tab) {
   document.getElementById('wo-main').classList.toggle('hidden', tab !== 'wo');
   document.getElementById('finance-main').classList.toggle('hidden', tab !== 'finance');
   document.getElementById('toorder-main').classList.toggle('hidden', tab !== 'toorder');
-  document.getElementById('stock-stats').classList.toggle('hidden', tab !== 'stock');
   document.getElementById('wo-stats').classList.toggle('hidden', tab !== 'wo');
   document.getElementById('finance-stats').classList.toggle('hidden', tab !== 'finance');
   document.getElementById('toorder-stats').classList.toggle('hidden', tab !== 'toorder');
@@ -3616,7 +3605,7 @@ function printWo(id) {
         <div class="inv-row"><span>Net Due</span><span>€${amountDue.toFixed(2)}</span></div>` : ''}
         <div class="inv-row"><span>Paid (cash)</span><span>€${cashPaid.toFixed(2)}</span></div>
         <div class="inv-row"><span>Paid (transfer)</span><span>€${transferPaid.toFixed(2)}</span></div>
-        <div class="inv-row ${balance > 0 ? 'due' : ''}"><span>${balance > 0 ? 'Balance Due' : 'Paid in Full'}</span><span>€${Math.max(0,balance).toFixed(2)}</span></div>
+        ${balance > 0 ? `<div class="inv-row due"><span>Balance Due</span><span>€${balance.toFixed(2)}</span></div>` : ''}
       </div>
 
       <div class="inv-footer">Not valid invoice.</div>
@@ -4147,8 +4136,6 @@ function renderList() {
 }
 
 function updateStats() {
-  document.getElementById('stat-parts').textContent = parts.length;
-  document.getElementById('stat-units').textContent = parts.reduce((s,p) => s + p.qty, 0);
   updateToOrderBadge();
 }
 
