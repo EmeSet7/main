@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Stock.io — Autofill</title>
+<title>Stock.io</title>
 <script src="https://unpkg.com/@zxing/library@0.18.6/umd/index.min.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500&display=swap');
@@ -40,10 +40,72 @@
     --text: #aaaaaa;      /* Main text color — labels, values, part codes */
     --text-dim: #888888;  /* Secondary text — descriptions, placeholders, small labels */
 
+    --on-accent: #fff;    /* Text color on top of accent-filled buttons */
+    --orange: #fb923c;    /* Aging badge, 30+ days */
+    --hot: #ff4d4d;       /* Aging badge, 60+ days */
+    color-scheme: dark;   /* Makes native controls (dropdowns, scrollbars) match the theme */
+
     /* Fonts */
     --mono: 'IBM Plex Mono', monospace; /* Used for codes, numbers, labels, buttons */
     --sans: 'IBM Plex Sans', sans-serif; /* Used for body text and input fields */
   }
+
+  /* ═══════════════════════════════════════════════
+     THEMES — picked in Preferences, stored in stock.json (settings.theme).
+     "Graphite" is the default palette defined in :root above. Each block below
+     only overrides the same variables, so every part of the page follows.
+     To add a theme: copy a block, change the values, add it to THEMES in the script.
+     ═══════════════════════════════════════════════ */
+  :root[data-theme="midnight"] {
+    --bg: #070b14; --surface: #111a2b; --surface2: #1f2d47; --border: #3a4d70;
+    --accent: #4f8ef7; --accent-dim: #1b2f55;
+    --green: #34d399; --green-dim: #0b3d2e;
+    --red: #f87171; --red-dim: #4a1d1d;
+    --yellow: #fbbf24;
+    --text: #cbd5e1; --text-dim: #7d8aa3;
+    --on-accent: #fff; color-scheme: dark;
+  }
+  :root[data-theme="amber"] {
+    --bg: #0d0904; --surface: #1c140a; --surface2: #33240f; --border: #5c4320;
+    --accent: #f59e0b; --accent-dim: #4a3208;
+    --green: #84cc16; --green-dim: #2d3d0a;
+    --red: #ef4444; --red-dim: #4a1414;
+    --yellow: #fde047;
+    --text: #e8d9b8; --text-dim: #9c8a66;
+    --on-accent: #1c140a; color-scheme: dark;
+  }
+  :root[data-theme="violet"] {
+    --bg: #0a0710; --surface: #1a1326; --surface2: #2d2145; --border: #4f3d78;
+    --accent: #a78bfa; --accent-dim: #35235f;
+    --green: #4ade80; --green-dim: #0f3d22;
+    --red: #fb7185; --red-dim: #4c1625;
+    --yellow: #facc15;
+    --text: #ddd6f0; --text-dim: #8f84ad;
+    --on-accent: #130a26; color-scheme: dark;
+  }
+  :root[data-theme="light"] {
+    --bg: #f4f4f5; --surface: #ffffff; --surface2: #e4e4e7; --border: #c4c4cc;
+    --accent: #2563eb; --accent-dim: #dbeafe;
+    --green: #15803d; --green-dim: #dcfce7;
+    --red: #b91c1c; --red-dim: #fee2e2;
+    --yellow: #a16207;
+    --text: #18181b; --text-dim: #71717a;
+    --orange: #c2410c; --hot: #dc2626;
+    --on-accent: #fff; color-scheme: light;
+  }
+
+  /* Theme picker in Preferences */
+  .theme-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .theme-chip {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+    font-family: var(--mono); font-size: 11px; font-weight: 600;
+    padding: 7px 11px; border-radius: 6px; cursor: pointer;
+  }
+  .theme-chip:hover { border-color: var(--accent); }
+  .theme-chip.active { border-color: var(--accent); color: var(--accent); }
+  .theme-dots { display: flex; }
+  .theme-dots i { width: 11px; height: 11px; border-radius: 50%; margin-right: -3px; border: 1px solid rgba(128,128,128,0.6); }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -141,6 +203,36 @@
   .stat { text-align: right; }
   .stat-value { font-family: var(--mono); font-size: 18px; font-weight: 600; color: var(--text); }
   .stat-label { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.06em; }
+  /* Keep the header the same height on every tab: the counters on the other tabs
+     are slightly taller than the buttons, which made the bar grow. Tight line
+     heights keep them inside the button height. */
+  .header-stats .stat-value { line-height: 1.05; }
+  .header-stats .stat-label { line-height: 1.1; margin-top: 2px; }
+  .header-stats { flex-wrap: nowrap; flex-shrink: 0; }
+  .header-stats .stat { white-space: nowrap; }
+
+  /* The real cause of the taller bar: when the counter takes up room, the tab
+     labels ("Work Orders", "To Order") were squeezed onto two lines. Labels now
+     never wrap, and the save text shortens with "…" instead of wrapping. */
+  .brand { flex-shrink: 0; }
+  .nav-tab { white-space: nowrap; flex-shrink: 0; }
+  .nav-tabs { flex-shrink: 0; }
+  .hdr-actions { min-width: 0; flex-shrink: 1; }
+  .save-status { min-width: 0; }
+  #save-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 140px; }
+
+  /* Mid-size desktop windows: tighten the header a little so everything still fits on one row */
+  @media (min-width: 821px) and (max-width: 1500px) {
+    header { padding: 12px 14px; }
+    header .btn { padding: 8px 10px; }
+    .hdr-actions { gap: 6px; }
+    .header-stats { gap: 14px; }
+    .nav-tab { padding: 7px 11px; }
+  }
+  /* Very narrow desktop windows: drop the counters so nothing overflows sideways */
+  @media (min-width: 821px) and (max-width: 1000px) {
+    .header-stats { display: none !important; }
+  }
 
   .main {
     display: flex;
@@ -198,7 +290,7 @@
 
   .btn {
     background: var(--accent);
-    color: #fff;
+    color: var(--on-accent);
     border: none;
     border-radius: 6px;
     padding: 10px 14px;
@@ -724,8 +816,12 @@
   .wo-item-balance.settled { color: var(--green); }
   .wo-item-balance.pending { color: var(--text-dim); font-style: italic; }
 
-  /* Aging badge — flags a WO stuck in the same status for a while.
-     Escalates yellow (1wk+) -> yellow/bold (1mo+) -> red (3mo+). */
+  /* Aging badge — days a WO has been in its current status, colour-coded at a glance.
+       0-9 days   grey
+       10-29 days yellow
+       30-59 days orange
+       60+ days   red
+     Thresholds live in getAgingBadge() in the script. */
   .aging-badge {
     font-family: var(--mono);
     font-size: 9px;
@@ -734,9 +830,10 @@
     border-radius: 4px;
     white-space: nowrap;
   }
-  .aging-badge.week    { background: var(--surface2); color: var(--yellow); border: 1px solid var(--yellow); }
-  .aging-badge.month   { background: var(--surface2); color: var(--yellow); border: 1px solid var(--yellow); font-weight: 700; }
-  .aging-badge.quarter { background: var(--red-dim); color: var(--red); border: 1px solid var(--red); font-weight: 700; }
+  .aging-badge.d0  { background: var(--surface2); color: var(--text-dim); border: 1px solid var(--border); }
+  .aging-badge.d10 { background: var(--surface2); color: var(--yellow); border: 1px solid var(--yellow); }
+  .aging-badge.d30 { background: var(--surface2); color: var(--orange); border: 1px solid var(--orange); font-weight: 700; }
+  .aging-badge.d60 { background: var(--red-dim); color: var(--hot); border: 1px solid var(--hot); font-weight: 700; }
 
   .field textarea {
     background: var(--surface);
@@ -860,6 +957,8 @@
   .prefs-logo-preview { width: 64px; height: 64px; object-fit: contain; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 4px; }
   .inv-meta { text-align: right; font-size: 12px; }
   .inv-meta .inv-number { font-family: var(--mono); font-size: 16px; font-weight: 600; }
+  .inv-barcode { margin: 6px 0 4px auto; width: 220px; }
+  .inv-barcode svg { display: block; width: 100%; height: 38px; }
   .inv-section { margin-bottom: 16px; }
   .inv-section-title { font-family: var(--mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: #555; margin-bottom: 6px; border-bottom: 1px solid #ccc; padding-bottom: 3px; }
   .inv-row { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; padding: 3px 0; }
@@ -894,6 +993,14 @@
       background: #fff;
       padding: 15mm;
     }
+
+    /* Flowing layout, only used for long lists (To Order) via html.print-flow:
+       the app is removed and the list continues onto more pages if needed. */
+    html.print-flow, html.print-flow body { background: #fff !important; height: auto !important; overflow: visible !important; }
+    html.print-flow body > *:not(#print-area) { display: none !important; }
+    html.print-flow #print-area { position: relative; min-height: 0; }
+    html.print-flow .inv-table tr, html.print-flow .inv-totals { break-inside: avoid; page-break-inside: avoid; }
+    html.print-flow .inv-table thead { display: table-header-group; }
   }
 
   .hidden { display: none !important; }
@@ -1126,6 +1233,47 @@
     .finance-table { min-width: 520px; }
     .finance-rate-setting { margin-left: 0; }
   }
+
+  /* ── STABLE HEADER ON DESKTOP ────────────────────────
+     The header used to spread its items with space-between, so showing or hiding
+     the per-tab counter (Open Orders, Balance Due, Contacts…) moved the tab pills.
+     Now the logo and tabs are pinned to the left with a fixed gap between them,
+     and only the right-hand side (save buttons + counter) moves. */
+  @media (min-width: 821px) {
+    header { justify-content: flex-start; }
+    .brand { margin-right: 40px; }
+    .hdr-actions { margin-left: auto; }
+    .header-stats { margin-left: 24px; }
+  }
+
+  /* ── COUNTERS + SYNC STATUS (desktop) ────────────────
+     The per-tab counters (Open Orders, Balance Due, …) only show on big screens
+     (1600px and up: desktop, wide windows). There they live in a fixed-width slot
+     at the far right, reserved with padding on the header, so nothing moves when
+     you change tabs. On smaller screens (iPad landscape, small windows) they are
+     hidden, because logo + tabs + buttons already fill the bar.
+     To change when they appear, change the two 1600 / 1599 values below. */
+  @media (min-width: 821px) {
+    header { position: relative; }
+    .save-status { flex: 0 0 138px; }          /* fixed width: the dot never shifts */
+    #save-label { max-width: none; flex: 1; min-width: 0; }
+    .hdr-actions { flex-shrink: 0; }
+  }
+  @media (min-width: 1600px) {
+    header { padding-right: 176px; }
+    .header-stats {
+      position: absolute; right: 24px; top: 50%; transform: translateY(-50%);
+      width: 130px; margin-left: 0; justify-content: flex-end;
+    }
+    .header-stats .stat-value { overflow: hidden; text-overflow: ellipsis; }
+  }
+  @media (min-width: 821px) and (max-width: 1599px) {
+    .header-stats { display: none !important; }
+  }
+  /* Medium windows: if the buttons do not fit next to the tabs, they drop to a second row */
+  @media (min-width: 821px) and (max-width: 1279px) {
+    header { flex-wrap: wrap; row-gap: 8px; }
+  }
 </style>
 </head>
 <body>
@@ -1279,6 +1427,7 @@
 <!-- SHARED LOCATION DATALIST — populated by JS from existing part locations -->
 <datalist id="location-suggestions"></datalist>
 <datalist id="manufacturer-suggestions"></datalist>
+<datalist id="purchase-by-suggestions"></datalist>
 <datalist id="wo-model-suggestions"></datalist>
 <datalist id="code-suggestions"></datalist>
 <datalist id="customer-name-suggestions"></datalist>
@@ -1316,6 +1465,14 @@
         <label>Min Stock</label>
         <input id="m-minstock" type="number" min="0" step="1" placeholder="0">
       </div>
+      <div class="field">
+        <label>Last Purchase Price</label>
+        <input id="m-buyprice" type="number" min="0" step="0.01" placeholder="0.00">
+      </div>
+      <div class="field">
+        <label>Purchase by</label>
+        <input id="m-buyfrom" placeholder="Supplier / shop…" list="purchase-by-suggestions" autocomplete="off">
+      </div>
       <div class="field full">
         <label>Location</label>
         <!-- datalist gives a dropdown of existing locations but still allows typing new ones -->
@@ -1345,12 +1502,30 @@
   </div>
 </div>
 
+<!-- PDF MODAL — shown while a PDF is built (Safari / iPhone / iPad printing, and the PDF button) -->
+<div class="modal-overlay hidden" id="pdf-modal">
+  <div class="modal" style="width:380px;">
+    <h2 id="pdf-modal-title">PDF</h2>
+    <p id="pdf-modal-msg"></p>
+    <div class="modal-actions" style="flex-wrap:wrap;">
+      <button class="btn secondary" onclick="closePdfModal()">Close</button>
+      <button class="btn secondary" id="pdf-share-btn" onclick="sharePdf()" disabled>Share / save</button>
+      <button class="btn success hidden" id="pdf-wa-btn" onclick="sendPdfViaWhatsApp()" disabled>Send via WhatsApp</button>
+      <button class="btn" id="pdf-open-btn" onclick="openPdf()" disabled>Open to print</button>
+    </div>
+  </div>
+</div>
+
 <!-- PREFERENCES MODAL -->
 <div class="modal-overlay hidden" id="prefs-modal">
   <div class="modal">
     <h2>Preferences</h2>
     <p>Your business info is used on printed work orders and WhatsApp messages. It is stored in stock.json (Save/Load), never in the page itself.</p>
     <div class="fields-grid">
+      <div class="field full">
+        <label>Theme</label>
+        <div class="theme-chips" id="prefs-theme-chips"></div>
+      </div>
       <div class="field full">
         <label>Logo</label>
         <div style="display:flex; align-items:center; gap:10px;">
@@ -1380,6 +1555,15 @@
         <label>WhatsApp "ready" message</label>
         <textarea id="prefs-wa-template"></textarea>
         <span style="font-size:11px;color:var(--text-dim)">Placeholders: {name} {unit} {wo} {balance}</span>
+      </div>
+      <div class="field">
+        <label>Pickup reminder after (days)</label>
+        <input id="prefs-reminder-days" type="number" min="1" step="1" placeholder="7" inputmode="numeric" autocomplete="off">
+      </div>
+      <div class="field full">
+        <label>WhatsApp "pickup reminder" message</label>
+        <textarea id="prefs-wa-reminder"></textarea>
+        <span style="font-size:11px;color:var(--text-dim)">Same placeholders. The Reminder button shows on Ready orders once they have waited this many days.</span>
       </div>
     </div>
     <div class="modal-actions">
@@ -1426,6 +1610,10 @@
         <label>Phone Number</label>
         <input id="wo-m-phone" placeholder="9..." list="customer-phone-suggestions" autocomplete="off" oninput="autofillCustomerFromPhone()">
       </div>
+      <div class="field full">
+        <label>Known from / Company</label>
+        <input id="wo-m-ref" placeholder="e.g. Casa da Música, friend of João, neighbour…" autocomplete="off">
+      </div>
       <div class="field">
         <label>Make</label>
         <input id="wo-m-make" placeholder="e.g. Yamaha" list="manufacturer-suggestions" autocomplete="off">
@@ -1461,10 +1649,31 @@
 // On Load button: reads a stock.json file you pick
 // Every change: marks the dot yellow (unsaved) and backs up to localStorage
 
+// crypto.randomUUID() only exists on secure pages (https or localhost). Opened over
+// plain http on a LAN address it is undefined, and every "create" action (work
+// orders, payments, parts, history) would silently fail — so use our own fallback.
+function uuid() {
+  if (window.crypto && typeof crypto.randomUUID === 'function') return crypto.randomUUID();
+  const b = crypto.getRandomValues(new Uint8Array(16));
+  b[6] = (b[6] & 0x0f) | 0x40; b[8] = (b[8] & 0x3f) | 0x80;
+  const h = [...b].map(x => x.toString(16).padStart(2, '0')).join('');
+  return `${h.slice(0,8)}-${h.slice(8,12)}-${h.slice(12,16)}-${h.slice(16,20)}-${h.slice(20)}`;
+}
+
 const STORAGE_KEY = 'stockio_parts'; // key used inside the browser's localStorage
 const HISTORY_STORAGE_KEY = 'stockio_history'; // key used for the change-log backup
 const HISTORY_LIMIT = 1000; // keep the log from growing forever
 let unsaved = false;
+// Server sync (only active when the page is served by the Stock.io server — see "SERVER SYNC")
+let serverMode = false;
+let serverRev = 0;       // revision of the server data this device last synced with
+let changeSeq = 0;       // bumped on every local change, so a sync knows whether newer edits arrived mid-flight
+let syncing = false;
+let syncTimer = null;
+const SYNC_DEBOUNCE_MS = 1500;
+const SYNC_RETRY_MS = 15000;
+const SERVER_REV_KEY = 'stockio_server_rev';
+const DIRTY_KEY = 'stockio_dirty';
 
 // ─── PART CATALOG (autofill memory) ─────────────────────────────────────────
 // A lightweight, auto-maintained cache of "what a code usually means" —
@@ -1495,7 +1704,9 @@ function rememberPart(p) {
     manufacturer: p.manufacturer || '',
     description: p.description || '',
     price: p.price || 0,
-    location: p.location || ''
+    location: p.location || '',
+    buyPrice: p.buyPrice || 0,
+    buyFrom: p.buyFrom || ''
   };
   partCatalogBackup();
 }
@@ -1508,7 +1719,8 @@ function rememberPart(p) {
 // under `settings` — it's merged over defaults on load.
 const SETTINGS_KEY = 'stockio_settings';
 const DEFAULT_WA_TEMPLATE = 'Olá {name}! O seu {unit} ({wo}) já está pronto para levantar.{balance} Obrigado!';
-const DEFAULT_SETTINGS = { business: { phone: '', email: '', address: '', logo: '', waCountry: '351', waTemplate: DEFAULT_WA_TEMPLATE } };
+const DEFAULT_WA_REMINDER = 'Olá {name}! Lembrete: o seu {unit} ({wo}) continua pronto para levantar.{balance} Obrigado!';
+const DEFAULT_SETTINGS = { business: { phone: '', email: '', address: '', logo: '', waCountry: '351', waTemplate: DEFAULT_WA_TEMPLATE, reminderDays: 7, waReminderTemplate: DEFAULT_WA_REMINDER } };
 let settings = (() => {
   try { return normalizeSettings(JSON.parse(localStorage.getItem(SETTINGS_KEY))); }
   catch { return normalizeSettings(null); }
@@ -1524,7 +1736,20 @@ function escHtml(v) {
   return String(v == null ? '' : v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 let DEFAULT_LOGO_SRC = '';
+// Theme list — keys must match the :root[data-theme="…"] blocks in the CSS.
+// `dots` are only the three preview circles shown on the picker (bg, surface, accent).
+const THEMES = [
+  { key: 'graphite', name: 'Graphite', dots: ['#020202', '#222222', '#999999'] },
+  { key: 'midnight', name: 'Midnight', dots: ['#070b14', '#111a2b', '#4f8ef7'] },
+  { key: 'amber',    name: 'Amber',    dots: ['#0d0904', '#1c140a', '#f59e0b'] },
+  { key: 'violet',   name: 'Violet',   dots: ['#0a0710', '#1a1326', '#a78bfa'] },
+  { key: 'light',    name: 'Light',    dots: ['#f4f4f5', '#ffffff', '#2563eb'] }
+];
+function currentThemeKey() {
+  return THEMES.some(t => t.key === settings.theme) ? settings.theme : 'graphite';
+}
 function applySettings() {
+  document.documentElement.setAttribute('data-theme', currentThemeKey());
   const img = document.getElementById('brand-logo');
   if (!img) return;
   if (!DEFAULT_LOGO_SRC) DEFAULT_LOGO_SRC = img.getAttribute('src');
@@ -1538,11 +1763,29 @@ function openPrefs() {
   document.getElementById('prefs-address').value = b.address || '';
   document.getElementById('prefs-wa-country').value = b.waCountry || '';
   document.getElementById('prefs-wa-template').value = b.waTemplate || DEFAULT_WA_TEMPLATE;
+  document.getElementById('prefs-reminder-days').value = b.reminderDays || 7;
+  document.getElementById('prefs-wa-reminder').value = b.waReminderTemplate || DEFAULT_WA_REMINDER;
   prefsPendingLogo = b.logo || '';
   refreshPrefsLogoPreview();
+  prefsPendingTheme = currentThemeKey();
+  renderThemeChips();
   document.getElementById('prefs-modal').classList.remove('hidden');
 }
+let prefsPendingTheme = 'graphite';
+function renderThemeChips() {
+  document.getElementById('prefs-theme-chips').innerHTML = THEMES.map(t => `
+    <button type="button" class="theme-chip ${t.key === prefsPendingTheme ? 'active' : ''}" onclick="pickTheme('${t.key}')">
+      <span class="theme-dots">${t.dots.map(c => `<i style="background:${c}"></i>`).join('')}</span>${t.name}
+    </button>`).join('');
+}
+// Clicking a theme previews it live; it is only kept when you press Save.
+function pickTheme(key) {
+  prefsPendingTheme = key;
+  document.documentElement.setAttribute('data-theme', key);
+  renderThemeChips();
+}
 function closePrefs() {
+  applySettings(); // drops an unsaved theme preview (and is harmless after Save)
   document.getElementById('prefs-modal').classList.add('hidden');
   if (activeTab === 'stock') focusScan();
 }
@@ -1581,8 +1824,11 @@ function savePrefs() {
     address: document.getElementById('prefs-address').value.trim(),
     logo: prefsPendingLogo,
     waCountry: document.getElementById('prefs-wa-country').value.replace(/\D/g, ''),
-    waTemplate: document.getElementById('prefs-wa-template').value.trim() || DEFAULT_WA_TEMPLATE
+    waTemplate: document.getElementById('prefs-wa-template').value.trim() || DEFAULT_WA_TEMPLATE,
+    reminderDays: Math.max(1, parseInt(document.getElementById('prefs-reminder-days').value) || 7),
+    waReminderTemplate: document.getElementById('prefs-wa-reminder').value.trim() || DEFAULT_WA_REMINDER
   };
+  settings.theme = prefsPendingTheme;
   settingsBackup();
   applySettings();
   markUnsaved();
@@ -1603,8 +1849,9 @@ function markUnsaved() {
   unsaved = true;
   document.getElementById('save-dot').className = 'save-dot unsaved';
   const md1 = document.getElementById('menu-dot'); if (md1) md1.className = 'save-dot unsaved';
-  document.getElementById('save-label').textContent = 'Unsaved changes';
+  document.getElementById('save-label').textContent = serverMode ? 'Syncing…' : 'Unsaved changes';
   scheduleAutoSave();
+  scheduleServerSync();
 }
 function markSaved(label) {
   unsaved = false;
@@ -1630,27 +1877,12 @@ function saveFile() {
   a.download = 'stock.json';
   a.click();
   URL.revokeObjectURL(a.href);
-  markSaved('Saved to stock.json');
+  if (!(serverMode && unsaved)) markSaved('Saved to stock.json');
   backupToLocal();
 }
 
-function loadFile() {
-  const input = document.createElement('input');
-  input.type = 'file';
-  input.accept = '.json,application/json';
-  input.onchange = e => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = ev => {
-      let data;
-      try {
-        data = JSON.parse(ev.target.result);
-      } catch {
-        alert('Could not read file — make sure it\'s a valid stock.json');
-        return;
-      }
-      try {
+// Replaces everything in the app with a snapshot (from a file or from the server).
+function applySnapshot(data, label) {
         parts = data.parts || data; // support both versioned and raw array
         history = Array.isArray(data.history) ? data.history : history; // keep current log if file predates history
         workOrders = Array.isArray(data.workOrders) ? data.workOrders : workOrders; // keep current WOs if file predates them
@@ -1687,7 +1919,7 @@ function loadFile() {
         try { localStorage.setItem(IRS_RATE_KEY, String(estIrsRate)); } catch {}
         settingsBackup();
         applySettings();
-        markSaved('Loaded: ' + file.name);
+        markSaved(label);
         selectedId = null;
         selectedWoId = null;
         selectedCustomerKey = null;
@@ -1708,6 +1940,27 @@ function loadFile() {
             <div class="no-selection-icon">◫</div>
             <p>Create or select a work order</p>
           </div>`;
+}
+
+function loadFile() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json,application/json';
+  input.onchange = e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      let data;
+      try {
+        data = JSON.parse(ev.target.result);
+      } catch {
+        alert('Could not read file — make sure it\'s a valid stock.json');
+        return;
+      }
+      try {
+        applySnapshot(data, 'Loaded: ' + file.name);
+        if (serverMode) markUnsaved(); // a loaded file becomes the new truth on the server too
       } catch (err) {
         // The JSON itself parsed fine — something in applying/rendering it broke.
         // Say so plainly instead of blaming the file, and log details for debugging.
@@ -1804,13 +2057,141 @@ function scheduleAutoSave() {
   autoSaveDebounceTimer = setTimeout(writeAutoSave, AUTO_SAVE_DEBOUNCE_MS);
 }
 
+// ─── SERVER SYNC ────────────────────────────────────────────────────────────
+// When this page is served by the Stock.io server (docker container), data is kept
+// on the server instead of only in this browser: every change is pushed a moment
+// later, and other devices pull it when you switch back to the tab. On GitHub Pages
+// or from a local file there is no /api, so serverMode stays false and nothing changes.
+//
+// The server holds one document plus a revision number. A push says "I'm based on
+// revision N"; if someone else saved since, the server answers 409 and the user
+// chooses which side wins (the losing side is downloaded as a backup file first).
+function setServerRev(rev) {
+  serverRev = rev;
+  try { localStorage.setItem(SERVER_REV_KEY, String(rev)); } catch {}
+}
+function clearDirty() { try { localStorage.removeItem(DIRTY_KEY); } catch {} }
+function syncTime() { return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); }
+
+function scheduleServerSync() {
+  if (!serverMode) return;
+  changeSeq++;
+  try { localStorage.setItem(DIRTY_KEY, '1'); } catch {}
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(pushToServer, SYNC_DEBOUNCE_MS);
+}
+
+async function pushToServer() {
+  if (!serverMode) return;
+  if (syncing) { clearTimeout(syncTimer); syncTimer = setTimeout(pushToServer, SYNC_DEBOUNCE_MS); return; }
+  syncing = true;
+  const seqAtStart = changeSeq;
+  try {
+    const body = '{"baseRev":' + serverRev + ',"snapshot":' + currentSnapshotJson() + '}';
+    const r = await fetch('api/data', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body });
+    if (r.status === 409) { const info = await r.json(); syncing = false; resolveConflict(info); return; }
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const j = await r.json();
+    setServerRev(j.rev);
+    if (changeSeq === seqAtStart) { clearDirty(); markSaved('Synced ' + syncTime()); }
+    else { clearTimeout(syncTimer); syncTimer = setTimeout(pushToServer, SYNC_DEBOUNCE_MS); } // edits arrived while sending
+    backupToLocal();
+  } catch (err) {
+    document.getElementById('save-dot').className = 'save-dot unsaved';
+    const md = document.getElementById('menu-dot'); if (md) md.className = 'save-dot unsaved';
+    document.getElementById('save-label').textContent = 'Offline — will retry';
+    clearTimeout(syncTimer);
+    syncTimer = setTimeout(pushToServer, SYNC_RETRY_MS);
+  } finally {
+    syncing = false;
+  }
+}
+
+function applyServerData(info) {
+  clearTimeout(syncTimer);
+  applySnapshot(info.snapshot, 'Synced ' + syncTime());
+  setServerRev(info.rev);
+  clearTimeout(syncTimer); // applySnapshot's own backups flag "unsaved"; nothing needs pushing
+  clearDirty();
+  unsaved = false;
+  markSaved('Synced ' + syncTime());
+}
+
+// Both sides have changes the other doesn't. Never decide silently.
+function resolveConflict(info) {
+  const useServer = confirm(
+    'This device and the server have different data.\n\n' +
+    'OK = use the server data (this device\'s data is downloaded first as a backup file)\n' +
+    'Cancel = keep this device\'s data and overwrite the server');
+  if (useServer) {
+    downloadText('stock-local-backup-' + new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-') + '.json', 'application/json', currentSnapshotJson());
+    applyServerData(info);
+  } else {
+    setServerRev(info.rev); // now based on the server's latest, so the push is accepted
+    pushToServer();
+  }
+}
+
+// When you come back to the tab: push anything unsent, or pull newer data saved elsewhere.
+async function checkServerNow() {
+  if (!serverMode || syncing) return;
+  if (unsaved) { pushToServer(); return; }
+  if (document.querySelector('.modal-overlay:not(.hidden)')) return;
+  const a = document.activeElement;
+  if (a && (a.tagName === 'TEXTAREA' || (a.tagName === 'INPUT' && a !== scanInput && a.value))) return; // don't wipe something being typed
+  try {
+    const rr = await fetch('api/rev', { cache: 'no-store' });
+    const { rev } = await rr.json();
+    if (rev === serverRev) return;
+    const info = await (await fetch('api/data', { cache: 'no-store' })).json();
+    if (info && info.snapshot) applyServerData(info);
+  } catch {}
+}
+
+async function initServerSync() {
+  let info;
+  try {
+    const r = await fetch('api/data', { cache: 'no-store' });
+    if (!r.ok) return;
+    info = await r.json();
+    if (!info || typeof info.rev !== 'number') return;
+  } catch { return; } // GitHub Pages / local file: no server, behave as before
+  serverMode = true;
+  const btn = document.getElementById('auto-save-btn');
+  if (btn) btn.classList.add('hidden'); // the server makes file auto-save pointless
+
+  const stored = parseInt(localStorage.getItem(SERVER_REV_KEY), 10);
+  const lastRev = isNaN(stored) ? null : stored;
+  const dirty = localStorage.getItem(DIRTY_KEY) === '1';
+  const hasLocal = parts.length > 0 || workOrders.length > 0 || contacts.length > 0;
+
+  if (info.rev === 0 || !info.snapshot) {
+    setServerRev(0);
+    if (hasLocal) { markUnsaved(); } // first sync from this device: upload what it has
+    else markSaved('Server ready (empty)');
+  } else if (dirty) {
+    if (lastRev === info.rev) { setServerRev(info.rev); markUnsaved(); } // unsent edits from last time: just send them
+    else resolveConflict(info);
+  } else if (lastRev === info.rev) {
+    setServerRev(info.rev);
+    markSaved('Synced');
+  } else if (lastRev === null && hasLocal) {
+    resolveConflict(info); // this device has data it never synced and the server has some too
+  } else {
+    applyServerData(info);
+  }
+
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') checkServerNow(); });
+  window.addEventListener('online', () => { if (unsaved) pushToServer(); });
+}
+
 // ─── HISTORY LOG ────────────────────────────────────────────────────────────
 // Records every meaningful stock change: create, delete, edit, +/- qty, bulk adjust.
 // Newest entries first. Persisted to localStorage immediately and saved/loaded
 // together with parts.json (see saveFile/loadFile below).
 function logEvent(type, code, desc) {
   history.unshift({
-    id: crypto.randomUUID(),
+    id: uuid(),
     ts: new Date().toISOString(),
     type,        // 'create' | 'delete' | 'edit' | 'qty'
     code,
@@ -2368,6 +2749,7 @@ function renderFinance() {
 
   let totalInvoiced = 0, totalTax = 0, totalRetention = 0, totalEstIrs = 0, totalGoods = 0, totalLabor = 0, totalProfit = 0, totalLaborProfit = 0;
   let invoicedCount = 0;
+  let totalPartsCost = 0, totalPartsMargin = 0;
   inPeriod.forEach(wo => {
     const t = computeWoTotals(wo);
     if (wo.invoiced) {
@@ -2390,6 +2772,8 @@ function renderFinance() {
     totalLabor += t.laborTotal;
     totalProfit += t.profit;
     totalLaborProfit += t.laborProfit;
+    totalPartsCost += t.partsCost;
+    totalPartsMargin += t.partsMargin;
   });
 
   // Cash/transfer split by when payments were actually received (payment's
@@ -2469,8 +2853,10 @@ function renderFinance() {
       <div class="stat"><div class="stat-value">€${totalProfit.toFixed(2)}</div><div class="stat-label">Est. Profit (Ready/Delivered)</div></div>
       <div class="stat"><div class="stat-value">€${totalLaborProfit.toFixed(2)}</div><div class="stat-label">Total Labor Profit (Ready/Delivered)</div></div>
       <div class="stat"><div class="stat-value">€${totalGoods.toFixed(2)}</div><div class="stat-label">Total Parts Revenue (Ready/Delivered)</div></div>
+      <div class="stat"><div class="stat-value">€${totalPartsCost.toFixed(2)}</div><div class="stat-label">Parts Cost (Ready/Delivered)</div></div>
+      <div class="stat"><div class="stat-value">€${totalPartsMargin.toFixed(2)}</div><div class="stat-label">Real Parts Margin (Ready/Delivered)</div></div>
     </div>
-    <div style="font-size:11px; color:var(--text-dim); margin-top:-14px;">Total Invoiced, IVA, Retention, and Est. IRS — Est. Profit = cash jobs in full, invoiced jobs after VAT and Est. IRS. Profit and Parts Revenue only count work orders marked Ready or Delivered.</div>
+    <div style="font-size:11px; color:var(--text-dim); margin-top:-14px;">Total Invoiced, IVA, Retention, and Est. IRS — Est. Profit = cash jobs in full, invoiced jobs after VAT and Est. IRS. Profit, Parts Revenue and Parts Margin only count work orders marked Ready or Delivered. Real Parts Margin = parts sale price minus purchase price (stock parts only, before tax).</div>
 
     <div class="finance-chart-card">
       <div class="section-title" style="margin-bottom:0;">Monthly Collections — ${financeYear}</div>
@@ -2545,8 +2931,21 @@ const DEFAULT_LABOR_TAX_RATE = 23;
 // individual customers are never subject to retention.
 const DEFAULT_RETENTION_RATE = 11.5;
 
+// Purchase cost of one part line. New lines remember the cost at the moment the part was
+// used; older lines (before purchase prices existed) fall back to the part's current
+// purchase price, or 0 if the part is gone / has none.
+function lineUnitCost(l) {
+  if (typeof l.unitCost === 'number') return l.unitCost;
+  const part = parts.find(p => p.id === l.partId);
+  return part ? (part.buyPrice || 0) : 0;
+}
+
 function computeWoTotals(wo) {
   const partsTotal = wo.partsUsed.reduce((s, l) => s + l.lineTotal, 0);
+  // Real margin on stock parts (internal / reports only — never printed on the work order):
+  // what the customer pays for the parts minus what the parts cost you to buy.
+  const partsCost = Math.round(wo.partsUsed.reduce((s, l) => s + l.qty * lineUnitCost(l), 0) * 100) / 100;
+  const partsMargin = Math.round((partsTotal - partsCost) * 100) / 100;
   const miscTotal = (wo.miscItems || []).reduce((s, l) => s + l.lineTotal, 0);
   const goodsTotal = partsTotal + miscTotal; // parts + other non-stock materials
   const laborTotal = wo.laborCost || 0;
@@ -2600,11 +2999,11 @@ function computeWoTotals(wo) {
   const laborProfit = Math.round((laborTotal - laborEstIrsDue) * 100) / 100;
   const profit = Math.round((subtotal - estIrsDue) * 100) / 100;
 
-  return { partsTotal, miscTotal, goodsTotal, laborTotal, subtotal, partsTaxRate, laborTaxRate, goodsTax, laborTax, tax, total, retentionRate, retention, amountDue, paid, cashPaid, transferPaid, balance, presumedProfit, estIrsDue, goodsEstIrsDue, laborEstIrsDue, goodsProfit, laborProfit, profit };
+  return { partsTotal, partsCost, partsMargin, miscTotal, goodsTotal, laborTotal, subtotal, partsTaxRate, laborTaxRate, goodsTax, laborTax, tax, total, retentionRate, retention, amountDue, paid, cashPaid, transferPaid, balance, presumedProfit, estIrsDue, goodsEstIrsDue, laborEstIrsDue, goodsProfit, laborProfit, profit };
 }
 
 function openWoModal() {
-  ['wo-m-name','wo-m-phone','wo-m-make','wo-m-model','wo-m-serial','wo-m-problem'].forEach(id => document.getElementById(id).value = '');
+  ['wo-m-name','wo-m-phone','wo-m-ref','wo-m-make','wo-m-model','wo-m-serial','wo-m-problem'].forEach(id => document.getElementById(id).value = '');
   updateCustomerDatalists();
   updateSerialDatalist();
   document.getElementById('wo-modal').classList.remove('hidden');
@@ -2617,14 +3016,15 @@ function saveNewWo() {
   if (!name) { alert('Customer name is required'); return; }
   woCounter += 1;
   const wo = {
-    id: crypto.randomUUID(),
+    id: uuid(),
     number: woCounter,
     createdAt: new Date().toISOString(),
     status: 'open',
     statusChangedAt: new Date().toISOString(),
     customer: {
       name,
-      phone: document.getElementById('wo-m-phone').value.trim()
+      phone: document.getElementById('wo-m-phone').value.trim(),
+      ref: document.getElementById('wo-m-ref').value.trim()
     },
     unit: {
       make: document.getElementById('wo-m-make').value.trim(),
@@ -2679,14 +3079,18 @@ function statusLabel(key) {
 // stands out in the list instead of blending in. Uses statusChangedAt (set
 // whenever the status dropdown changes); falls back to createdAt for older
 // work orders saved before that field existed.
-function getAgingBadge(wo) {
-  if (wo.status === 'ready' || wo.status === 'delivered' || wo.status === 'cancelled') return '';
+function woDaysInStatus(wo) {
   const since = new Date(wo.statusChangedAt || wo.createdAt);
-  const days = Math.floor((Date.now() - since.getTime()) / 86400000);
-  if (days >= 90) return `<span class="aging-badge quarter" title="${days} days in ${statusLabel(wo.status)}">⚠ 3mo+</span>`;
-  if (days >= 30) return `<span class="aging-badge month" title="${days} days in ${statusLabel(wo.status)}">▲ 1mo+</span>`;
-  if (days >= 7) return `<span class="aging-badge week" title="${days} days in ${statusLabel(wo.status)}">● 1wk+</span>`;
-  return '';
+  return Math.max(0, Math.floor((Date.now() - since.getTime()) / 86400000));
+}
+
+function getAgingBadge(wo) {
+  if (wo.status === 'delivered' || wo.status === 'cancelled') return ''; // Ready still counts: it is waiting for pickup
+  const days = woDaysInStatus(wo);
+  // Colour tiers by days in the current status — change the numbers here to retune.
+  const tier = days >= 60 ? 'd60' : days >= 30 ? 'd30' : days >= 10 ? 'd10' : 'd0';
+  const what = wo.status === 'ready' ? 'waiting for pickup' : 'in ' + statusLabel(wo.status);
+  return `<span class="aging-badge ${tier}" title="${days} day${days === 1 ? '' : 's'} ${what}">${days}d</span>`;
 }
 
 // ─── CUSTOMERS VIEW ──────────────────────────────────────────────────────────
@@ -2697,17 +3101,18 @@ function getCustomerKey(customer) {
   const phone = (customer.phone || '').trim().toLowerCase();
   if (phone) return 'p:' + phone;
   const name = (customer.name || '').trim().toLowerCase();
-  return 'n:' + name;
+  const ref = (customer.ref || '').trim().toLowerCase();
+  return 'n:' + name + (ref ? '|' + ref : ''); // two "Rui" with different refs stay separate customers
 }
 
 function getCustomersList() {
   const map = new Map();
   workOrders.forEach(wo => {
     const key = getCustomerKey(wo.customer);
-    if (!map.has(key)) map.set(key, { key, name: wo.customer.name, phone: wo.customer.phone, latestNumber: wo.number, wos: [] });
+    if (!map.has(key)) map.set(key, { key, name: wo.customer.name, phone: wo.customer.phone, ref: wo.customer.ref || '', latestNumber: wo.number, wos: [] });
     const c = map.get(key);
     c.wos.push(wo);
-    if (wo.number > c.latestNumber) { c.latestNumber = wo.number; c.name = wo.customer.name; c.phone = wo.customer.phone; } // keep most recently-entered name/phone in case it was corrected later
+    if (wo.number > c.latestNumber) { c.latestNumber = wo.number; c.name = wo.customer.name; c.phone = wo.customer.phone; c.ref = wo.customer.ref || ''; } // keep most recently-entered name/phone in case it was corrected later
   });
   return Array.from(map.values()).map(c => {
     const sorted = c.wos.slice().sort((a, b) => b.number - a.number);
@@ -2718,7 +3123,7 @@ function getCustomersList() {
       if (wo.status !== 'ready' && wo.status !== 'delivered') return s;
       return s + Math.max(0, computeWoTotals(wo).balance);
     }, 0);
-    return { key: c.key, name: c.name, phone: c.phone, woCount: c.wos.length, totalPaid, balanceDue, lastVisit: sorted[0].createdAt, wos: sorted };
+    return { key: c.key, name: c.name, phone: c.phone, ref: c.ref, woCount: c.wos.length, totalPaid, balanceDue, lastVisit: sorted[0].createdAt, wos: sorted };
   });
 }
 
@@ -2741,10 +3146,11 @@ let contactEditId = null; // null = no form, 'new' = adding, otherwise the id be
 function normalizeContacts(arr) {
   if (!Array.isArray(arr)) return [];
   return arr.filter(c => c && typeof c === 'object').map(c => ({
-    id: typeof c.id === 'string' && c.id ? c.id : crypto.randomUUID(),
+    id: typeof c.id === 'string' && c.id ? c.id : uuid(),
     name: String(c.name || '').trim(),
     phone: String(c.phone || '').trim(),
-    email: String(c.email || '').trim()
+    email: String(c.email || '').trim(),
+    ref: String(c.ref || '').trim()
   }));
 }
 function updateContactsStat() {
@@ -2760,11 +3166,12 @@ function findDuplicateContact(c) {
   return contacts.find(x =>
     (mail && x.email && x.email.toLowerCase() === mail) ||
     (pk.length >= 6 && contactPhoneKey(x.phone) === pk) ||
-    (!c.phone && !c.email && nm && x.name.toLowerCase() === nm));
+    (!c.phone && !c.email && nm && x.name.toLowerCase() === nm &&
+      String(x.ref || '').trim().toLowerCase() === String(c.ref || '').trim().toLowerCase()));
 }
 // Adds one contact unless it duplicates an existing one. Returns true if added.
 function addContactIfNew(raw) {
-  const c = { id: crypto.randomUUID(), name: String(raw.name || '').trim(), phone: String(raw.phone || '').trim(), email: String(raw.email || '').trim() };
+  const c = { id: uuid(), name: String(raw.name || '').trim(), phone: String(raw.phone || '').trim(), email: String(raw.email || '').trim(), ref: String(raw.ref || '').trim() };
   if (!c.name) c.name = c.email || c.phone;
   if (!c.name) return false;
   if (findDuplicateContact(c)) return false;
@@ -2785,14 +3192,15 @@ function saveContactForm() {
   const name = document.getElementById('ct-name').value.trim();
   const phone = document.getElementById('ct-phone').value.trim();
   const email = document.getElementById('ct-email').value.trim();
+  const ref = document.getElementById('ct-ref').value.trim();
   if (!name && !email && !phone) { alert('Enter at least a name, phone or email'); return; }
   if (email && !/^\S+@\S+\.\S+$/.test(email)) { alert('That email address doesn\'t look right'); return; }
   const finalName = name || email || phone;
   if (contactEditId === 'new') {
-    contacts.push({ id: crypto.randomUUID(), name: finalName, phone, email });
+    contacts.push({ id: uuid(), name: finalName, phone, email, ref });
   } else {
     const c = contacts.find(x => x.id === contactEditId);
-    if (c) { c.name = finalName; c.phone = phone; c.email = email; }
+    if (c) { c.name = finalName; c.phone = phone; c.email = email; c.ref = ref; }
   }
   contactEditId = null;
   contactsChanged();
@@ -2819,6 +3227,7 @@ function contactsToVcf(list) {
     const lines = ['BEGIN:VCARD', 'VERSION:3.0', `N:${vcfEscape(n.last)};${vcfEscape(n.first)};;;`, `FN:${vcfEscape(c.name)}`];
     if (c.phone) lines.push(`TEL;TYPE=CELL:${vcfEscape(c.phone)}`);
     if (c.email) lines.push(`EMAIL;TYPE=INTERNET:${vcfEscape(c.email)}`);
+    if (c.ref) lines.push(`ORG:${vcfEscape(c.ref)}`);
     lines.push('END:VCARD');
     return lines.join('\r\n');
   }).join('\r\n') + '\r\n';
@@ -2828,7 +3237,7 @@ function parseVcf(text) {
   const out = [];
   unfolded.split(/BEGIN:VCARD/i).slice(1).forEach(block => {
     const body = block.split(/END:VCARD/i)[0];
-    let fn = '', nm = '', email = '';
+    let fn = '', nm = '', email = '', org = '';
     const tels = [];
     body.split('\n').forEach(line => {
       const idx = line.indexOf(':');
@@ -2840,11 +3249,12 @@ function parseVcf(text) {
       if (prop === 'FN') fn = vcfUnescape(val).trim();
       else if (prop === 'N') { const p = val.split(';'); nm = [vcfUnescape(p[1] || ''), vcfUnescape(p[0] || '')].filter(Boolean).join(' ').trim(); }
       else if (prop === 'EMAIL' && !email) email = vcfUnescape(val).trim();
+      else if (prop === 'ORG' && !org) org = vcfUnescape(val.split(';')[0]).trim();
       else if (prop === 'TEL') tels.push({ v: vcfUnescape(val).replace(/^tel:/i, '').trim(), cell: /CELL/.test(params) });
     });
     const tel = (tels.find(t => t.cell && t.v) || tels.find(t => t.v) || { v: '' }).v;
     const name = fn || nm;
-    if (name || email || tel) out.push({ name, phone: tel, email });
+    if (name || email || tel) out.push({ name, phone: tel, email, ref: org });
   });
   return out;
 }
@@ -2852,8 +3262,8 @@ function parseVcf(text) {
 // ── CSV ──
 function csvCell(v) { return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"'; }
 function contactsToCsv(list) {
-  const header = ['First Name', 'Last Name', 'Display Name', 'Primary Email', 'Mobile Number'];
-  const rows = list.map(c => { const n = splitName(c.name); return [n.first, n.last, c.name, c.email, c.phone]; });
+  const header = ['First Name', 'Last Name', 'Display Name', 'Primary Email', 'Mobile Number', 'Organization'];
+  const rows = list.map(c => { const n = splitName(c.name); return [n.first, n.last, c.name, c.email, c.phone, c.ref || '']; });
   return [header, ...rows].map(r => r.map(csvCell).join(',')).join('\r\n') + '\r\n';
 }
 function parseCsvRows(text, delim) {
@@ -2887,6 +3297,7 @@ function parseCsvContacts(text) {
   const iDisplay = col(['display name', 'name', 'nome', 'full name']);
   const iFirst = col(['first name', 'given name', 'nome próprio']);
   const iLast = col(['last name', 'family name', 'surname', 'apelido']);
+  const iOrg = col(['organization', 'company', 'organização', 'organizacao', 'empresa']);
   const iMail = col(['primary email', 'e-mail address', 'email address', 'email', 'e-mail', 'mail', 'correio eletrónico']);
   const iPhones = ['mobile number', 'mobile phone', 'mobile', 'telemóvel', 'telemovel', 'phone', 'telefone', 'primary phone', 'home phone', 'work phone'].map(n => head.indexOf(n)).filter(i => i >= 0);
   if (iDisplay < 0 && iFirst < 0 && iMail < 0 && !iPhones.length) return null; // headers not recognised
@@ -2894,7 +3305,7 @@ function parseCsvContacts(text) {
   return rows.slice(1).map(r => {
     const name = at(r, iDisplay) || [at(r, iFirst), at(r, iLast)].filter(Boolean).join(' ');
     const phone = iPhones.map(i => at(r, i)).find(Boolean) || '';
-    return { name, phone, email: at(r, iMail) };
+    return { name, phone, email: at(r, iMail), ref: at(r, iOrg) };
   }).filter(c => c.name || c.phone || c.email);
 }
 
@@ -2935,11 +3346,17 @@ function importContacts() {
   input.click();
 }
 function importContactsFromCustomers() {
-  let added = 0;
-  getCustomersList().forEach(c => { if (addContactIfNew({ name: c.name, phone: c.phone, email: '' })) added++; });
-  if (!added) { alert('Every work-order customer is already in your contacts'); return; }
+  let added = 0, updated = 0;
+  getCustomersList().forEach(c => {
+    const cand = { name: c.name, phone: c.phone || '', email: '', ref: c.ref || '' };
+    if (addContactIfNew(cand)) { added++; return; }
+    // already in contacts: just fill in "known from" if the contact has none yet
+    const dup = findDuplicateContact({ name: String(cand.name || '').trim(), phone: cand.phone, email: '', ref: cand.ref });
+    if (dup && !dup.ref && cand.ref) { dup.ref = cand.ref; updated++; }
+  });
+  if (!added && !updated) { alert('Every work-order customer is already in your contacts'); return; }
   contactsChanged();
-  alert(`Added ${added} customer${added === 1 ? '' : 's'} from work orders`);
+  alert(`Added ${added} customer${added === 1 ? '' : 's'} from work orders` + (updated ? `, updated "known from" on ${updated} existing contact${updated === 1 ? '' : 's'}` : ''));
 }
 
 // ── Render ──
@@ -2948,7 +3365,7 @@ function renderContacts() {
   if (!el) return;
   const q = contactsSearch.trim().toLowerCase();
   const list = contacts
-    .filter(c => !q || c.name.toLowerCase().includes(q) || c.phone.toLowerCase().includes(q) || c.email.toLowerCase().includes(q))
+    .filter(c => !q || c.name.toLowerCase().includes(q) || c.phone.toLowerCase().includes(q) || c.email.toLowerCase().includes(q) || (c.ref || '').toLowerCase().includes(q))
     .sort((a, b) => a.name.localeCompare(b.name, 'pt'));
   const editing = contactEditId && contactEditId !== 'new' ? contacts.find(c => c.id === contactEditId) : null;
   const form = contactEditId ? `
@@ -2957,6 +3374,7 @@ function renderContacts() {
         <div class="ct-field"><label>Name</label><input id="ct-name" value="${escHtml(editing ? editing.name : '')}" autocomplete="off"></div>
         <div class="ct-field"><label>Phone</label><input id="ct-phone" type="tel" value="${escHtml(editing ? editing.phone : '')}" autocomplete="off"></div>
         <div class="ct-field"><label>Email</label><input id="ct-email" type="email" value="${escHtml(editing ? editing.email : '')}" autocomplete="off"></div>
+        <div class="ct-field"><label>Known from / Company</label><input id="ct-ref" value="${escHtml(editing ? editing.ref : '')}" autocomplete="off"></div>
       </div>
       <div style="display:flex; gap:8px; margin-top:12px;">
         <button class="btn success" onclick="saveContactForm()">Save</button>
@@ -2968,6 +3386,7 @@ function renderContacts() {
       <td>${escHtml(c.name)}</td>
       <td class="num">${escHtml(c.phone)}</td>
       <td>${escHtml(c.email)}</td>
+      <td>${escHtml(c.ref)}</td>
       <td style="text-align:right; white-space:nowrap;">
         <button class="btn secondary" style="padding:3px 8px; font-size:11px;" onclick="openContactForm('${c.id}')">Edit</button>
         <button class="btn danger" style="padding:3px 8px; font-size:11px;" onclick="deleteContact('${c.id}')">Delete</button>
@@ -2985,8 +3404,8 @@ function renderContacts() {
     ${form}
     <div>
       <table class="finance-table">
-        <thead><tr><th>Name</th><th class="num">Phone</th><th>Email</th><th></th></tr></thead>
-        <tbody>${rows || `<tr><td colspan="4" class="tax-note" style="padding:16px;">${contacts.length ? 'No matches.' : 'No contacts yet — add one, import a file, or pull in your work-order customers.'}</td></tr>`}</tbody>
+        <thead><tr><th>Name</th><th class="num">Phone</th><th>Email</th><th>Known from / Company</th><th></th></tr></thead>
+        <tbody>${rows || `<tr><td colspan="5" class="tax-note" style="padding:16px;">${contacts.length ? 'No matches.' : 'No contacts yet — add one, import a file, or pull in your work-order customers.'}</td></tr>`}</tbody>
       </table>
       <div class="tax-note" style="margin-top:8px;">Thunderbird: Address Book → Tools → Import to load a .vcf or .csv, and Tools → Export to get one back. Duplicates (same email or phone) are skipped on import.</div>
     </div>`;
@@ -3023,7 +3442,7 @@ function syncWoModeUI() {
 function renderCustomersList() {
   const q = (document.getElementById('wo-search-input').value || '').toLowerCase();
   const customers = getCustomersList()
-    .filter(c => !q || (c.name || '').toLowerCase().includes(q) || (c.phone || '').toLowerCase().includes(q))
+    .filter(c => !q || (c.name || '').toLowerCase().includes(q) || (c.phone || '').toLowerCase().includes(q) || (c.ref || '').toLowerCase().includes(q))
     .sort((a, b) => new Date(b.lastVisit) - new Date(a.lastVisit));
 
   const list = document.getElementById('wo-list');
@@ -3032,12 +3451,12 @@ function renderCustomersList() {
     return;
   }
   list.innerHTML = customers.map(c => `
-    <div class="part-item ${c.key === selectedCustomerKey ? 'active' : ''}" onclick="selectCustomer('${c.key.replace(/'/g, "\\'")}')">
+    <div class="part-item ${c.key === selectedCustomerKey ? 'active' : ''}" onclick="selectCustomer('${escHtml(c.key.replace(/'/g, "\\'"))}')">
       <div class="wo-item-top">
         <span class="wo-item-num">${c.name || 'Unknown'}</span>
         ${c.balanceDue > 0 ? `<span class="wo-status-badge open">€${c.balanceDue.toFixed(2)} due</span>` : ''}
       </div>
-      <div class="wo-item-customer">${c.phone || 'No phone on file'}</div>
+      <div class="wo-item-customer">${c.ref ? escHtml(c.ref) + ' · ' : ''}${c.phone || 'No phone on file'}</div>
       <div class="wo-item-unit">${c.woCount} job${c.woCount > 1 ? 's' : ''} · last visit ${new Date(c.lastVisit).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}</div>
       <div class="wo-item-bottom"><span class="wo-item-balance settled">€${c.totalPaid.toFixed(2)} paid</span></div>
     </div>
@@ -3057,7 +3476,7 @@ function selectCustomer(key) {
     <div class="detail-header">
       <div>
         <div class="detail-code">${c.name || 'Unknown Customer'}</div>
-        <div class="detail-manufacturer">${c.phone || 'No phone on file'}</div>
+        <div class="detail-manufacturer">${c.ref ? escHtml(c.ref) + ' · ' : ''}${c.phone || 'No phone on file'}</div>
       </div>
     </div>
 
@@ -3069,12 +3488,23 @@ function selectCustomer(key) {
     </div>
 
     <div>
+      <div class="section-title">Known from / Company</div>
+      <div class="field full">
+        <input id="customer-ref-input" value="${escHtml(c.ref)}" placeholder="e.g. Casa da Música, friend of João, neighbour…" autocomplete="off" onkeydown="if(event.key==='Enter') saveCustomerRef('${escHtml(key.replace(/'/g, "\\'"))}')">
+      </div>
+      <div class="tax-note" style="margin-top:6px;">Applies to all ${c.woCount} work order${c.woCount > 1 ? 's' : ''} of this customer.</div>
+      <div class="save-bar" style="margin-top:8px;">
+        <button class="btn" onclick="saveCustomerRef('${escHtml(key.replace(/'/g, "\\'"))}')">Save</button>
+      </div>
+    </div>
+
+    <div>
       <div class="section-title">Notes</div>
       <div class="field full">
-        <textarea id="customer-note-input" placeholder="e.g. always pays cash, prefers pickup after 6pm…">${note}</textarea>
+        <textarea id="customer-note-input" placeholder="e.g. always pays cash, prefers pickup after 6pm…">${escHtml(note)}</textarea>
       </div>
       <div class="save-bar" style="margin-top:8px;">
-        <button class="btn" onclick="saveCustomerNotes('${key.replace(/'/g, "\\'")}')">Save Notes</button>
+        <button class="btn" onclick="saveCustomerNotes('${escHtml(key.replace(/'/g, "\\'"))}')">Save Notes</button>
       </div>
     </div>
 
@@ -3111,6 +3541,29 @@ function selectCustomer(key) {
   `;
 }
 
+// Sets "Known from / Company" on every work order of this customer at once.
+// For customers identified by name only (no phone), the ref is part of their key,
+// so the key changes — their saved notes are moved to the new key.
+function saveCustomerRef(key) {
+  const input = document.getElementById('customer-ref-input');
+  if (!input) return;
+  const ref = input.value.trim();
+  const affected = workOrders.filter(wo => getCustomerKey(wo.customer) === key);
+  if (!affected.length) return;
+  affected.forEach(wo => { wo.customer.ref = ref; });
+  const newKey = getCustomerKey(affected[0].customer);
+  if (newKey !== key && customerNotes[key] !== undefined) {
+    customerNotes[newKey] = customerNotes[newKey] ? customerNotes[newKey] + '\n' + customerNotes[key] : customerNotes[key];
+    delete customerNotes[key];
+    customerNotesBackup();
+  }
+  woBackup();
+  logEvent('wo', 'Customer', `known from → ${ref || '—'} for ${affected[0].customer.name} (${affected.length} order${affected.length > 1 ? 's' : ''})`);
+  selectedCustomerKey = newKey;
+  renderWoList();
+  selectCustomer(newKey);
+}
+
 function saveCustomerNotes(key) {
   const input = document.getElementById('customer-note-input');
   if (!input) return;
@@ -3142,6 +3595,7 @@ function renderWorkOrdersList() {
       woNumberLabel(wo.number).toLowerCase().includes(q) ||
       wo.customer.name.toLowerCase().includes(q) ||
       (wo.customer.phone||'').toLowerCase().includes(q) ||
+      (wo.customer.ref||'').toLowerCase().includes(q) ||
       (wo.unit.serial||'').toLowerCase().includes(q) ||
       (wo.unit.make||'').toLowerCase().includes(q) ||
       (wo.unit.model||'').toLowerCase().includes(q) ||
@@ -3179,7 +3633,7 @@ function renderWorkOrdersList() {
           <span class="wo-item-num">${woNumberLabel(wo.number)}</span>
           <span class="wo-item-badges">${getAgingBadge(wo)}<span class="wo-status-badge ${wo.status}">${statusLabel(wo.status)}</span></span>
         </div>
-        <div class="wo-item-customer">${wo.customer.name}</div>
+        <div class="wo-item-customer">${escHtml(wo.customer.name)}${wo.customer.ref ? ' <span style="color:var(--text-dim)">· ' + escHtml(wo.customer.ref) + '</span>' : ''}</div>
         <div class="wo-item-unit">${[wo.unit.make, wo.unit.model].filter(Boolean).join(' ') || '—'}${wo.unit.serial ? ' · SN ' + wo.unit.serial : ''}</div>
         ${balanceLine ? `<div class="wo-item-bottom">${balanceLine}</div>` : ''}
       </div>`;
@@ -3208,7 +3662,8 @@ function getCustomerHistory(wo) {
       const wPhone = (w.customer.phone || '').trim().toLowerCase();
       const wName = (w.customer.name || '').trim().toLowerCase();
       if (phone && wPhone) return wPhone === phone;
-      return !!wName && wName === name;
+      return !!wName && wName === name &&
+        String(w.customer.ref || '').trim().toLowerCase() === String(wo.customer.ref || '').trim().toLowerCase();
     })
     .sort((a, b) => b.number - a.number);
 }
@@ -3222,7 +3677,7 @@ function getCustomerHistory(wo) {
 // immediately clicking Print is a completely normal flow), the click landed
 // on a button that no longer existed and silently did nothing. See saveWoLabor().
 function buildWoCostSummaryHtml(wo) {
-  const { subtotal, tax, total, retentionRate, retention, amountDue, paid, cashPaid, transferPaid, balance, estIrsDue } = computeWoTotals(wo);
+  const { subtotal, tax, total, retentionRate, retention, amountDue, paid, cashPaid, transferPaid, balance, estIrsDue, partsCost, partsMargin } = computeWoTotals(wo);
   const isBusiness = wo.clientType === 'business';
   return `
       <div class="stat"><div class="stat-value">€${subtotal.toFixed(2)}</div><div class="stat-label">Subtotal</div></div>
@@ -3234,6 +3689,8 @@ function buildWoCostSummaryHtml(wo) {
       <div class="stat"><div class="stat-value">€${paid.toFixed(2)}</div><div class="stat-label">Paid</div></div>
       <div class="stat"><div class="stat-value ${balance > 0 ? 'due' : 'settled'}">€${Math.max(0,balance).toFixed(2)}</div><div class="stat-label">Balance Due</div></div>
       <div class="stat"><div class="stat-value" style="font-size:14px;">€${cashPaid.toFixed(2)} cash / €${transferPaid.toFixed(2)} transfer</div><div class="stat-label">Payment Split</div></div>
+      ${wo.partsUsed.length ? `<div class="stat"><div class="stat-value">€${partsCost.toFixed(2)}</div><div class="stat-label">Parts Cost (internal)</div></div>
+      <div class="stat"><div class="stat-value ${partsMargin >= 0 ? 'settled' : 'due'}">€${partsMargin.toFixed(2)}</div><div class="stat-label">Parts Margin (internal)</div></div>` : ''}
   `;
 }
 
@@ -3263,7 +3720,9 @@ function selectWo(id) {
         <button class="btn ${wo.warranty ? 'success' : 'secondary'}" onclick="toggleWoWarranty('${wo.id}')" >${wo.warranty ? 'Warranty (No VAT)' : 'Not Warranty'}</button>
         <button class="btn ${isBusiness ? 'success' : 'secondary'}" onclick="toggleWoClientType('${wo.id}')" >${isBusiness ? 'Withholding Tax' : 'No 11,5% Withhold'}</button>
         <button class="btn ${wo.status === 'ready' ? 'success' : 'secondary'}" onclick="openWoWhatsApp('${wo.id}')" title="Open WhatsApp with a ready-for-pickup message">WhatsApp</button>
+        ${(wo.status === 'ready' && woDaysInStatus(wo) >= (settings.business.reminderDays || 7)) ? `<button class="btn danger" onclick="openWoReminder('${wo.id}')" title="Ready for ${woDaysInStatus(wo)} days — send a pickup reminder on WhatsApp">Reminder (${woDaysInStatus(wo)}d)</button>` : ''}
         <button class="btn secondary" onclick="printWo('${wo.id}')" >Print</button>
+        <button class="btn secondary" onclick="printWo('${wo.id}', true)" title="Make a PDF: open, print, share, or send to the customer on WhatsApp">PDF</button>
         <button class="btn danger" onclick="deleteWo('${wo.id}')">Delete</button>
       </div>
     </div>
@@ -3309,27 +3768,31 @@ function selectWo(id) {
       <div class="fields-grid">
         <div class="field">
           <label>Customer Name</label>
-          <input id="wo-e-name" value="${wo.customer.name}">
+          <input id="wo-e-name" value="${escHtml(wo.customer.name)}">
         </div>
         <div class="field">
           <label>Phone</label>
-          <input id="wo-e-phone" value="${wo.customer.phone||''}">
+          <input id="wo-e-phone" value="${escHtml(wo.customer.phone)}">
+        </div>
+        <div class="field full">
+          <label>Known from / Company</label>
+          <input id="wo-e-ref" value="${escHtml(wo.customer.ref)}" placeholder="e.g. Casa da Música, friend of João…" autocomplete="off">
         </div>
         <div class="field">
           <label>Make</label>
-          <input id="wo-e-make" value="${wo.unit.make||''}" list="manufacturer-suggestions" autocomplete="off">
+          <input id="wo-e-make" value="${escHtml(wo.unit.make)}" list="manufacturer-suggestions" autocomplete="off">
         </div>
         <div class="field">
           <label>Model</label>
-          <input id="wo-e-model" value="${wo.unit.model||''}" list="wo-model-suggestions" autocomplete="off">
+          <input id="wo-e-model" value="${escHtml(wo.unit.model)}" list="wo-model-suggestions" autocomplete="off">
         </div>
         <div class="field full">
           <label>Serial Number</label>
-          <input id="wo-e-serial" value="${wo.unit.serial||''}">
+          <input id="wo-e-serial" value="${escHtml(wo.unit.serial)}">
         </div>
         <div class="field full">
           <label>Problem / Notes</label>
-          <textarea id="wo-e-problem">${wo.problem||''}</textarea>
+          <textarea id="wo-e-problem">${escHtml(wo.problem)}</textarea>
         </div>
       </div>
       <div class="save-bar" style="margin-top:10px;">
@@ -3521,10 +3984,53 @@ function generatePcbWatermarkSvg() {
   return new XMLSerializer().serializeToString(svg);
 }
 
+// ─── CODE 128 BARCODE (for the work order sticker) ─────────────────────────
+// Tiny self-contained Code 128 (subset B) encoder that returns an inline SVG, so the
+// printed work order can carry a scannable WO number with no library and no network.
+// Scanning it in the Stock tab (USB scanner or camera) opens that work order.
+const CODE128_PATTERNS = [
+  '212222', '222122', '222221', '121223', '121322', '131222', '122213', '122312',
+  '132212', '221213', '221312', '231212', '112232', '122132', '122231', '113222',
+  '123122', '123221', '223211', '221132', '221231', '213212', '223112', '312131',
+  '311222', '321122', '321221', '312212', '322112', '322211', '212123', '212321',
+  '232121', '111323', '131123', '131321', '112313', '132113', '132311', '211313',
+  '231113', '231311', '112133', '112331', '132131', '113123', '113321', '133121',
+  '313121', '211331', '231131', '213113', '213311', '213131', '311123', '311321',
+  '331121', '312113', '312311', '332111', '314111', '221411', '431111', '111224',
+  '111422', '121124', '121421', '141122', '141221', '112214', '112412', '122114',
+  '122411', '142112', '142211', '241211', '221114', '413111', '241112', '134111',
+  '111242', '121142', '121241', '114212', '124112', '124211', '411212', '421112',
+  '421211', '212141', '214121', '412121', '111143', '111341', '131141', '114113',
+  '114311', '411113', '411311', '113141', '114131', '311141', '411131', '211412',
+  '211214', '211232', '2331112'
+];
+function code128Svg(text) {
+  const codes = [104]; // Start B
+  for (const ch of String(text)) {
+    const v = ch.charCodeAt(0) - 32;
+    if (v >= 0 && v <= 94) codes.push(v);
+  }
+  let sum = codes[0];
+  for (let i = 1; i < codes.length; i++) sum += i * codes[i];
+  codes.push(sum % 103); // checksum
+  codes.push(106);       // Stop
+  const QUIET = 10;      // blank modules each side
+  let x = QUIET, bars = '';
+  codes.forEach(c => {
+    const pat = CODE128_PATTERNS[c];
+    for (let k = 0; k < pat.length; k++) {
+      const w = parseInt(pat[k], 10);
+      if (k % 2 === 0) bars += `<rect x="${x}" y="0" width="${w}" height="40" fill="#000"/>`;
+      x += w;
+    }
+  });
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${x + QUIET} 40" preserveAspectRatio="none" shape-rendering="crispEdges">${bars}</svg>`;
+}
+
 // Builds a clean invoice layout for a work order into the hidden #print-area,
 // then triggers the browser's print dialog. @media print rules (see <style>)
 // hide the rest of the app so only the invoice ends up on paper / as PDF.
-function printWo(id) {
+function printWo(id, forcePdf) {
   const wo = workOrders.find(w => w.id === id);
   if (!wo) return;
   const { partsTotal, miscTotal, subtotal, tax, total, retentionRate, retention, amountDue, paid, cashPaid, transferPaid, balance } = computeWoTotals(wo);
@@ -3565,6 +4071,7 @@ function printWo(id) {
         ${printBrandHtml()}
         <div class="inv-meta">
           <div class="inv-number">${woNumberLabel(wo.number)}</div>
+          <div class="inv-barcode">${code128Svg(woNumberLabel(wo.number))}</div>
           <div>${new Date(wo.createdAt).toLocaleDateString([], { month:'long', day:'numeric', year:'numeric' })}</div>
           <div>Status: ${statusLabel(wo.status)}</div>
         </div>
@@ -3614,7 +4121,25 @@ function printWo(id) {
 
   // wait for the logo to decode so it can't be missing from the printout
   const imgs = [...document.querySelectorAll('#print-area img')];
-  Promise.all(imgs.map(i => i.decode ? i.decode().catch(() => {}) : null)).then(() => window.print());
+  Promise.all(imgs.map(i => i.decode ? i.decode().catch(() => {}) : null)).then(() => {
+    // Safari / iPhone / iPad add their own header + footer to anything they print, so there
+    // the work order is turned into a PDF first. Other browsers print directly.
+    if (forcePdf || NEEDS_PDF_PRINT) createPdfFromPrintArea(woNumberLabel(wo.number), wo.id);
+    else { fitPrintArea(); printWithTitle(woNumberLabel(wo.number)); }
+  });
+}
+
+// When an order's balance reaches zero, it becomes Ready (unless it is already
+// Ready, or past that point: Delivered / Cancelled). Delivered can still be set by hand.
+function markReadyIfPaid(wo) {
+  const { balance, total } = computeWoTotals(wo);
+  if (total <= 0 || balance > 0) return;
+  if (wo.status === 'ready' || wo.status === 'delivered' || wo.status === 'cancelled') return;
+  const before = wo.status;
+  wo.status = 'ready';
+  wo.statusChangedAt = new Date().toISOString();
+  woBackup();
+  logEvent('wo', woNumberLabel(wo.number), `status ${statusLabel(before)} → Ready (paid in full)`);
 }
 
 function updateWoStatus(id, status) {
@@ -3673,6 +4198,7 @@ function saveWoFields(id) {
   if (!wo) return;
   wo.customer.name = document.getElementById('wo-e-name').value.trim() || wo.customer.name;
   wo.customer.phone = document.getElementById('wo-e-phone').value.trim();
+  wo.customer.ref = document.getElementById('wo-e-ref').value.trim();
   wo.unit.make = document.getElementById('wo-e-make').value.trim();
   wo.unit.model = document.getElementById('wo-e-model').value.trim();
   wo.unit.serial = document.getElementById('wo-e-serial').value.trim();
@@ -3713,18 +4239,20 @@ function applyPartToWo(wo, part, qty) {
   const before = part.qty;
   part.qty = Math.max(0, part.qty - qty);
   save();
-  const existing = wo.partsUsed.find(l => l.partId === part.id && l.unitPrice === (part.price || 0));
+  const cost = part.buyPrice || 0;
+  const existing = wo.partsUsed.find(l => l.partId === part.id && l.unitPrice === (part.price || 0) && lineUnitCost(l) === cost);
   if (existing) {
     existing.qty += qty;
     existing.lineTotal = Math.round(existing.unitPrice * existing.qty * 100) / 100;
   } else {
     wo.partsUsed.push({
-      id: crypto.randomUUID(),
+      id: uuid(),
       partId: part.id,
       code: part.code,
       description: part.description || '',
       qty,
       unitPrice: part.price || 0,
+      unitCost: cost,
       lineTotal: Math.round((part.price || 0) * qty * 100) / 100
     });
   }
@@ -3888,15 +4416,27 @@ function waNumber(raw) {
   return cc + d.replace(/^0+/, '');
 }
 
-function buildWoWhatsAppText(wo) {
+function buildWoWhatsAppText(wo, template) {
   const t = computeWoTotals(wo);
   const unit = [wo.unit.make, wo.unit.model].filter(Boolean).join(' ') || 'equipamento';
   const balance = t.balance > 0 ? ` Valor a pagar: €${t.balance.toFixed(2)}.` : '';
-  return (settings.business.waTemplate || DEFAULT_WA_TEMPLATE)
+  return (template || settings.business.waTemplate || DEFAULT_WA_TEMPLATE)
     .replace(/\{name\}/g, wo.customer.name || '')
     .replace(/\{unit\}/g, unit)
     .replace(/\{wo\}/g, woNumberLabel(wo.number))
     .replace(/\{balance\}/g, balance);
+}
+
+// Pickup reminder for a Ready order that has been waiting. Opens WhatsApp with the
+// reminder message; does not change the order's status.
+function openWoReminder(id) {
+  const wo = workOrders.find(w => w.id === id);
+  if (!wo) return;
+  const num = waNumber(wo.customer.phone);
+  if (!num) { alert('This work order has no phone number. Add one under Customer & Unit and save.'); return; }
+  const text = buildWoWhatsAppText(wo, settings.business.waReminderTemplate || DEFAULT_WA_REMINDER);
+  window.open('https://wa.me/' + num + '?text=' + encodeURIComponent(text), '_blank', 'noopener');
+  logEvent('wo', woNumberLabel(wo.number), `pickup reminder opened (${woDaysInStatus(wo)} days waiting)`);
 }
 
 function openWoWhatsApp(id) {
@@ -3946,7 +4486,7 @@ function addWoMisc(woId) {
   const qty = Math.max(1, parseInt(document.getElementById('wo-misc-qty').value) || 1);
   const unitPrice = Math.max(0, parseFloat(document.getElementById('wo-misc-price').value) || 0);
   const item = {
-    id: crypto.randomUUID(),
+    id: uuid(),
     description,
     qty,
     unitPrice,
@@ -3981,9 +4521,10 @@ function addWoPayment(woId) {
   const amount = parseFloat(document.getElementById('wo-payment-amount').value);
   if (!amount || amount <= 0) { alert('Enter a valid payment amount'); return; }
   const method = document.getElementById('wo-payment-method').value;
-  wo.payments.push({ id: crypto.randomUUID(), amount: Math.round(amount * 100) / 100, method, date: new Date().toISOString() });
+  wo.payments.push({ id: uuid(), amount: Math.round(amount * 100) / 100, method, date: new Date().toISOString() });
   woBackup();
   logEvent('wo', woNumberLabel(wo.number), `payment recorded: €${amount.toFixed(2)} (${method})`);
+  markReadyIfPaid(wo);
   document.getElementById('wo-payment-amount').value = '';
   selectWo(woId);
 }
@@ -3994,9 +4535,10 @@ function payWoInFull(woId) {
   const { balance } = computeWoTotals(wo);
   if (balance <= 0) { alert('This work order is already paid.'); return; }
   const method = document.getElementById('wo-payment-method').value;
-  wo.payments.push({ id: crypto.randomUUID(), amount: Math.round(balance * 100) / 100, method, date: new Date().toISOString() });
+  wo.payments.push({ id: uuid(), amount: Math.round(balance * 100) / 100, method, date: new Date().toISOString() });
   woBackup();
   logEvent('wo', woNumberLabel(wo.number), `payment recorded: €${balance.toFixed(2)} (${method}) - paid in full`);
+  markReadyIfPaid(wo);
   selectWo(woId);
 }
 
@@ -4055,6 +4597,14 @@ function handleScan() {
   scanInput.value = '';
   focusScan();
 
+  // A scanned work-order sticker (e.g. WO-0012) opens that work order
+  if (/^WO-\d+$/.test(code)) {
+    const woHit = workOrders.find(w => woNumberLabel(w.number) === code);
+    if (woHit) { switchTab('wo'); selectWo(woHit.id); }
+    else alert('No work order ' + code);
+    return;
+  }
+
   const part = parts.find(p => p.code.toLowerCase() === code.toLowerCase());
   if (part) {
     selectPart(part.id);
@@ -4085,7 +4635,7 @@ function renderLocationChips() {
   wrap.innerHTML = [
     `<span class="loc-chip ${!selectedLocation ? 'active' : ''}" onclick="setLocationFilter(null)">All</span>`,
     ...locations.map(loc =>
-      `<span class="loc-chip ${selectedLocation === loc ? 'active' : ''}" onclick="setLocationFilter('${loc.replace(/'/g, "\\'")}')">${loc}</span>`
+      `<span class="loc-chip ${selectedLocation === loc ? 'active' : ''}" onclick="setLocationFilter('${escHtml(loc.replace(/'/g, "\\'"))}')">${escHtml(loc)}</span>`
     )
   ].join('');
 }
@@ -4104,6 +4654,7 @@ function renderList() {
   renderLocationChips();
   updateLocationDatalist();
   updateManufacturerDatalist();
+  updatePurchaseByDatalist();
   updateCodeDatalist();
   const q = document.getElementById('search-input').value.toLowerCase();
   const filtered = parts.filter(p => {
@@ -4112,6 +4663,7 @@ function renderList() {
       (p.manufacturer||'').toLowerCase().includes(q) ||
       (p.description||'').toLowerCase().includes(q) ||
       (p.location||'').toLowerCase().includes(q) ||
+      (p.buyFrom||'').toLowerCase().includes(q) ||
       (p.oldCodes||[]).some(c => c.toLowerCase().includes(q));
     const matchesLocation = !selectedLocation || p.location === selectedLocation;
     return matchesSearch && matchesLocation;
@@ -4128,11 +4680,11 @@ function renderList() {
     const badgeClass = p.qty === 0 ? 'zero' : (needsOrder ? 'low' : 'ok');
     return `
     <div class="part-item ${p.id === selectedId ? 'active' : ''}" onclick="selectPart('${p.id}')">
-      <div class="part-item-code">${needsOrder ? '⚠ ' : ''}${p.code}${(p.oldCodes && p.oldCodes.length) ? ' <span class="eol-tag" title="Replaces '+p.oldCodes.join(', ')+'">⇄</span>' : ''}</div>
-      <div class="part-item-name">${p.manufacturer ? p.manufacturer + ' — ' : ''}${p.description || '—'}</div>
+      <div class="part-item-code">${needsOrder ? '⚠ ' : ''}${escHtml(p.code)}${(p.oldCodes && p.oldCodes.length) ? ' <span class="eol-tag" title="Replaces '+escHtml(p.oldCodes.join(', '))+'">⇄</span>' : ''}</div>
+      <div class="part-item-name">${p.manufacturer ? escHtml(p.manufacturer) + ' — ' : ''}${escHtml(p.description) || '—'}</div>
       <div class="part-item-row">
         <span class="qty-badge ${badgeClass}">${p.qty} units</span>
-        <span class="loc-badge">${p.location || ''}</span>
+        <span class="loc-badge">${escHtml(p.location)}</span>
       </div>
     </div>
   `;
@@ -4168,10 +4720,27 @@ function updateToOrderBadge() {
   if (statEl) statEl.textContent = count;
 }
 
+// To Order is grouped by "Purchase by" (supplier) so you can buy from one supplier now
+// and the rest later. Parts without a supplier go in a last group. Each group can be
+// printed or copied on its own; "Print all" prints every group in one document.
+let toOrderGroups = [];
+function buildToOrderGroups() {
+  const map = new Map();
+  getPartsToOrder().forEach(p => {
+    const name = (p.buyFrom || '').trim();
+    if (!map.has(name)) map.set(name, []);
+    map.get(name).push(p);
+  });
+  return [...map.entries()]
+    .map(([name, items]) => ({ name, label: name || 'No supplier', items }))
+    .sort((a, b) => a.name === '' ? 1 : b.name === '' ? -1 : a.name.localeCompare(b.name));
+}
+
 function renderToOrder() {
-  const list = getPartsToOrder();
+  toOrderGroups = buildToOrderGroups();
+  const count = toOrderGroups.reduce((n, g) => n + g.items.length, 0);
   const wrap = document.getElementById('toorder-detail');
-  if (!list.length) {
+  if (!count) {
     wrap.innerHTML = `
       <div class="no-selection">
         <div class="no-selection-icon">◫</div>
@@ -4181,22 +4750,278 @@ function renderToOrder() {
     return;
   }
   wrap.innerHTML = `
-    <div class="section-title" style="margin-bottom:10px;">To Order (${list.length})</div>
-    ${list.map(p => {
-      const state = p.qty === 0 ? 'zero' : 'low';
-      return `
-      <div class="order-row" onclick="jumpToPartFromOrder('${p.id}')">
-        <div style="min-width:0;overflow:hidden;">
-          <div class="order-row-code">${p.code}</div>
-          <div class="order-row-name">${p.manufacturer ? p.manufacturer + ' — ' : ''}${p.description || '—'}${p.location ? ' · ' + p.location : ''}</div>
+    <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:14px;">
+      <div class="section-title" style="margin-bottom:0;">To Order (${count})</div>
+      <button class="btn secondary" onclick="printToOrder()">Print all</button>
+    </div>
+    ${toOrderGroups.map((g, gi) => `
+      <div style="margin-bottom:18px;">
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px;">
+          <div class="section-title" style="margin-bottom:0; color:var(--text);">${escHtml(g.label)} <span style="color:var(--text-dim);">(${g.items.length})</span></div>
+          <div style="display:flex; gap:6px;">
+            <button class="btn secondary" style="padding:6px 10px;" onclick="copyToOrder(${gi}, this)">Copy</button>
+            <button class="btn secondary" style="padding:6px 10px;" onclick="printToOrder(${gi})">Print</button>
+          </div>
         </div>
-        <div class="order-row-right">
-          <div class="order-row-qty ${state}">${p.qty} in stock</div>
-          <div class="order-row-min">min ${p.minStock}</div>
-        </div>
-      </div>`;
-    }).join('')}
+        ${g.items.map(p => {
+          const state = p.qty === 0 ? 'zero' : 'low';
+          return `
+          <div class="order-row" onclick="jumpToPartFromOrder('${p.id}')">
+            <div style="min-width:0;overflow:hidden;">
+              <div class="order-row-code">${escHtml(p.code)}</div>
+              <div class="order-row-name">${p.manufacturer ? escHtml(p.manufacturer) + ' — ' : ''}${escHtml(p.description) || '—'}${p.location ? ' · ' + escHtml(p.location) : ''}</div>
+            </div>
+            <div class="order-row-right">
+              <div class="order-row-qty ${state}">${p.qty} in stock</div>
+              <div class="order-row-min">min ${p.minStock}</div>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>`).join('')}
   `;
+}
+
+// Plain-text list of one supplier's group, ready to paste into a message.
+async function copyToOrder(i, btn) {
+  const g = toOrderGroups[i];
+  if (!g) return;
+  const text = (g.name ? g.name + ':\n' : '') + g.items.map(p =>
+    '- ' + [p.code, [p.manufacturer, p.description].filter(Boolean).join(' ')].filter(Boolean).join(' — ')).join('\n');
+  try {
+    await navigator.clipboard.writeText(text);
+    if (btn) { const old = btn.textContent; btn.textContent = 'Copied'; setTimeout(() => { btn.textContent = old; }, 1200); }
+  } catch {
+    prompt('Copy this list:', text); // clipboard blocked (e.g. plain http): let the user copy by hand
+  }
+}
+
+// Printable shopping list: ref, brand, description and last purchase price.
+// printToOrder() = every supplier in one document; printToOrder(i) = just that supplier.
+// Reuses the hidden #print-area + @media print rules used by work orders.
+// ─── PDF OUTPUT ─────────────────────────────────────────────────────────────
+// Safari, iPhone and iPad ignore the page-margin rule and stamp their own header and
+// footer (address, date, title) on anything printed, so there "Print" first turns the
+// printout into a PDF made inside the app, which has no header or footer and a
+// full-page watermark. You then open it and print/share from the PDF viewer.
+// Other browsers (Firefox, Chrome…) print directly. The "PDF" button on a work order
+// makes a PDF on any browser.
+// The PDF tools (html2canvas + jsPDF) are only downloaded the first time they are needed.
+const IS_IOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const IS_SAFARI = /^((?!chrome|chromium|crios|fxios|android|edg).)*safari/i.test(navigator.userAgent);
+const NEEDS_PDF_PRINT = IS_IOS || IS_SAFARI;
+const PDF_LIB_URLS = [
+  'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'
+];
+const scriptLoads = {};
+function loadScriptOnce(url) {
+  if (!scriptLoads[url]) {
+    scriptLoads[url] = new Promise((resolve, reject) => {
+      const el = document.createElement('script');
+      el.src = url;
+      el.onload = resolve;
+      el.onerror = () => { delete scriptLoads[url]; reject(new Error('Could not load ' + url)); };
+      document.head.appendChild(el);
+    });
+  }
+  return scriptLoads[url];
+}
+
+// Draws the given printout HTML on an A4-sized page, takes a picture of it and puts it in a
+// PDF (one A4 sheet per page-height of content).
+async function buildPdfBlob(innerHtml) {
+  await Promise.all(PDF_LIB_URLS.map(loadScriptOnce));
+  const stage = document.createElement('div');
+  stage.id = 'pdf-stage';
+  stage.style.cssText = 'position:fixed;left:-10000px;top:0;width:210mm;min-height:297mm;box-sizing:border-box;padding:15mm;background:#fff;color:#000;overflow:hidden;';
+  stage.innerHTML = innerHtml;
+  document.body.appendChild(stage);
+  try {
+    await Promise.all([...stage.querySelectorAll('img')].map(i => i.decode ? i.decode().catch(() => {}) : null));
+    if (document.fonts && document.fonts.ready) await document.fonts.ready;
+    const pageH = 297 * 96 / 25.4;                       // A4 height in px
+    const pages = Math.max(1, Math.ceil((stage.scrollHeight - 2) / pageH));
+    stage.style.minHeight = (pages * 297) + 'mm';         // watermark then covers every sheet
+    const canvas = await window.html2canvas(stage, {
+      scale: 2, backgroundColor: '#ffffff', useCORS: true, logging: false,
+      scrollX: 0, scrollY: 0, windowWidth: 1200,
+      onclone: doc => {                                   // render the copy at the top-left, not off-screen
+        const st = doc.getElementById('pdf-stage');
+        if (st) { st.style.position = 'absolute'; st.style.left = '0'; st.style.top = '0'; }
+      }
+    });
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+    const pw = canvas.width, ph = Math.round(pw * 297 / 210);
+    for (let i = 0; i < pages; i++) {
+      const sliceH = Math.min(ph, canvas.height - i * ph);
+      const slice = document.createElement('canvas');
+      slice.width = pw; slice.height = ph;
+      const ctx = slice.getContext('2d');
+      ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, pw, ph);
+      ctx.drawImage(canvas, 0, i * ph, pw, sliceH, 0, 0, pw, sliceH);
+      if (i) pdf.addPage();
+      pdf.addImage(slice.toDataURL('image/png'), 'PNG', 0, 0, 210, 297);
+    }
+    return pdf.output('blob');
+  } finally {
+    stage.remove();
+  }
+}
+
+let pdfState = null; // { blob, url, name } of the PDF currently offered in the modal
+function setPdfModal(title, msg, ready) {
+  document.getElementById('pdf-modal-title').textContent = title;
+  document.getElementById('pdf-modal-msg').textContent = msg;
+  document.getElementById('pdf-open-btn').disabled = !ready;
+  document.getElementById('pdf-share-btn').disabled = !ready;
+  document.getElementById('pdf-wa-btn').disabled = !ready;
+}
+function closePdfModal() {
+  document.getElementById('pdf-modal').classList.add('hidden');
+  if (pdfState) { try { URL.revokeObjectURL(pdfState.url); } catch {} pdfState = null; }
+}
+// Takes whatever is currently in #print-area (work order or To Order list) and offers it as a PDF.
+async function createPdfFromPrintArea(name, woId) {
+  const html = document.getElementById('print-area').innerHTML;
+  closePdfModal();
+  document.getElementById('pdf-wa-btn').classList.toggle('hidden', !woId);
+  setPdfModal(name, 'Building PDF…', false);
+  document.getElementById('pdf-modal').classList.remove('hidden');
+  try {
+    const blob = await buildPdfBlob(html);
+    pdfState = { blob, url: URL.createObjectURL(blob), name: name.replace(/[^\w.-]+/g, '_') + '.pdf', woId: woId || null };
+    setPdfModal(name + ' — PDF ready', woId
+      ? 'Open to print: opens the PDF — use the Share button there and choose Print. Send via WhatsApp: shares the PDF together with the ready message — pick WhatsApp, then the customer (a file cannot be sent to a pre-selected number).'
+      : 'Open to print: opens the PDF — use the Share button there and choose Print. Share / save sends the file to another app.', true);
+  } catch (err) {
+    console.error('PDF failed:', err);
+    setPdfModal(name + ' — PDF failed', 'Could not build the PDF. The PDF tools download from the internet the first time, so check your connection and try again.', false);
+  }
+}
+// Work order PDF + the "ready" message, through the phone's share sheet (WhatsApp can then be
+// picked there). WhatsApp links cannot carry a file, so the contact has to be chosen in WhatsApp;
+// the message is also copied to the clipboard in case WhatsApp drops the text that came with the file.
+// Without a share sheet (desktop) it opens the customer's chat with the message and downloads the PDF to attach.
+async function sendPdfViaWhatsApp() {
+  if (!pdfState || !pdfState.woId) return;
+  const wo = workOrders.find(w => w.id === pdfState.woId);
+  if (!wo) return;
+  const text = buildWoWhatsAppText(wo);
+  const file = new File([pdfState.blob], pdfState.name, { type: 'application/pdf' });
+  let copied = false;
+  const copying = navigator.clipboard ? navigator.clipboard.writeText(text).then(() => { copied = true; }).catch(() => {}) : null;
+  let shared = false;
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try {
+      await navigator.share({ files: [file], text, title: pdfState.name });
+      shared = true;
+    } catch (err) {
+      if (err && err.name === 'AbortError') return; // closed the share sheet: nothing was sent
+    }
+  }
+  if (!shared) {
+    const num = waNumber(wo.customer.phone);
+    if (num) window.open('https://wa.me/' + num + '?text=' + encodeURIComponent(text), '_blank', 'noopener');
+    else alert('This work order has no phone number, so the chat could not be opened. The PDF is downloading — send it from WhatsApp yourself.');
+    const a = document.createElement('a');
+    a.href = pdfState.url; a.download = pdfState.name;
+    document.body.appendChild(a); a.click(); a.remove();
+  }
+  if (copying) await copying;
+  logEvent('wo', woNumberLabel(wo.number), 'work order PDF + ready message sent via WhatsApp');
+  // same as the WhatsApp button: the message says "ready", so mark the order Ready
+  const id = wo.id;
+  if (wo.status !== 'ready' && wo.status !== 'delivered' && wo.status !== 'cancelled') updateWoStatus(id, 'ready');
+  setPdfModal(woNumberLabel(wo.number) + ' — PDF ready',
+    shared
+      ? 'Sent to the share sheet.' + (copied ? ' The ready message is also copied — paste it in the chat if it did not appear.' : '')
+      : 'Chat opened with the ready message; attach the downloaded PDF there.',
+    true);
+  if (selectedWoId === id) selectWo(id);
+}
+
+function openPdf() {
+  if (!pdfState) return;
+  const w = window.open(pdfState.url, '_blank');
+  if (!w) alert('The browser blocked the new tab. Use "Share / save" instead.');
+}
+async function sharePdf() {
+  if (!pdfState) return;
+  const file = new File([pdfState.blob], pdfState.name, { type: 'application/pdf' });
+  try {
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({ files: [file], title: pdfState.name });
+      return;
+    }
+  } catch (err) {
+    if (err && err.name === 'AbortError') return; // closed the share sheet
+  }
+  const a = document.createElement('a'); // no share sheet here: plain download
+  a.href = pdfState.url; a.download = pdfState.name;
+  document.body.appendChild(a); a.click(); a.remove();
+}
+
+// window.print() with a clean document title. If the browser still adds its own header
+// (Chrome: "Headers and footers" ticked in the print dialog), it shows e.g. "WO-0012"
+// instead of the app name, and "Save as PDF" suggests that as the file name.
+function printWithTitle(title, flow) {
+  const old = document.title;
+  const root = document.documentElement;
+  const restore = () => {
+    document.title = old;
+    root.classList.remove('print-flow');
+    window.removeEventListener('afterprint', restore);
+  };
+  document.title = title;
+  if (flow) root.classList.add('print-flow');
+  window.addEventListener('afterprint', restore);
+  window.print();
+}
+
+// The work order is printed on one sheet. If it is taller than the page (many parts and
+// payments), shrink it just enough to fit instead of cutting off the totals at the bottom.
+function fitPrintArea() {
+  const area = document.getElementById('print-area');
+  const content = area && area.querySelector('.print-content');
+  if (!content) return;
+  content.style.zoom = '';
+  // measure off-screen at A4 width with the same padding the printout uses
+  area.style.cssText = 'display:block;position:absolute;left:-10000px;top:0;width:210mm;padding:15mm;visibility:hidden;';
+  const usable = (297 - 30) * 96 / 25.4; // usable page height in px
+  const h = content.scrollHeight;
+  area.removeAttribute('style');
+  if (h > usable) content.style.zoom = Math.max(0.5, usable / h).toFixed(3);
+}
+
+function printToOrder(i) {
+  const groups = (i === undefined || i === null) ? toOrderGroups : [toOrderGroups[i]].filter(Boolean);
+  if (!groups.length) return;
+  const section = g => `
+    <div class="inv-section">
+      ${groups.length > 1 ? `<div class="inv-section-title" style="font-size:13px; color:#000;">${escHtml(g.label)}</div>` : ''}
+      <table class="inv-table">
+        <thead><tr><th>Ref</th><th>Brand</th><th>Description</th><th class="num">Last purchase price</th></tr></thead>
+        <tbody>${g.items.map(p => `
+          <tr>
+            <td>${escHtml(p.code)}</td>
+            <td>${escHtml(p.manufacturer) || '—'}</td>
+            <td>${escHtml(p.description) || '—'}</td>
+            <td class="num">${p.buyPrice ? '€' + parseFloat(p.buyPrice).toFixed(2) : '—'}</td>
+          </tr>`).join('')}</tbody>
+      </table>
+    </div>`;
+  document.getElementById('print-area').innerHTML = `
+    <div class="print-content">
+      <div class="inv-header">
+        <div class="inv-title">To Order${groups.length === 1 ? ' — ' + escHtml(groups[0].label) : ''}</div>
+        <div class="inv-meta">${new Date().toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' })}</div>
+      </div>
+      ${groups.map(section).join('')}
+    </div>`;
+  const title = 'To Order' + (groups.length === 1 ? ' - ' + groups[0].label : '');
+  if (NEEDS_PDF_PRINT) createPdfFromPrintArea(title);
+  else printWithTitle(title, true);
 }
 
 // Clicking a To Order row jumps to the Stock tab with that part selected.
@@ -4255,15 +5080,15 @@ function selectPart(id) {
       <div class="fields-grid">
         <div class="field full">
           <label>Code</label>
-          <input id="e-code" value="${p.code}" placeholder="Part code">
+          <input id="e-code" value="${escHtml(p.code)}" placeholder="Part code">
         </div>
         <div class="field full">
           <label>Manufacturer</label>
-          <input id="e-manufacturer" value="${p.manufacturer||''}" placeholder="Manufacturer" list="manufacturer-suggestions" autocomplete="off">
+          <input id="e-manufacturer" value="${escHtml(p.manufacturer)}" placeholder="Manufacturer" list="manufacturer-suggestions" autocomplete="off">
         </div>
         <div class="field full">
           <label>Description</label>
-          <input id="e-description" value="${p.description||''}" placeholder="Description">
+          <input id="e-description" value="${escHtml(p.description)}" placeholder="Description">
         </div>
         <div class="field">
           <label>Sale Price</label>
@@ -4277,14 +5102,22 @@ function selectPart(id) {
           <label>Min Stock <span style="font-weight:400;color:var(--text-dim)">(0 = no warning)</span></label>
           <input id="e-minstock" type="number" min="0" step="1" value="${p.minStock || 0}">
         </div>
+        <div class="field">
+          <label>Last Purchase Price</label>
+          <input id="e-buyprice" type="number" min="0" step="0.01" value="${p.buyPrice || ''}" placeholder="0.00">
+        </div>
+        <div class="field">
+          <label>Purchase by</label>
+          <input id="e-buyfrom" value="${escHtml(p.buyFrom)}" placeholder="Supplier / shop…" list="purchase-by-suggestions" autocomplete="off">
+        </div>
         <div class="field full">
           <label>Location</label>
           <!-- datalist gives dropdown of existing locations, still accepts new text -->
-          <input id="e-location" value="${p.location||''}" placeholder="Pick existing or type new…" list="location-suggestions" autocomplete="off">
+          <input id="e-location" value="${escHtml(p.location)}" placeholder="Pick existing or type new…" list="location-suggestions" autocomplete="off">
         </div>
         <div class="field full">
           <label>Replaces Old Code(s) <span style="font-weight:400;color:var(--text-dim)">(discontinued refs, comma-separated)</span></label>
-          <input id="e-oldcodes" value="${(p.oldCodes||[]).join(', ')}" placeholder="e.g. 12345, 98765">
+          <input id="e-oldcodes" value="${escHtml((p.oldCodes||[]).join(', '))}" placeholder="e.g. 12345, 98765">
         </div>
       </div>
 
@@ -4342,7 +5175,7 @@ function adjustQty(id, delta) {
 function savePart(id) {
   const p = parts.find(x => x.id === id);
   if (!p) return;
-  const before = { code: p.code, manufacturer: p.manufacturer, description: p.description, price: p.price, qty: p.qty, location: p.location, minStock: p.minStock || 0, oldCodes: (p.oldCodes||[]).join(',') };
+  const before = { code: p.code, manufacturer: p.manufacturer, description: p.description, price: p.price, qty: p.qty, location: p.location, minStock: p.minStock || 0, oldCodes: (p.oldCodes||[]).join(','), buyPrice: p.buyPrice || 0, buyFrom: p.buyFrom || '' };
   p.code = document.getElementById('e-code').value.trim() || p.code;
   p.manufacturer = document.getElementById('e-manufacturer').value.trim();
   p.description = document.getElementById('e-description').value.trim();
@@ -4350,6 +5183,8 @@ function savePart(id) {
   p.qty = Math.max(0, parseInt(document.getElementById('e-qty').value) || 0);
   p.location = document.getElementById('e-location').value.trim();
   p.minStock = Math.max(0, parseInt(document.getElementById('e-minstock').value) || 0);
+  p.buyPrice = parseFloat(document.getElementById('e-buyprice').value) || 0;
+  p.buyFrom = document.getElementById('e-buyfrom').value.trim();
   p.oldCodes = document.getElementById('e-oldcodes').value
     .split(',')
     .map(c => c.trim().toUpperCase())
@@ -4366,6 +5201,8 @@ function savePart(id) {
   if (before.qty !== p.qty) changed.push(`qty ${before.qty} → ${p.qty}`);
   if (before.location !== p.location) changed.push(`location → ${p.location || '—'}`);
   if (before.minStock !== p.minStock) changed.push(`min stock ${before.minStock} → ${p.minStock}`);
+  if (before.buyPrice !== p.buyPrice) changed.push(`purchase price €${before.buyPrice} → €${p.buyPrice}`);
+  if (before.buyFrom !== p.buyFrom) changed.push(`purchase by → ${p.buyFrom || '—'}`);
   if (before.oldCodes !== p.oldCodes.join(',')) changed.push(`replaces → ${p.oldCodes.join(', ') || '—'}`);
   if (changed.length) logEvent('edit', p.code, changed.join(', '));
 
@@ -4407,10 +5244,16 @@ function bulkAdjust(id, direction) {
 // ─── LOCATION DATALIST ─────────────────────────────────────────────────────
 // Keeps the shared <datalist> in sync with all unique locations in stock.
 // Used by both the modal and the detail panel edit field.
+function updatePurchaseByDatalist() {
+  const names = [...new Set(parts.map(p => p.buyFrom).filter(Boolean))].sort();
+  document.getElementById('purchase-by-suggestions').innerHTML =
+    names.map(n => `<option value="${escHtml(n)}">`).join('');
+}
+
 function updateLocationDatalist() {
   const locations = [...new Set(parts.map(p => p.location).filter(Boolean))].sort();
   document.getElementById('location-suggestions').innerHTML =
-    locations.map(l => `<option value="${l}">`).join('');
+    locations.map(l => `<option value="${escHtml(l)}">`).join('');
 }
 
 // ─── MANUFACTURER DATALIST ──────────────────────────────────────────────────
@@ -4423,7 +5266,7 @@ function updateManufacturerDatalist() {
   const fromWo = workOrders.map(wo => wo.unit.make);
   const manufacturers = [...new Set([...fromParts, ...fromWo].filter(Boolean))].sort();
   document.getElementById('manufacturer-suggestions').innerHTML =
-    manufacturers.map(m => `<option value="${m}">`).join('');
+    manufacturers.map(m => `<option value="${escHtml(m)}">`).join('');
 }
 
 // ─── WO MODEL DATALIST ──────────────────────────────────────────────────────
@@ -4432,7 +5275,7 @@ function updateManufacturerDatalist() {
 function updateWoModelDatalist() {
   const models = [...new Set(workOrders.map(wo => wo.unit.model).filter(Boolean))].sort();
   document.getElementById('wo-model-suggestions').innerHTML =
-    models.map(m => `<option value="${m}">`).join('');
+    models.map(m => `<option value="${escHtml(m)}">`).join('');
 }
 
 // ─── CODE DATALIST ───────────────────────────────────────────────────────────
@@ -4443,7 +5286,7 @@ function updateCodeDatalist() {
   const codes = new Set(parts.map(p => p.code));
   Object.values(partCatalog).forEach(c => codes.add(c.code));
   document.getElementById('code-suggestions').innerHTML =
-    [...codes].filter(Boolean).sort().map(c => `<option value="${c}">`).join('');
+    [...codes].filter(Boolean).sort().map(c => `<option value="${escHtml(c)}">`).join('');
 }
 
 // ─── NEW PART AUTOFILL ───────────────────────────────────────────────────────
@@ -4464,6 +5307,10 @@ function autofillNewPartFromCatalog() {
   if (!desc.value.trim() && hit.description) desc.value = hit.description;
   if (!price.value && hit.price) price.value = hit.price;
   if (!loc.value.trim() && hit.location) loc.value = hit.location;
+  const buyPrice = document.getElementById('m-buyprice');
+  const buyFrom = document.getElementById('m-buyfrom');
+  if (!buyPrice.value && hit.buyPrice) buyPrice.value = hit.buyPrice;
+  if (!buyFrom.value.trim() && hit.buyFrom) buyFrom.value = hit.buyFrom;
 }
 
 // ─── CUSTOMER DATALISTS ──────────────────────────────────────────────────────
@@ -4473,10 +5320,10 @@ function updateCustomerDatalists() {
   const customers = getCustomersList();
   document.getElementById('customer-name-suggestions').innerHTML =
     [...new Set(customers.map(c => c.name).filter(Boolean))].sort()
-      .map(n => `<option value="${n}">`).join('');
+      .map(n => `<option value="${escHtml(n)}">`).join('');
   document.getElementById('customer-phone-suggestions').innerHTML =
     [...new Set(customers.map(c => c.phone).filter(Boolean))].sort()
-      .map(p => `<option value="${p}">`).join('');
+      .map(p => `<option value="${escHtml(p)}">`).join('');
 }
 
 // Fires on the WO modal's name/phone fields. Matching an existing customer
@@ -4486,8 +5333,14 @@ function autofillCustomerFromName() {
   if (!name) return;
   const phoneField = document.getElementById('wo-m-phone');
   if (phoneField.value.trim()) return;
-  const hit = getCustomersList().find(c => (c.name || '').trim().toLowerCase() === name);
-  if (hit && hit.phone) phoneField.value = hit.phone;
+  // Several customers can share a first name (e.g. two "Rui"), so only autofill
+  // when exactly one customer matches — otherwise guessing would pick the wrong one.
+  const matches = getCustomersList().filter(c => (c.name || '').trim().toLowerCase() === name);
+  if (matches.length !== 1) return;
+  const hit = matches[0];
+  if (hit.phone) phoneField.value = hit.phone;
+  const refField = document.getElementById('wo-m-ref');
+  if (refField && !refField.value.trim() && hit.ref) refField.value = hit.ref;
 }
 function autofillCustomerFromPhone() {
   const phone = document.getElementById('wo-m-phone').value.trim().toLowerCase();
@@ -4496,6 +5349,8 @@ function autofillCustomerFromPhone() {
   if (nameField.value.trim()) return;
   const hit = getCustomersList().find(c => (c.phone || '').trim().toLowerCase() === phone);
   if (hit && hit.name) nameField.value = hit.name;
+  const refField = document.getElementById('wo-m-ref');
+  if (hit && refField && !refField.value.trim() && hit.ref) refField.value = hit.ref;
 }
 
 // ─── SERIAL DATALIST + AUTOFILL ──────────────────────────────────────────────
@@ -4505,7 +5360,7 @@ function autofillCustomerFromPhone() {
 function updateSerialDatalist() {
   const serials = [...new Set(workOrders.map(wo => wo.unit.serial).filter(Boolean))].sort();
   document.getElementById('wo-serial-suggestions').innerHTML =
-    serials.map(s => `<option value="${s}">`).join('');
+    serials.map(s => `<option value="${escHtml(s)}">`).join('');
 }
 function autofillUnitFromSerial() {
   const serial = document.getElementById('wo-m-serial').value.trim().toLowerCase();
@@ -4523,6 +5378,8 @@ function autofillUnitFromSerial() {
   if (!model.value.trim() && hit.unit.model) model.value = hit.unit.model;
   if (!name.value.trim() && hit.customer.name) name.value = hit.customer.name;
   if (!phone.value.trim() && hit.customer.phone) phone.value = hit.customer.phone;
+  const refEl = document.getElementById('wo-m-ref');
+  if (refEl && !refEl.value.trim() && hit.customer.ref) refEl.value = hit.customer.ref;
 }
 
 // ─── MODAL (New Part popup) ─────────────────────────────────────────────────
@@ -4539,6 +5396,8 @@ function openModal(code) {
   document.getElementById('m-price').value = '';
   document.getElementById('m-qty').value = '1';
   document.getElementById('m-minstock').value = '0';
+  document.getElementById('m-buyprice').value = '';
+  document.getElementById('m-buyfrom').value = '';
   document.getElementById('m-location').value = '';
   document.getElementById('modal-code-label').textContent =
     code ? `Code "${code}" not found — add it to stock.` : 'Add a new part manually.';
@@ -4559,7 +5418,7 @@ function saveNewPart() {
     alert('A part with this code already exists'); return;
   }
   const part = {
-    id: crypto.randomUUID(),
+    id: uuid(),
     code,
     manufacturer: document.getElementById('m-manufacturer').value.trim(),
     description: document.getElementById('m-description').value.trim(),
@@ -4567,6 +5426,8 @@ function saveNewPart() {
     qty: Math.max(0, parseInt(document.getElementById('m-qty').value) || 0),
     minStock: Math.max(0, parseInt(document.getElementById('m-minstock').value) || 0),
     location: document.getElementById('m-location').value.trim(),
+    buyPrice: parseFloat(document.getElementById('m-buyprice').value) || 0,
+    buyFrom: document.getElementById('m-buyfrom').value.trim(),
   };
   parts.push(part);
   save();
@@ -4584,11 +5445,14 @@ document.getElementById('modal').addEventListener('click', e => {
 document.getElementById('wo-modal').addEventListener('click', e => {
   if (e.target === document.getElementById('wo-modal')) closeWoModal();
 });
+document.getElementById('pdf-modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('pdf-modal')) closePdfModal();
+});
 
 // + button in header area — keyboard shortcut N (stock tab only, so it doesn't fire while typing a WO)
 document.addEventListener('keydown', e => {
   if (activeTab === 'stock' && e.key === 'n' && document.activeElement !== scanInput && document.activeElement.tagName !== 'INPUT') openModal('');
-  if (e.key === 'Escape') { closeModal(); closeWoModal(); closeHistory(); closePrefs(); closeWoScan(); }
+  if (e.key === 'Escape') { closeModal(); closeWoModal(); closeHistory(); closePrefs(); closeWoScan(); closePdfModal(); }
   if (e.key === 's' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); saveFile(); }
 });
 
@@ -4692,6 +5556,7 @@ syncWoModeUI();
 renderWoList();
 updateContactsStat();
 focusScan();
+initServerSync();
 </script>
 </body>
 </html>
