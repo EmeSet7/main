@@ -3906,6 +3906,12 @@ function openWoWhatsApp(id) {
   if (!num) { alert('This work order has no phone number. Add one under Customer & Unit and save.'); return; }
   window.open('https://wa.me/' + num + '?text=' + encodeURIComponent(buildWoWhatsAppText(wo)), '_blank', 'noopener');
   logEvent('wo', woNumberLabel(wo.number), 'WhatsApp message opened');
+  // The message says "ready for pickup", so mark the order Ready too — unless it
+  // is already Ready, or past that point (Delivered / Cancelled), which stay as they are.
+  if (wo.status !== 'ready' && wo.status !== 'delivered' && wo.status !== 'cancelled') {
+    updateWoStatus(id, 'ready');
+    selectWo(id); // refresh the status dropdown and the green WhatsApp button
+  }
 }
 
 // Removing a used part puts the quantity back into stock — keeps stock accurate

@@ -334,6 +334,37 @@
   }
 
   #exportSettings{padding:14px 16px; border-top:1px solid var(--edge); display:flex; flex-direction:column; gap:10px;}
+
+  /* ---- Speed controls ---- */
+  .speed-row{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    flex-wrap:wrap;
+    font-family:"JetBrains Mono",monospace;
+    font-size:10px;
+    color:var(--text-dim);
+    text-transform:uppercase;
+    letter-spacing:0.5px;
+  }
+  .speed-row select, .speed-row input{
+    background:var(--panel-2);
+    color:var(--text);
+    border:1px solid var(--edge);
+    border-radius:var(--radius);
+    font-family:"JetBrains Mono",monospace;
+    font-size:12px;
+    padding:6px 8px;
+  }
+  .speed-row input{width:70px; text-align:center;}
+  #speedInfo{
+    font-family:"JetBrains Mono",monospace;
+    font-size:10px;
+    line-height:1.6;
+    color:var(--text-faint);
+  }
+  #speedInfo b{color:var(--accent2); font-weight:700;}
+
   #exportLog{
     font-family:"JetBrains Mono",monospace;
     font-size:10px;
@@ -361,7 +392,7 @@
 <header>
   <div>
     <h1>CLIP <span>CUTTER</span></h1>
-    <div class="sub">trim gameplay footage — local, no upload</div>
+    <div class="sub">trim &amp; speed up gameplay footage — local, no upload</div>
   </div>
   <div class="status-pill" id="statusPill"><span class="dot"></span><span id="statusText">idle</span></div>
 </header>
@@ -386,6 +417,7 @@
         <button class="icon" id="playBtn" title="Play/Pause (Space)">▶</button>
         <div id="timeReadout"><b id="curTime">00:00.0</b> / <span id="durTime">00:00.0</span></div>
         <div class="spacer"></div>
+        <button class="small" id="wholeBtn" title="Add the entire video as one clip">WHOLE VIDEO</button>
         <button class="small" id="setInBtn">SET IN [I]</button>
         <button class="small" id="setOutBtn" disabled>SET OUT [O]</button>
         <button class="small ghost" id="cancelPendingBtn" style="display:none;">CANCEL</button>
@@ -420,7 +452,7 @@
       </div>
       <div class="sprockets"></div>
       <div id="ioRow">
-        <span class="hint">tap timeline to seek · ←/→ step frame (shift = 10) · set FPS above if steps look off · cuts are lossless (no re-encode)</span>
+        <span class="hint">tap timeline to seek · ←/→ step frame (shift = 10) · set FPS above if steps look off · 1x cuts are lossless (no re-encode)</span>
       </div>
     </div>
 
@@ -431,10 +463,25 @@
       </div>
       <div class="panel-body">
         <div id="reelList">
-          <div class="empty-reel" id="emptyReel">No clips yet.<br>Mark an in/out range on the timeline to add one.</div>
+          <div class="empty-reel" id="emptyReel">No clips yet.<br>Mark an in/out range on the timeline,<br>or tap WHOLE VIDEO.</div>
         </div>
       </div>
       <div id="exportSettings">
+        <div class="speed-row">
+          <label for="speedSelect">SPEED</label>
+          <select id="speedSelect">
+            <option value="1">1x (lossless)</option>
+            <option value="2">2x</option>
+            <option value="4">4x</option>
+            <option value="8">8x</option>
+            <option value="10">10x</option>
+            <option value="16">16x</option>
+            <option value="custom">Custom…</option>
+          </select>
+          <input type="number" id="speedCustom" class="mono" value="8.5" min="1.1" max="100" step="0.1" style="display:none;">
+          <span id="speedX" style="display:none;">x</span>
+        </div>
+        <div id="speedInfo"></div>
         <button class="primary" id="exportAllBtn" disabled>EXPORT ALL AS ZIP</button>
         <div id="exportLog"></div>
       </div>
@@ -444,7 +491,10 @@
 </main>
 
 <script type="module">
-import { Input, Output, Conversion, ALL_FORMATS, BlobSource, BufferTarget, Mp4OutputFormat } from 'https://cdn.jsdelivr.net/npm/mediabunny/+esm';
+import {
+  Input, Output, Conversion, ALL_FORMATS, BlobSource, BufferTarget, Mp4OutputFormat,
+  VideoSampleSink, VideoSampleSource, QUALITY_HIGH, getFirstEncodableVideoCodec
+} from 'https://cdn.jsdelivr.net/npm/mediabunny/+esm';
 
 // ---------- State ----------
 const state = {
@@ -469,6 +519,7 @@ const timeline = document.getElementById('timeline');
 const playhead = document.getElementById('playhead');
 const setInBtn = document.getElementById('setInBtn');
 const setOutBtn = document.getElementById('setOutBtn');
+const wholeBtn = document.getElementById('wholeBtn');
 const cancelPendingBtn = document.getElementById('cancelPendingBtn');
 const reelList = document.getElementById('reelList');
 const emptyReel = document.getElementById('emptyReel');
@@ -478,6 +529,10 @@ const exportLog = document.getElementById('exportLog');
 const loadNewBtn = document.getElementById('loadNewBtn');
 const statusPill = document.getElementById('statusPill');
 const statusText = document.getElementById('statusText');
+const speedSelect = document.getElementById('speedSelect');
+const speedCustom = document.getElementById('speedCustom');
+const speedX = document.getElementById('speedX');
+const speedInfo = document.getElementById('speedInfo');
 
 // ---------- Helpers ----------
 function fmtTime(t){
@@ -497,7 +552,35 @@ function log(msg, cls){
   d.textContent = msg;
   exportLog.appendChild(d);
   exportLog.scrollTop = exportLog.scrollHeight;
+  return d;
 }
+
+// ---------- Speed ----------
+function getSpeed(){
+  if(speedSelect.value === 'custom'){
+    const v = parseFloat(speedCustom.value);
+    return (isFinite(v) && v >= 1) ? v : 1;
+  }
+  return parseFloat(speedSelect.value) || 1;
+}
+function speedLabel(s){ return (Number.isInteger(s) ? s : s.toFixed(2).replace(/\.?0+$/,'')) + 'x'; }
+function updateSpeedInfo(){
+  const s = getSpeed();
+  const total = state.clips.reduce((sum,c) => sum + (c.end - c.start), 0);
+  if(s <= 1){
+    speedInfo.innerHTML = 'Lossless cut · audio kept' + (total ? ' · total <b>'+fmtTime(total)+'</b>' : '');
+  }else{
+    speedInfo.innerHTML = 'Re-encode · <b>audio removed</b>' +
+      (total ? '<br>' + fmtTime(total) + ' → <b>' + fmtTime(total/s) + '</b> at ' + speedLabel(s) : '');
+  }
+}
+speedSelect.addEventListener('change', () => {
+  const custom = speedSelect.value === 'custom';
+  speedCustom.style.display = custom ? '' : 'none';
+  speedX.style.display = custom ? '' : 'none';
+  updateSpeedInfo();
+});
+speedCustom.addEventListener('input', updateSpeedInfo);
 
 // ---------- File loading ----------
 ['dragover','dragenter'].forEach(ev => dropzone.addEventListener(ev, e => { e.preventDefault(); dropzone.classList.add('drag'); }));
@@ -569,7 +652,7 @@ document.getElementById('frameControls').addEventListener('click', e => {
 
 document.addEventListener('keydown', e => {
   if(!editor.classList.contains('active')) return;
-  if(e.target.tagName === 'INPUT' || e.target.classList.contains('clip-name')) return;
+  if(e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.classList.contains('clip-name')) return;
   if(e.code === 'Space'){ e.preventDefault(); video.paused ? video.play() : video.pause(); }
   else if(e.key === 'i' || e.key === 'I'){ markIn(); }
   else if(e.key === 'o' || e.key === 'O'){ markOut(); }
@@ -628,11 +711,7 @@ function markIn(){
   cancelPendingBtn.style.display = '';
   renderTimelineMarkers();
 }
-function markOut(){
-  if(state.pendingIn === null) return;
-  const start = Math.min(state.pendingIn, video.currentTime);
-  const end = Math.max(state.pendingIn, video.currentTime);
-  if(end - start < 0.15){ alert('That range is too short — mark a wider in/out.'); return; }
+function addClip(start, end){
   const clip = {
     id: nextId++,
     name: 'clip'+(state.clips.length+1),
@@ -647,6 +726,17 @@ function markOut(){
   renderReel();
   generateThumb(clip);
 }
+function markOut(){
+  if(state.pendingIn === null) return;
+  const start = Math.min(state.pendingIn, video.currentTime);
+  const end = Math.max(state.pendingIn, video.currentTime);
+  if(end - start < 0.15){ alert('That range is too short — mark a wider in/out.'); return; }
+  addClip(start, end);
+}
+wholeBtn.addEventListener('click', () => {
+  if(!state.duration) return;
+  addClip(0, state.duration);
+});
 
 // ---------- Reel ----------
 function selectClip(id){
@@ -659,6 +749,7 @@ function renderReel(){
   clipCount.textContent = state.clips.length;
   exportAllBtn.disabled = state.clips.length === 0;
   updateExportBtnLabel();
+  updateSpeedInfo();
   reelList.querySelectorAll('.clip-card').forEach(n=>n.remove());
   emptyReel.style.display = state.clips.length ? 'none' : '';
   state.clips.forEach(c => {
@@ -712,8 +803,14 @@ async function generateThumb(clip){
   if(img) img.src = clip.thumb;
 }
 
-// ---------- Export engine (Mediabunny — lossless remux via WebCodecs) ----------
-async function runExport(clip){
+// ---------- Export engine (Mediabunny) ----------
+function safeName(clip, speed){
+  const suffix = speed > 1 ? '_' + speedLabel(speed).replace('.','_') : '';
+  return clip.name.replace(/[^a-z0-9_-]/gi,'_') + suffix + '.mp4';
+}
+
+// 1x: lossless remux via WebCodecs, audio kept
+async function runLosslessExport(clip){
   const input = new Input({ source: new BlobSource(state.file), formats: ALL_FORMATS });
   const output = new Output({ format: new Mp4OutputFormat(), target: new BufferTarget() });
   const conversion = await Conversion.init({
@@ -725,8 +822,58 @@ async function runExport(clip){
     throw new Error('this browser could not decode part of the video' + (reasons ? ' — ' + reasons : '') + ' (try Chrome or Edge)');
   }
   await conversion.execute();
-  const outName = clip.name.replace(/[^a-z0-9_-]/gi,'_') + '.mp4';
-  return { name: outName, data: new Uint8Array(output.target.buffer) };
+  return { name: safeName(clip, 1), data: new Uint8Array(output.target.buffer) };
+}
+
+// >1x: decode frames, drop the ones we don't need, squash timestamps, re-encode.
+// Audio is never added to the output, so the result is silent.
+const SPEED_OUT_FPS = 30;
+async function runSpeedExport(clip, speed, onProgress){
+  const input = new Input({ source: new BlobSource(state.file), formats: ALL_FORMATS });
+  const vTrack = await input.getPrimaryVideoTrack();
+  if(!vTrack) throw new Error('no video track found');
+
+  const output = new Output({ format: new Mp4OutputFormat(), target: new BufferTarget() });
+  const codec = await getFirstEncodableVideoCodec(
+    output.format.getSupportedVideoCodecs(),
+    { width: vTrack.displayWidth, height: vTrack.displayHeight }
+  ) || 'avc';
+
+  const source = new VideoSampleSource({ codec, bitrate: QUALITY_HIGH });
+  const trackOpts = { frameRate: SPEED_OUT_FPS };
+  if(vTrack.rotation) trackOpts.rotation = vTrack.rotation;
+  output.addVideoTrack(source, trackOpts);
+  await output.start();
+
+  const sink = new VideoSampleSink(vTrack);
+  const frameDur = 1 / SPEED_OUT_FPS;
+  let nextOut = 0;
+  let written = 0;
+
+  for await (const sample of sink.samples(clip.start, clip.end)){
+    const outTs = Math.max(0, (sample.timestamp - clip.start) / speed);
+    if(outTs + 1e-6 >= nextOut){
+      sample.setTimestamp(nextOut);
+      sample.setDuration(frameDur);
+      await source.add(sample);
+      nextOut += frameDur;
+      written++;
+    }
+    sample.close();
+    if(onProgress && written % 15 === 0){
+      onProgress(Math.min(1, (sample.timestamp - clip.start) / (clip.end - clip.start)));
+    }
+  }
+
+  source.close();
+  await output.finalize();
+  if(!written) throw new Error('no frames were produced');
+  return { name: safeName(clip, speed), data: new Uint8Array(output.target.buffer) };
+}
+
+async function runExport(clip, onProgress){
+  const speed = getSpeed();
+  return speed > 1 ? runSpeedExport(clip, speed, onProgress) : runLosslessExport(clip);
 }
 
 // ---------- Delivery: share sheet (lets you pick where to save) with download fallback ----------
@@ -748,11 +895,20 @@ async function deliverFile(blob, name, mime){
   return 'download';
 }
 
+function progressReporter(label, line){
+  return p => {
+    const pct = Math.round(p*100);
+    setStatus('busy', label + ' ' + pct + '%');
+    if(line) line.textContent = 'exporting ' + label + '… ' + pct + '%';
+  };
+}
+
 async function exportClip(clip){
   try{
+    const speed = getSpeed();
     setStatus('busy','exporting '+clip.name+'…');
-    log('exporting '+clip.name+'…');
-    const {name,data} = await runExport(clip);
+    const line = log('exporting '+clip.name+(speed>1?' at '+speedLabel(speed):'')+'…');
+    const {name,data} = await runExport(clip, speed>1 ? progressReporter(clip.name, line) : null);
     const blob = new Blob([data], {type:'video/mp4'});
     const method = await deliverFile(blob, name, 'video/mp4');
     if(method === 'cancelled'){
@@ -790,14 +946,17 @@ exportAllBtn.addEventListener('click', async () => {
     return;
   }
 
+  const speed = getSpeed();
   const zip = new JSZip();
   setStatus('busy', `exporting ${state.clips.length} clips…`);
-  state.clips.forEach(c => log('exporting '+c.name+'…'));
-  await runWithConcurrency(state.clips, 2, async (clip) => {
+  // re-encoding is heavy, so one at a time; lossless cuts can run two in parallel
+  await runWithConcurrency(state.clips, speed > 1 ? 1 : 2, async (clip) => {
     try{
-      const {name,data} = await runExport(clip);
+      const line = log('exporting '+clip.name+(speed>1?' at '+speedLabel(speed):'')+'…');
+      const {name,data} = await runExport(clip, speed>1 ? progressReporter(clip.name, line) : null);
       zip.file(name, data);
-      log(name+' done', 'ok');
+      line.textContent = name+' done';
+      line.className = 'ok';
     }catch(err){
       console.error(err);
       log('failed: '+clip.name+' — '+err.message, 'err');
@@ -815,6 +974,7 @@ function updateExportBtnLabel(){
   exportAllBtn.textContent = state.clips.length === 1 ? 'EXPORT CLIP' : 'EXPORT ALL AS ZIP';
 }
 
+updateSpeedInfo();
 setStatus('', 'idle — drop a file to begin');
 </script>
 
